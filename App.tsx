@@ -30,11 +30,15 @@ export default function App() {
                 <FontAwesomeIcon icon={faXmark} style={{ color: "#ffffff" }} />
               </TouchableOpacity>
               <View className="p-4">
-                <Text className="text-white text-lg mb-4">Menu</Text>
+                <Text className="text-white text-3xl mb-4">Menu</Text>
                 <TouchableOpacity className="py-2">
-                  <Text className="text-gray-300 font-black">New chat</Text>
+                  <Text className="text-gray-300 text-2xl font-black">
+                    New chat
+                  </Text>
                 </TouchableOpacity>
-                <Text className="text-gray-300 font-extrabold">History</Text>
+                <Text className="text-gray-300 text-2xl font-extrabold">
+                  History
+                </Text>
                 <TouchableOpacity className="py-2">
                   <Text className="text-gray-300">....</Text>
                 </TouchableOpacity>

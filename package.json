@@ -16,6 +16,7 @@
     "expo": "~53.0.22",
     "expo-status-bar": "~2.2.3",
     "nativewind": "^4.1.23",
+    "openai": "^5.20.0",
     "react": "19.0.0",
     "react-native": "0.79.5",
     "react-native-gesture-handler": "~2.24.0",
