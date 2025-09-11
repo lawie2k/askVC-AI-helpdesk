@@ -1,0 +1,9 @@
+[dotenv@17.2.2] injecting env (2) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+✅ Server running on http://localhost:5050
+✅ Connected to MySQL database!
+🔍 Searching database for: What departments are available?
+✅ AI response generated with database context
+🔍 Searching database for: What are the rules?
+✅ AI response generated with database context
+🔍 Searching database for: Hello who is the program head in IT?
+✅ AI response generated with database context
