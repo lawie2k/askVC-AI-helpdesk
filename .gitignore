@@ -94,3 +94,10 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo.env
+
+# Backend env
+um-ai-chat-backend/.env
+
+# Generic envs (optional)
+.env
+*.env
