@@ -23,7 +23,7 @@ async function searchDatabase(question) {
     const searchResults = [];
     let completedSearches = 0;
 
-    // Tables to search (excluding admins)
+    // Tables to search
     const tablesToSearch = [
       "departments",
       "professors",

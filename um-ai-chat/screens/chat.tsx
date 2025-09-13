@@ -9,8 +9,10 @@ import {
   Bubble,
 } from "react-native-gifted-chat";
 
-export default function Chat() {
-  const [messages, setMessages] = React.useState<IMessage[]>([]);
+export default function Chat({ messages, setMessages }: { 
+  messages: IMessage[], 
+  setMessages: React.Dispatch<React.SetStateAction<IMessage[]>> 
+}) {
 
   const onSend = React.useCallback(async (messages: IMessage[] = []) => {
     setMessages((prev) => GiftedChat.append(prev, messages));
@@ -40,17 +42,19 @@ export default function Chat() {
       };
       setMessages((prev) => GiftedChat.append(prev, [errorMessage]));
     }
-  }, []);
+  }, [setMessages]);
 
   return (
     <View className="flex-1">
       {messages.length === 0 && (
         <View className="px-4 pt-6">
           <Text className="text-white text-[16px] font-extrabold">
-            Hi, welcome to VC AI – your AI companion here at UM Tagum Visayan Campus!
+            Hi, welcome to VC AI – your AI companion here at UM Tagum Visayan
+            Campus!
           </Text>
           <Text className="text-white text-[16px] font-extrabold mt-3">
-             I can help you with our school’s mission, vision, rules, events, and more. What would you like to know today?
+            I can help you with our school’s mission, vision, rules, events, and
+            more. What would you like to know today?
           </Text>
         </View>
       )}

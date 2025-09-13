@@ -3,10 +3,12 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import Chat from "./screens/chat";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faListUl, faXmark } from "@fortawesome/free-solid-svg-icons";
-import { useState } from "react";
+import React, { useState } from "react";
+import { IMessage } from "react-native-gifted-chat";
 
 export default function App() {
   const [sideBar, setSideBar] = useState(false);
+  const [messages, setMessages] = React.useState<IMessage[]>([]);
 
   return (
     <SafeAreaProvider>
@@ -17,7 +19,7 @@ export default function App() {
               <FontAwesomeIcon icon={faListUl} color="#ffffff" size={24} />
             </TouchableOpacity>
             <Text className="text-white text-[24px] text-center font-extrabold">
-              ASK <Text className="text-[#900C27]">UM</Text>
+              askVC <Text className="text-[#900C27]">AI</Text>
             </Text>
           </View>
 
@@ -31,22 +33,22 @@ export default function App() {
               </TouchableOpacity>
               <View className="p-4">
                 <Text className="text-white text-3xl mb-4">Menu</Text>
-                <TouchableOpacity className="py-2">
+                <TouchableOpacity
+                  className="py-2"
+                  onPress={() => {
+                    setMessages([]);
+                    setSideBar(false);
+                  }}
+                >
                   <Text className="text-gray-300 text-2xl font-black">
                     New chat
                   </Text>
-                </TouchableOpacity>
-                <Text className="text-gray-300 text-2xl font-extrabold">
-                  History
-                </Text>
-                <TouchableOpacity className="py-2">
-                  <Text className="text-gray-300">....</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
-          <Chat />
+          <Chat messages={messages} setMessages={setMessages} />
         </View>
       </SafeAreaView>
     </SafeAreaProvider>
