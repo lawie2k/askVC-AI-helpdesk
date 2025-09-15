@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text } from "react-native";
+import {View, Text, Platform, TouchableOpacity} from "react-native";
 import {
   GiftedChat,
   IMessage,
@@ -7,6 +7,7 @@ import {
   Composer,
   Send,
   Bubble,
+  Message,
 } from "react-native-gifted-chat";
 
 export function Chat({messages, setMessages}: {
@@ -14,26 +15,49 @@ export function Chat({messages, setMessages}: {
     setMessages: React.Dispatch<React.SetStateAction<IMessage[]>>
 }) {
 
+    const BASE_URL = Platform.select({
+        ios: "http://localhost:5050",
+        android: "http://10.0.2.2:5050",
+        default: "http://localhost:5050",
+    });
+
+    const [isThinking, setIsThinking] = React.useState(false);
+
     const onSend = React.useCallback(async (messages: IMessage[] = []) => {
+        setIsThinking(true);
         setMessages((prev) => GiftedChat.append(prev, messages));
         const userText = messages[0].text;
         try {
-            const response = await fetch("http://192.168.1.5:5050/ask", {
+            const response = await fetch(`${BASE_URL}/ask`, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({question: userText}),
             });
 
-            const data = await response.json();
+            if (!response.ok) {
+                const errText = await response.text().catch(() => "");
+                throw new Error(`HTTP ${response.status} ${response.statusText} ${errText}`);
+            }
+
+            const data = await response.json().catch((err) => {
+                throw new Error(`Invalid JSON: ${String(err)}`);
+            });
+
+            const answerText = (data && typeof data.answer === "string") ? data.answer : undefined;
+            if (!answerText) {
+                console.error("Unexpected response shape from /ask:", data);
+                throw new Error("Missing 'answer' in response");
+            }
 
             const aiMessage: IMessage = {
                 _id: Date.now(),
-                text: data.answer,
+                text: answerText,
                 createdAt: new Date(),
                 user: {_id: 2, name: "UM AI"},
             };
             setMessages((prev) => GiftedChat.append(prev, [aiMessage]));
         } catch (e) {
+            console.error("AI fetch failed:", e);
             const errorMessage: IMessage = {
                 _id: Date.now(),
                 text: "Error fetching AI response",
@@ -41,34 +65,38 @@ export function Chat({messages, setMessages}: {
                 user: {_id: 2},
             };
             setMessages((prev) => GiftedChat.append(prev, [errorMessage]));
+        } finally {
+            setIsThinking(false);
         }
     }, [setMessages]);
 
     return (
         <View className="flex-1">
             {messages.length === 0 && (
-                <View className="px-4 pt-6">
-                    <Text className="text-white text-[16px] font-extrabold">
-                        Hi, welcome to VC AI – your AI companion here at UM Tagum Visayan
-                        Campus!
-                    </Text>
-                    <Text className="text-white text-[16px] font-extrabold mt-3">
-                        I can help you with our school’s mission, vision, rules, events, and
-                        more. What would you like to know today?
-                    </Text>
+                <View className="flex-col">
+                    <View className=" flex items-center px-4 pt-32">
+                        <Text className="text-white text-[16px] text-center w-[180px] font-extrabold">
+                            Hi, welcome to askVC your AI companion here at UM Tagum Visayan
+                            Campus!
+                        </Text>
+                    </View>
                 </View>
             )}
+            {messages.length === 0 && null}
             <GiftedChat
                 messages={messages}
                 onSend={onSend}
                 user={{
                     _id: 1,
                 }}
-                renderUsernameOnMessage
                 placeholder="Ask UM"
-                renderInputToolbar={(props) => (
+                isTyping={isThinking}
+                renderInputToolbar={(props) => {
+                    const { key, ...toolbarProps } = props as any;
+                    return (
                     <InputToolbar
-                        {...props}
+                        key={key}
+                        {...toolbarProps}
                         containerStyle={{
                             marginTop: 1,
                             borderRadius:50,
@@ -76,12 +104,16 @@ export function Chat({messages, setMessages}: {
                             borderTopColor: "#374151", // Gray-700 - border color
                         }}
                     />
-                )}
+                    );
+                }}
                 minComposerHeight={37}
                 maxComposerHeight={200}
-                renderComposer={(props) => (
+                renderComposer={(props) => {
+                    const { key, ...composerProps } = props as any;
+                    return (
                     <Composer
-                        {...props}
+                        key={key}
+                        {...composerProps}
                         textInputProps={{
                             blurOnSubmit: false,
                         }}
@@ -96,10 +128,14 @@ export function Chat({messages, setMessages}: {
                             borderColor: "#3C3C3C", // Gray-600 - border color
                         }}
                     />
-                )}
-                renderSend={(props) => (
+                    );
+                }}
+                renderSend={(props) => {
+                    const { key, ...sendProps } = props as any;
+                    return (
                     <Send
-                        {...props}
+                        key={key}
+                        {...sendProps}
                         containerStyle={{
                             justifyContent: "center",
                             alignItems: "center",
@@ -111,7 +147,8 @@ export function Chat({messages, setMessages}: {
                             color: "white",
                         }}
                     />
-                )}
+                    );
+                }}
                 renderBubble={(props) => {
                     const { key, ...restProps } = props as any;
                     return (
@@ -137,13 +174,79 @@ export function Chat({messages, setMessages}: {
                                 left: {
                                     marginLeft: 0,
                                     marginRight: 0,
+                                    backgroundColor: "transparent",
                                     alignSelf: "flex-start",
                                 },
                             }}
                         />
                     );
                 }}
+                renderMessage={(props) => {
+                    const { key, ...messageProps } = props as any;
+                    return <Message key={key} {...messageProps} />;
+                }}
+                renderFooter={() =>
+                    isThinking ? (
+                        <View className="px-2 py-1 items-start">
+                            <View className="bg-[#292929] rounded-[18px] py-2 px-3 max-w-[250px] h-[30px]">
+                                <Text className="text-white">UM AI is thinking…</Text>
+                            </View>
+                        </View>
+                    ) : null
+                }
             />
+            {messages.length === 0 && (
+                <View className="absolute left-3 bottom-[72px] z-50 flex-row flex-wrap gap-3 max-w-[80%]">
+                    <TouchableOpacity
+                        onPress={() => {
+                            setIsThinking(true);
+                            const msg: IMessage = {
+                                _id: Date.now(),
+                                text: "What is the vision of UM Tagum Visayan Campus?",
+                                createdAt: new Date(),
+                                user: { _id: 1 },
+                            };
+                            onSend([msg]);
+                        }}
+                        className="bg-[#3C3C3C] px-3 py-2 rounded-full"
+                    >
+                        <Text className="text-white font-bold">🎯 Vision</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => {
+                            setIsThinking(true);
+                            const msg: IMessage = {
+                                _id: Date.now(),
+                                text: "What is the mission of UM Tagum Visayan Campus?",
+                                createdAt: new Date(),
+                                user: { _id: 1 },
+                            };
+                            onSend([msg]);
+                        }}
+                        className="bg-[#3C3C3C] px-3 py-2 rounded-full"
+                    >
+                        <Text className="text-white font-bold">🏆 Mission</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => {
+                            setIsThinking(true);
+                            // Add behavior as needed
+                        }}
+                        className="bg-[#3C3C3C] px-3 py-2 rounded-full"
+                    >
+                        <Text className="text-white font-bold">👨‍🏫 Professors in IT</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => {
+                            setIsThinking(true);
+                            // Add behavior as needed
+                        }}
+                        className="bg-[#3C3C3C] px-3 py-2 rounded-full"
+                    >
+                        <Text className="text-white font-bold">📚 Programs</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
         </View>
     );
 }

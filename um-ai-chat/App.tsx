@@ -20,7 +20,7 @@ export function App() {
                         <FontAwesomeIcon icon={faListUl} color="#ffffff" size={24}/>
                     </TouchableOpacity>
                     <Text className="text-white text-[24px] text-center font-extrabold">
-                        askVC <Text className="text-[#900C27]">AI</Text>
+                        ask<Text className="text-[#900C27]">VC</Text>
                     </Text>
                 </View>
 
@@ -52,7 +52,7 @@ export function App() {
 
                 <Chat key={chatKey} messages={messages} setMessages={setMessages}/>
 
-                <View className="flex-row justify-center mb-[-40px]">
+                <View className="flex-row justify-center mb-[-35px]">
                     <Text className="text-white text-[12px] text-center">© 2025 All Rights Reserved. By Group 1</Text>
                 </View>
             </View>
