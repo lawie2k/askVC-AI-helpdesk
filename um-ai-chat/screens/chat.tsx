@@ -75,8 +75,9 @@ export function Chat({messages, setMessages}: {
             {messages.length === 0 && (
                 <View className="flex-col">
                     <View className=" flex items-center px-4 pt-32">
-                        <Text className="text-white text-[16px] text-center w-[180px] font-extrabold">
-                            Hi, welcome to askVC your AI companion here at UM Tagum Visayan
+                        <Text className="text-[20px] text-white font-extrabold">Hi, welcome to askVC</Text>
+                        <Text className="text-white text-[16px] text-center w-[180px] mt-2 font-extrabold">
+                             your AI companion here at UM Tagum Visayan
                             Campus!
                         </Text>
                     </View>
@@ -124,7 +125,6 @@ export function Chat({messages, setMessages}: {
                             paddingTop:10,
                             fontSize: 16,
                             color: "#F9FAFB", // Gray-50 - text color
-
                             borderColor: "#3C3C3C", // Gray-600 - border color
                         }}
                     />
@@ -187,7 +187,7 @@ export function Chat({messages, setMessages}: {
                 }}
                 renderFooter={() =>
                     isThinking ? (
-                        <View className="px-2 py-1 items-start">
+                        <View className="px-2 py-1 pb-3 items-start">
                             <View className="bg-[#292929] rounded-[18px] py-2 px-3 max-w-[250px] h-[30px]">
                                 <Text className="text-white">UM AI is thinking…</Text>
                             </View>
@@ -196,7 +196,7 @@ export function Chat({messages, setMessages}: {
                 }
             />
             {messages.length === 0 && (
-                <View className="absolute left-3 bottom-[72px] z-50 flex-row flex-wrap gap-3 max-w-[80%]">
+                <View className="absolute left-3 bottom-[72px] z-40 flex-row flex-wrap gap-3 max-w-[80%]">
                     <TouchableOpacity
                         onPress={() => {
                             setIsThinking(true);

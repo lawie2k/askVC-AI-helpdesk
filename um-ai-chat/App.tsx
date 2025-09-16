@@ -1,63 +1,26 @@
-import { Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import {Chat} from "./screens/chat";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faListUl, faXmark } from "@fortawesome/free-solid-svg-icons";
 import React, { useState } from "react";
-import { IMessage } from "react-native-gifted-chat";
+import Login from "./screens/login"
+import MainChat from "./screens/mainchat";
+import Signup from "./screens/signup";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
+const Stack = createNativeStackNavigator();
+
 
 export function App() {
-    const [sideBar, setSideBar] = useState(false);
-    const [messages, setMessages] = React.useState<IMessage[]>([]);
-    const [chatKey, setChatKey] = React.useState(0);
+
 
     return (
-        <SafeAreaProvider>
-        <SafeAreaView className="flex-1 bg-[#292929]">
-            <View className="flex-1 p-4 shadow-2xl">
-                <View className="flex-row items-center gap-5 border-b-2 border-gray-600 pb-4">
-                    <TouchableOpacity onPress={() => setSideBar(!sideBar)}>
-                        <FontAwesomeIcon icon={faListUl} color="#ffffff" size={24}/>
-                    </TouchableOpacity>
-                    <Text className="text-white text-[24px] text-center font-extrabold">
-                        ask<Text className="text-[#900C27]">VC</Text>
-                    </Text>
-                </View>
-
-                {sideBar && (
-                    <View className="absolute top-0 left-0 w-64 h-full bg-[#292929] z-50 shadow-lg">
-                        <TouchableOpacity
-                            onPress={() => setSideBar(false)}
-                            className=" w-5 p-4"
-                        >
-                            <FontAwesomeIcon icon={faXmark} style={{color: "#ffffff"}}/>
-                        </TouchableOpacity>
-                        <View className="p-4">
-                            <Text className="text-white text-3xl mb-4">Menu</Text>
-                            <TouchableOpacity
-                                className="py-2"
-                                onPress={() => {
-                                    setMessages([]);
-                                    setChatKey(prev => prev + 1);
-                                    setSideBar(false);
-                                }}
-                            >
-                                <Text className="text-gray-300 text-2xl font-black">
-                                    New chat
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                )}
-
-                <Chat key={chatKey} messages={messages} setMessages={setMessages}/>
-
-                <View className="flex-row justify-center mb-[-35px]">
-                    <Text className="text-white text-[12px] text-center">© 2025 All Rights Reserved. By Group 1</Text>
-                </View>
-            </View>
-        </SafeAreaView>
-        </SafeAreaProvider>
-
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <NavigationContainer>
+                <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="Login" component={Login as any} />
+                    <Stack.Screen name="Signup" component={Signup as any} />
+                    <Stack.Screen name="MainChat" component={MainChat as any} />
+                </Stack.Navigator>
+            </NavigationContainer>
+        </GestureHandlerRootView>
     );
 }

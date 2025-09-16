@@ -1,4 +1,10 @@
-export default function login() {
+import type { FC } from "react";
+
+type LoginProps = {
+  onLogin?: () => void;
+};
+
+const Login: FC<LoginProps> = ({ onLogin }) => {
     return (
       <div className="min-h-screen bg-[#292929] text-white">
         <header className="px-12 py-3">
@@ -23,7 +29,7 @@ export default function login() {
                 type="password"
                 autoComplete="current-password"
               />
-              <button className="bg-[#900C27] text-white w-[310px] h-[40px] mt-8 font-extrabold hover:bg-[#661424] transition-colors">
+              <button onClick={onLogin} className="bg-[#900C27] text-white w-[310px] h-[40px] mt-8 font-extrabold hover:bg-[#661424] transition-colors">
                 Login
               </button>
             </div>
@@ -31,5 +37,7 @@ export default function login() {
         </main>
       </div>
     )
-  }
+  };
+
+export default Login;
   
