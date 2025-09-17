@@ -1,15 +1,29 @@
-import { Text, TouchableOpacity, View } from "react-native";
+import {Pressable, Text, TouchableOpacity, View} from "react-native";
 import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
 import {faListUl, faTimes} from "@fortawesome/free-solid-svg-icons";
 import React, {useState} from "react";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {Chat} from "./chat";
 import {IMessage} from "react-native-gifted-chat";
+import {CommonActions, useNavigation} from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function MainChat() {
+    const navigation = useNavigation();
     const [sideBar, setSideBar] = useState(false);
     const [messages, setMessages] = React.useState<IMessage[]>([]);
     const [chatKey, setChatKey] = React.useState(0);
+
+    async function logout() {
+        await AsyncStorage.multiRemove(['token', 'auth_user', 'remember_me', 'remembered_email']);
+        navigation.dispatch(
+            CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+            })
+        )
+
+    }
     return (
         <SafeAreaView className="flex-1 bg-[#292929]">
             <View className="flex-1 p-4 shadow-2xl">
@@ -32,6 +46,20 @@ export default function MainChat() {
                         </TouchableOpacity>
                         <View className="p-4">
                             <Text className="text-white text-3xl mb-4">Menu</Text>
+
+                            <Pressable
+                                accessibilityRole="button"
+                                hitSlop={10}
+                                onPress={() => {
+                                    setSideBar(false);
+                                    navigation.navigate("Profile" as never);
+                                }}
+                            >
+                                <Text className="text-gray-300 text-2xl font-black">
+                                    Profile
+                                </Text>
+                            </Pressable>
+
                             <TouchableOpacity
                                 className="py-2"
                                 onPress={() => {
@@ -42,6 +70,18 @@ export default function MainChat() {
                             >
                                 <Text className="text-gray-300 text-2xl font-black">
                                     New chat
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                className="py-2"
+                                onPress={async () => {
+                                    setSideBar(false);
+                                    try { await logout(); } catch {}
+                                }}
+                            >
+                                <Text className="text-gray-300 text-2xl font-black">
+                                    log out
                                 </Text>
                             </TouchableOpacity>
                         </View>
