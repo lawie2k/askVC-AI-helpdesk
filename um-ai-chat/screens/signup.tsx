@@ -6,9 +6,35 @@ import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
 import {IconProp} from "@fortawesome/fontawesome-svg-core";
 import {useNavigation} from "@react-navigation/native";
 
+const API_URL = "http://localhost:5050";
+
 export default function Signup() {
     const navigation = useNavigation();
+    const [email, setEmail] = React.useState("");
+    const [password, setPassword] = React.useState("");
+    const [loading, setLoading] = React.useState(false);
 
+    async function handleSignup() {
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_URL}/auth/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+            });
+            const text = await response.text();
+            if (!response.ok) {
+                throw new Error(text || `Failed to sign up (${response.status})`);
+            }
+            navigation.navigate("Login" as never);
+        } catch (error: any) {
+            console.error(error);
+            alert(error?.message || "Failed to sign up");
+        } finally {
+            setLoading(false);
+        }
+    }
+    
     return(
         <SafeAreaProvider>
             <SafeAreaView className="flex-1 bg-[#292929]">
@@ -36,6 +62,8 @@ export default function Signup() {
                             keyboardType="email-address"
                             inputMode="email"
                             textContentType="emailAddress"
+                            value={email}
+                            onChangeText={(t) => setEmail(t)}
                         />
 
                         <TextInput className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
@@ -47,11 +75,17 @@ export default function Signup() {
                                    autoComplete="password"
                                    textContentType="password"
                                    returnKeyType="done"
+                                   value={password}
+                                   onChangeText={(t) => setPassword(t)}
                         />
 
                         <TouchableOpacity className="w-[310px] h-[50px] bg-[#900C27] rounded-full mt-5 px-5 "
-                                          onPress={() => {}}>
-                            <Text className="flex text-white text-[16px] font-extrabold text-center py-4">Register</Text>
+                                          onPress={handleSignup}
+                                          disabled={loading}>
+                            <Text className="flex text-white text-[16px] font-extrabold text-center py-4">
+                            {loading ? "Registering..." : "Register"}
+                            </Text>
+                            
                         </TouchableOpacity>
                     </View>
                 </View>

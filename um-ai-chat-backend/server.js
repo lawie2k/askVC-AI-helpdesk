@@ -10,6 +10,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const authRoutes = require("./auth");
+app.use("/auth", authRoutes);
+
+// TEMP: debug to verify auth router is mounted
+app.get("/auth/_debug", (req, res) => {
+  try {
+    const stack = (authRoutes && authRoutes.stack) || [];
+    return res.json({ ok: true, routes: stack.map(l => l.route && l.route.path).filter(Boolean) });
+  } catch (e) {
+    return res.json({ ok: false, error: String(e) });
+  }
+});
+
 // Initialize GitHub AI
 const token = process.env.GITHUB_TOKEN;
 const endpoint = "https://models.github.ai/inference";

@@ -2,12 +2,95 @@ import {View, Text, TextInput, TouchableOpacity, Pressable} from "react-native";
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
 import React from "react";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const API_URL = "http://localhost:5050";
 
 
 export default function Login(){
     const navigation = useNavigation();
     const [loginPressed, setLoginPressed] = React.useState(false);
     const [signUpPressed, setSignUpPressed] = React.useState(false);
+    const [email, setEmail] = React.useState("");
+    const [password, setPassword] = React.useState("");
+    const [rememberMe, setRememberMe] = React.useState(false);
+
+    React.useEffect(() => {
+        (async () => {
+            try {
+                const storedRemember = await AsyncStorage.getItem("remember_me");
+                const shouldRemember = storedRemember === "true";
+                if (shouldRemember) {
+                    const storedEmail = await AsyncStorage.getItem("remembered_email");
+                    if (storedEmail) setEmail(storedEmail);
+                }
+                setRememberMe(shouldRemember);
+            } catch (e) {
+                // noop
+            }
+        })();
+    }, []);
+
+    const toggleRemember = async () => {
+        try {
+            const next = !rememberMe;
+            setRememberMe(next);
+            await AsyncStorage.setItem("remember_me", String(next));
+            if (!next) {
+                await AsyncStorage.removeItem("remembered_email");
+            } else if (email) {
+                await AsyncStorage.setItem("remembered_email", email);
+            }
+        } catch (e) {
+            // noop
+        }
+    };
+
+    async function handleLogin() {
+        try {
+            setLoginPressed(true);
+            if (!email || !password) {
+                throw new Error("Email and password are required");
+            }
+
+            const response = await fetch(`${API_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const text = await response.text();
+            let data: any = null;
+            try {
+                data = text ? JSON.parse(text) : null;
+            } catch {
+                // leave data null; fall through to error handling if needed
+            }
+
+            if (!response.ok) {
+                const msg = (data && data.error) || text || `Login failed (${response.status})`;
+                throw new Error(msg);
+            }
+
+            if (!data || typeof data.token !== "string") {
+                throw new Error("Invalid login response");
+            }
+
+            const { token, user } = data;
+            await AsyncStorage.setItem("token", token);
+            await AsyncStorage.setItem("auth_user", JSON.stringify(user));
+            if (rememberMe && email) {
+                await AsyncStorage.setItem("remembered_email", email);
+            }
+
+            navigation.navigate("MainChat" as never);
+        } catch (e: any) {
+            console.error(e);
+            alert(e?.message || "Failed to login");
+        } finally {
+            setLoginPressed(false);
+        }
+    }
 
     return(
         <SafeAreaProvider>
@@ -29,6 +112,8 @@ export default function Login(){
                                keyboardType="email-address"
                                inputMode="email"
                                textContentType="emailAddress"
+                               value={email}
+                               onChangeText={(t) => setEmail(t)}
                            />
 
                            <TextInput className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
@@ -40,14 +125,29 @@ export default function Login(){
                                       autoComplete="password"
                                       textContentType="password"
                                       returnKeyType="done"
+                                      value={password}
+                                      onChangeText={(t) => setPassword(t)}
                            />
+                           <Pressable
+                               onPress={toggleRemember}
+                               className="flex-row items-center mt-3"
+                               accessibilityRole="checkbox"
+                               accessibilityState={{ checked: rememberMe }}
+                               hitSlop={8}
+                           >
+                               <View className="w-5 h-5 mr-2 rounded border border-white items-center justify-center">
+                                   {rememberMe ? (
+                                       <View className="w-3 h-3 bg-[#900C27]" />
+                                   ) : null}
+                               </View>
+                               <Text className="text-white">Remember me</Text>
+                           </Pressable>
+                           
 
                            <TouchableOpacity className="w-[310px] h-[50px] bg-[#900C27] rounded-full mt-5 px-5 "
-                           onPress={() => {
-                               setLoginPressed(true);
-                               navigation.navigate("MainChat" as never);
-                           }}>
-                               <Text className="flex text-white text-[16px] font-extrabold text-center py-4">Login</Text>
+                           onPress={handleLogin}
+                           disabled={loginPressed}>
+                               <Text className="flex text-white text-[16px] font-extrabold text-center py-4">{loginPressed ? "Logging in..." : "Login"}</Text>
                            </TouchableOpacity>
                        </View>
 
@@ -62,6 +162,7 @@ export default function Login(){
                                     setSignUpPressed(true);
                                     navigation.navigate("Signup" as never);
                                 }}
+                                disabled={loginPressed}
                             >
                                 <Text className="text-[16px] font-extrabold text-[#900C27]">
                                     Sign up
