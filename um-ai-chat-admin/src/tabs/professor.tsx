@@ -3,7 +3,7 @@ export default function professor(){
     return (
         <>
         <div>
-            <h1>Departments</h1>
+            <h1>Professor</h1>
         </div>
         </>
     )

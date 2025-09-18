@@ -6,12 +6,28 @@ import Profile from "./screens/Profile";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import * as SplashScreen from "expo-splash-screen";
 
 const Stack = createNativeStackNavigator();
+SplashScreen.preventAutoHideAsync()
 
 
-export function App() {
+export default function App() {
+    const [ready, setReady] = React.useState(false);
 
+    React.useEffect(() => {
+        (async () => {
+            try {
+                // TODO: load fonts/assets or init storage here
+                // await Font.loadAsync(...);
+            } finally {
+                setReady(true);
+                await SplashScreen.hideAsync();
+            }
+        })();
+    }, []);
+
+    if (!ready) return null;
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
