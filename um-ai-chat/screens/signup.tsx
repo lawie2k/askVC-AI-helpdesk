@@ -8,6 +8,14 @@ import {useNavigation} from "@react-navigation/native";
 
 const API_URL = "http://localhost:5050";
 
+const isUmEmail = (value: string) => {
+    const trimmed = value.trim();
+    const atIndex = trimmed.lastIndexOf("@");
+    if (atIndex <= 0) return false;
+    const domain = trimmed.slice(atIndex + 1).toLowerCase();
+    return domain === "umindanao.edu.ph";
+};
+
 export default function Signup() {
     const navigation = useNavigation();
     const [email, setEmail] = React.useState("");
@@ -17,10 +25,14 @@ export default function Signup() {
     async function handleSignup() {
         setLoading(true);
         try {
+            const normalizedEmail = email.trim();
+            if (!isUmEmail(normalizedEmail)) {
+                throw new Error("Use your @umindanao.edu.ph email");
+            }
             const response = await fetch(`${API_URL}/auth/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ email: normalizedEmail, password }),
             });
             const text = await response.text();
             if (!response.ok) {

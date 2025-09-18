@@ -6,6 +6,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_URL = "http://localhost:5050";
 
+const isUmEmail = (value: string) => {
+	const trimmed = value.trim();
+	const atIndex = trimmed.lastIndexOf("@");
+	if (atIndex <= 0) return false;
+	const domain = trimmed.slice(atIndex + 1).toLowerCase();
+	return domain === "umindanao.edu.ph";
+};
+
 
 export default function Login(){
     const navigation = useNavigation();
@@ -53,10 +61,16 @@ export default function Login(){
                 throw new Error("Email and password are required");
             }
 
+			const normalizedEmail = email.trim();
+
+			if (!isUmEmail(normalizedEmail)) {
+				throw new Error("Use your @umindanao.edu.ph email");
+			}
+
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
+				body: JSON.stringify({ email: normalizedEmail, password }),
             });
 
             const text = await response.text();
@@ -79,8 +93,8 @@ export default function Login(){
             const { token, user } = data;
             await AsyncStorage.setItem("token", token);
             await AsyncStorage.setItem("auth_user", JSON.stringify(user));
-            if (rememberMe && email) {
-                await AsyncStorage.setItem("remembered_email", email);
+            if (rememberMe && normalizedEmail) {
+                await AsyncStorage.setItem("remembered_email", normalizedEmail);
             }
 
             navigation.navigate("MainChat" as never);

@@ -1,4 +1,8 @@
+import { useNavigate } from "react-router-dom";
+
 export default function login() {
+    const navigate = useNavigate();
+
     return (
       <div className="min-h-screen bg-[#292929] text-white">
         <header className="px-12 py-3">
@@ -23,7 +27,8 @@ export default function login() {
                 type="password"
                 autoComplete="current-password"
               />
-              <button className="bg-[#900C27] text-white w-[310px] h-[40px] mt-8 font-extrabold hover:bg-[#661424] transition-colors">
+              <button className="bg-[#900C27] text-white w-[310px] h-[40px] mt-8 font-extrabold hover:bg-[#661424] transition-colors"
+              onClick={() => navigate("/dashboard") }>
                 Login
               </button>
             </div>
