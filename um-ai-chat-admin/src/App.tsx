@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
 import Login from "./login";
 import MainDashboard from "./maindashboard";
 import Dashboard from "./tabs/dashboard";
@@ -13,23 +13,7 @@ import Logs from "./tabs/logs";
 export default function App() {
   return (
     <>
-        <BrowserRouter>
-            <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/" element={<MainDashboard />}>
-                    <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="Rules" element={<Rules/>}/>
-                    <Route path="Professor" element={<Professor/>}/>
-                    <Route path="Rooms" element={<Rooms/>}/>
-                    <Route path="Offices" element={<Offices/>}/>
-                    <Route path="Departments" element={<Departments/>}/>
-                    <Route path="Reports" element={<Reports/>}/>
-                    <Route path="Logs" element={<Logs/>}/>
-
-                </Route>
-            </Routes>
-        </BrowserRouter>
+   
     </>
   );
 }
