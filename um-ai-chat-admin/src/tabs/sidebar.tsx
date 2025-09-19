@@ -17,7 +17,7 @@ export default function Sidebar() {
     return (
         <>
             <div
-                className='bg-[#3C3C3C] w-[320px] h-[800px] px-8 mx-10 shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]'>
+                className='bg-[#3C3C3C] w-[320px] h-[800px] px-8 ml-10 mr-5 shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]'>
               <div className='text-white pt-10'>
                   <NavLink
                       to="/dashboard"

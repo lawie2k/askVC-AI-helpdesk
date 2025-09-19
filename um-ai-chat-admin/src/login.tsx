@@ -31,6 +31,9 @@ export default function login() {
               onClick={() => navigate("/dashboard") }>
                 Login
               </button>
+                <h2 className="mt-24 font-bold">add new <button className="text-[#900C27]"
+                    onClick={()=>navigate("/signup")}>Admin</button>
+                </h2>
             </div>
           </div>
         </main>

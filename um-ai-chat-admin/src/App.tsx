@@ -10,14 +10,16 @@ import Offices from "./tabs/offices"
 import Departments from "./tabs/departments";
 import Reports from "./tabs/reports";
 import Logs from "./tabs/logs";
+import Signup from "./signup";
 
 export default function App() {
   return (
     <>
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/" element={<Navigate to="/login" replace />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
                 <Route path="/" element={<MainDashboard />}>
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="Rules" element={<Rules/>}/>

@@ -2,23 +2,18 @@
 export default function logs (){
     return (
         <>
-       <div className="bg-[#3C3C3C] w-[1100px] h-[800px] p-4">
-        <div className="flex justify-center mb-4">
-          <h1 className="text-white text-xl">Logs</h1>
-        </div>
+            <div className="bg-[#3C3C3C] w-[1250px] h-[800px] mt-[-50] pt-10 shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]">
+                <div className="flex justify-center justify-self-center text-[32px] font-bold bg-[#900C27] rounded-full w-[250px] h-[50px] ">
+                    <h1 className="">Logs</h1>
+                </div>
+                <div className="w-[1170px] h-[660px]  mt-6 mx-10 flex-col ">
+                    <div className="w-full h-[660px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg flex justify-center overflow-y-auto ">
+                        <div className="w-full h-[40px] bg-[#292929] border-white border-2 mt-4 mx-2">
 
-        <div className="w-[1025px] h-[650px] bg-[#2A2A2A] p-4">
-          <p className="text-gray-300">
-            admin Kenneth is logged this week
-          </p>
-        </div>
-
-        <div className="mt-4">
-          <button className="w-[150px] h-[40px] bg-red-600 hover:bg-red-700 text-white rounded">
-            Logs
-          </button>
-        </div>
-      </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </>
     )
 }
