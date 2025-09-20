@@ -3,6 +3,7 @@ import Login from "./screens/login"
 import MainChat from "./screens/mainchat";
 import Signup from "./screens/signup";
 import Profile from "./screens/Profile";
+import ResetPass from "./screens/resetPass";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -37,6 +38,7 @@ export default function App() {
                     <Stack.Screen name="Signup" component={Signup as any} />
                     <Stack.Screen name="MainChat" component={MainChat as any} />
                     <Stack.Screen name="Profile" component={Profile as any} />
+                    <Stack.Screen name="ResetPass" component={ResetPass as any} />
                 </Stack.Navigator>
             </NavigationContainer>
         </GestureHandlerRootView>

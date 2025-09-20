@@ -1,10 +1,10 @@
 import {View, Text, TextInput, TouchableOpacity, Pressable} from "react-native";
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
-import React from "react";
+import React, {useState} from "react";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://localhost:5050";
+const API_URL = "http://192.168.1.11:5050";
 
 const isUmEmail = (value: string) => {
 	const trimmed = value.trim();
@@ -22,6 +22,7 @@ export default function Login(){
     const [email, setEmail] = React.useState("");
     const [password, setPassword] = React.useState("");
     const [rememberMe, setRememberMe] = React.useState(false);
+    const [error, setError] = useState('');
 
     React.useEffect(() => {
         (async () => {
@@ -57,14 +58,18 @@ export default function Login(){
     async function handleLogin() {
         try {
             setLoginPressed(true);
+            setError(''); // Clear any previous errors
+            
             if (!email || !password) {
-                throw new Error("Email and password are required");
+                setError("Email and password are required");
+                return;
             }
 
 			const normalizedEmail = email.trim();
 
 			if (!isUmEmail(normalizedEmail)) {
-				throw new Error("Use your @umindanao.edu.ph email");
+				setError("Use your @umindanao.edu.ph email");
+				return;
 			}
 
             const response = await fetch(`${API_URL}/auth/login`, {
@@ -100,7 +105,7 @@ export default function Login(){
             navigation.navigate("MainChat" as never);
         } catch (e: any) {
             console.error(e);
-            alert(e?.message || "Failed to login");
+            setError(e?.message || "Failed to login");
         } finally {
             setLoginPressed(false);
         }
@@ -156,7 +161,12 @@ export default function Login(){
                                </View>
                                <Text className="text-white">Remember me</Text>
                            </Pressable>
-                           
+
+                           {error ? (
+                               <Text className="text-red-500 text-center mt-4 px-4">
+                                   {error}
+                               </Text>
+                           ) : null}
 
                            <TouchableOpacity className="w-[310px] h-[50px] bg-[#900C27] rounded-full mt-5 px-5 "
                            onPress={handleLogin}

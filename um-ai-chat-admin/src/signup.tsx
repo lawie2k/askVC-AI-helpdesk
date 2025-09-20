@@ -25,7 +25,7 @@ export default function signup() {
                        </button>
                        </div>
                         <div className="flex flex-col items-center">
-                            <h2 className="text-[40px] font-extrabold mt-10">Admin Signup</h2>
+                            <h2 className="text-[40px] font-extrabold mt-10">Register</h2>
                             <div className="mt-12 w-full flex flex-col items-center">
                                 <label className="text-[20px] font-extrabold w-[310px] text-left">Email</label>
                                 <input
