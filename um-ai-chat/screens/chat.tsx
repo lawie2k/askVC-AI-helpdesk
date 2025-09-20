@@ -75,8 +75,8 @@ export function Chat({messages, setMessages}: {
             {messages.length === 0 && (
                 <View className="flex-col">
                     <View className=" flex items-center px-4 pt-32">
-                        <Text className="text-[20px] text-white font-extrabold">Hi, welcome to askVC</Text>
-                        <Text className="text-white text-[16px] text-center w-[180px] mt-2 font-extrabold">
+                        <Text className="text-[28px] text-white font-extrabold">Hi, welcome to askVC</Text>
+                        <Text className="text-white text-[18px] text-center w-[180px] mt-2 font-extrabold">
                              your AI companion here at UM Tagum Visayan
                             Campus!
                         </Text>

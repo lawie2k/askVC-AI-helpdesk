@@ -21,6 +21,10 @@ export default function Signup() {
     const [email, setEmail] = React.useState("");
     const [password, setPassword] = React.useState("");
     const [loading, setLoading] = React.useState(false);
+    
+    const isFormValid = () => {
+        return email.trim() !== '' && password.trim() !== '';
+    };
 
     async function handleSignup() {
         setLoading(true);
@@ -91,7 +95,11 @@ export default function Signup() {
                                    onChangeText={(t) => setPassword(t)}
                         />
 
-                        <TouchableOpacity className="w-[310px] h-[50px] bg-[#900C27] rounded-full mt-5 px-5 "
+                        <TouchableOpacity className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${
+                            loading 
+                                ? 'bg-gray-500' 
+                                : 'bg-[#900C27]'
+                        }`}
                                           onPress={handleSignup}
                                           disabled={loading}>
                             <Text className="flex text-white text-[16px] font-extrabold text-center py-4">

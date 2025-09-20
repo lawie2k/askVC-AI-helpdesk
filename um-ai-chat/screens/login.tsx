@@ -23,6 +23,10 @@ export default function Login(){
     const [password, setPassword] = React.useState("");
     const [rememberMe, setRememberMe] = React.useState(false);
     const [error, setError] = useState('');
+    
+    const isFormValid = () => {
+        return email.trim() !== '' && password.trim() !== '';
+    };
 
     React.useEffect(() => {
         (async () => {
@@ -168,10 +172,16 @@ export default function Login(){
                                </Text>
                            ) : null}
 
-                           <TouchableOpacity className="w-[310px] h-[50px] bg-[#900C27] rounded-full mt-5 px-5 "
+                           <TouchableOpacity className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${
+                               loginPressed 
+                                   ? 'bg-gray-500' 
+                                   : 'bg-[#900C27]'
+                           }`}
                            onPress={handleLogin}
                            disabled={loginPressed}>
-                               <Text className="flex text-white text-[16px] font-extrabold text-center py-4">{loginPressed ? "Logging in..." : "Login"}</Text>
+                               <Text className="flex text-white text-[16px] font-extrabold text-center py-4">
+                                   {loginPressed ? "Logging in..." : "Login"}
+                               </Text>
                            </TouchableOpacity>
                        </View>
 

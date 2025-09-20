@@ -15,6 +15,12 @@ export default function ResetPass() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    
+    const isFormValid = () => {
+        return currentPassword.trim() !== '' && 
+               newPassword.trim() !== '' && 
+               confirmPassword.trim() !== '';
+    };
  
     const resetPassword = useCallback(async () => {
         // First: Do all validation checks
@@ -152,7 +158,11 @@ export default function ResetPass() {
                     </Text>
                 ) : null}
 
-                <Pressable className="w-[310px] h-[50px] bg-[#900C27] rounded-full mt-5 px-5 text-white"
+                <Pressable className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${
+                    loading 
+                        ? 'bg-gray-500' 
+                        : 'bg-[#900C27]'
+                }`}
                            onPress={resetPassword}
                            disabled={loading}
                 >
