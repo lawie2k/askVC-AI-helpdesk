@@ -154,10 +154,353 @@ app.post("/ask", async (req, res) => {
   }
 });
 
+// Admin API Routes
+app.get('/api/departments', (req, res) => {
+  db.query('SELECT * FROM departments', (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+app.post('/api/departments', (req, res) => {
+  const { name, short_name, description, head, location } = req.body;
+  db.query(
+    'INSERT INTO departments (name, short_name, description, head, location) VALUES (?, ?, ?, ?, ?)',
+    [name, short_name, description, head, location],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ id: result.insertId, message: 'Department created successfully' });
+    }
+  );
+});
+
+app.put('/api/departments/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, short_name, description, head, location } = req.body;
+  db.query(
+    'UPDATE departments SET name = ?, short_name = ?, description = ?, head = ?, location = ? WHERE id = ?',
+    [name, short_name, description, head, location, id],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ message: 'Department updated successfully' });
+    }
+  );
+});
+
+app.delete('/api/departments/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM departments WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'Department deleted successfully' });
+  });
+});
+
+// Room API Routes
+app.get('/api/rooms', (req, res) => {
+  db.query('SELECT * FROM rooms', (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+app.post('/api/rooms', (req, res) => {
+  const { room_number, building, floor, capacity, type, description, status } = req.body;
+  db.query(
+    'INSERT INTO rooms (room_number, building, floor, capacity, type, description, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [room_number, building, floor, capacity, type, description, status || 'Available'],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ id: result.insertId, message: 'Room created successfully' });
+    }
+  );
+});
+
+app.put('/api/rooms/:id', (req, res) => {
+  const { id } = req.params;
+  const { room_number, building, floor, capacity, type, description, status } = req.body;
+  db.query(
+    'UPDATE rooms SET room_number = ?, building = ?, floor = ?, capacity = ?, type = ?, description = ?, status = ? WHERE id = ?',
+    [room_number, building, floor, capacity, type, description, status, id],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ message: 'Room updated successfully' });
+    }
+  );
+});
+
+app.delete('/api/rooms/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM rooms WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'Room deleted successfully' });
+  });
+});
+
+// Office API Routes
+app.get('/api/offices', (req, res) => {
+  db.query('SELECT * FROM offices', (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+app.post('/api/offices', (req, res) => {
+  const { name, department, head, employees, location } = req.body;
+  db.query(
+    'INSERT INTO offices (name, department, head, employees, location) VALUES (?, ?, ?, ?, ?)',
+    [name, department, head, employees, location],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ id: result.insertId, message: 'Office created successfully' });
+    }
+  );
+});
+
+app.put('/api/offices/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, department, head, employees, location } = req.body;
+  db.query(
+    'UPDATE offices SET name = ?, department = ?, head = ?, employees = ?, location = ? WHERE id = ?',
+    [name, department, head, employees, location, id],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ message: 'Office updated successfully' });
+    }
+  );
+});
+
+app.delete('/api/offices/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM offices WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'Office deleted successfully' });
+  });
+});
+
+// Professor API Routes
+app.get('/api/professors', (req, res) => {
+  db.query('SELECT * FROM professors', (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+app.post('/api/professors', (req, res) => {
+  const { name, position, email, department } = req.body;
+  db.query(
+    'INSERT INTO professors (name, position, email, department) VALUES (?, ?, ?, ?)',
+    [name, position, email, department],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ id: result.insertId, message: 'Professor created successfully' });
+    }
+  );
+});
+
+app.put('/api/professors/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, position, email, department } = req.body;
+  db.query(
+    'UPDATE professors SET name = ?, position = ?, email = ?, department = ? WHERE id = ?',
+    [name, position, email, department, id],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ message: 'Professor updated successfully' });
+    }
+  );
+});
+
+app.delete('/api/professors/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM professors WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'Professor deleted successfully' });
+  });
+});
+
+// Rules API Routes
+app.get('/api/rules', (req, res) => {
+  db.query('SELECT * FROM rules', (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+app.post('/api/rules', (req, res) => {
+  const { description, admin_id } = req.body;
+  db.query(
+    'INSERT INTO rules (description, admin_id) VALUES (?, ?)',
+    [description, admin_id || 1], // Default admin_id to 1 if not provided
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ id: result.insertId, message: 'Rule created successfully' });
+    }
+  );
+});
+
+app.put('/api/rules/:id', (req, res) => {
+  const { id } = req.params;
+  const { description, admin_id } = req.body;
+  db.query(
+    'UPDATE rules SET description = ?, admin_id = ? WHERE id = ?',
+    [description, admin_id || 1, id],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ message: 'Rule updated successfully' });
+    }
+  );
+});
+
+app.delete('/api/rules/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM rules WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'Rule deleted successfully' });
+  });
+});
+
+// Logs API Routes
+app.get('/api/logs', (req, res) => {
+  db.query('SELECT * FROM logs ORDER BY created_at DESC', (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+app.post('/api/logs', (req, res) => {
+  const { action, user, details, status } = req.body;
+  db.query(
+    'INSERT INTO logs (action, user, details, status, created_at) VALUES (?, ?, ?, ?, NOW())',
+    [action, user, details, status || 'Success'],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ id: result.insertId, message: 'Log created successfully' });
+    }
+  );
+});
+
+app.put('/api/logs/:id', (req, res) => {
+  const { id } = req.params;
+  const { action, user, details, status } = req.body;
+  db.query(
+    'UPDATE logs SET action = ?, user = ?, details = ?, status = ? WHERE id = ?',
+    [action, user, details, status, id],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ message: 'Log updated successfully' });
+    }
+  );
+});
+
+app.delete('/api/logs/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM logs WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'Log deleted successfully' });
+  });
+});
+
+// Reports API Routes
+app.get('/api/reports', (req, res) => {
+  db.query('SELECT * FROM reports ORDER BY created_at DESC', (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+app.post('/api/reports', (req, res) => {
+  const { title, description, type, status, data } = req.body;
+  db.query(
+    'INSERT INTO reports (title, description, type, status, data, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+    [title, description, type, status || 'Draft', JSON.stringify(data)],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ id: result.insertId, message: 'Report created successfully' });
+    }
+  );
+});
+
+app.put('/api/reports/:id', (req, res) => {
+  const { id } = req.params;
+  const { title, description, type, status, data } = req.body;
+  db.query(
+    'UPDATE reports SET title = ?, description = ?, type = ?, status = ?, data = ? WHERE id = ?',
+    [title, description, type, status, JSON.stringify(data), id],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ message: 'Report updated successfully' });
+    }
+  );
+});
+
+app.delete('/api/reports/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM reports WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'Report deleted successfully' });
+  });
+});
+
 // Start server
 const PORT = process.env.PORT || 5050;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log(`✅ Server also accessible on http://192.168.1.5:${PORT}`);
+  console.log(`✅ Server also accessible on http://192.168.1.11:${PORT}`);
   console.log(`📱 Make sure your phone is connected to the same WiFi network`);
 });
