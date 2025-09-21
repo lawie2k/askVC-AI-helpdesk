@@ -257,7 +257,7 @@ export default function professor(){
           </div>
         </div>
 
-        <div className="w-full h-[590px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg overflow-y-auto">
+        <div className="w-full h-[590px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg p-4 overflow-y-auto">
           {loading ?(
             <div className="flex justify-center items-center h-full">
               <div className="text-white text-xl">Loading...</div>

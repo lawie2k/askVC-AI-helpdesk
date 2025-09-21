@@ -4,7 +4,7 @@ import { roomAPI,officeAPI,logsAPI,reportsAPI } from "../services/api";
 
 
 export default function dashboard() {
-    const [rooms, setRooms] = useState([]);
+    const [rooms, setRooms] = useState<any[]>([]);
     const [logs, setLogs] = useState([]);
     const [offices, setOffices] = useState([]);
     const [reports, setReports] = useState([]);
@@ -22,6 +22,7 @@ export default function dashboard() {
                 officeAPI.getAll(),
                 reportsAPI.getAll()
             ]);
+            console.log('Dashboard data loaded:', { rooms, logs, offices, reports });
             setRooms(rooms);
             setLogs(logs);
             setOffices(offices);
@@ -35,12 +36,12 @@ export default function dashboard() {
 
     const roomColumns = [
         {field: 'id', headerName: 'ID'},
-        {field: 'room_name', headerName: 'Room name'},
+        {field: 'name', headerName: 'Room name'},
         {field: 'location', headerName: 'Location'},
     ];
     const officeColumns = [
         {field: 'id', headerName: 'ID'},
-        {field: 'office_name', headerName: 'Office name'},
+        {field: 'name', headerName: 'Office name'},
         {field: 'location', headerName: 'Location'},
     ];
     const logColumns = [
@@ -63,28 +64,28 @@ export default function dashboard() {
           <div className="flex justify-center justify-self-center text-[32px] font-bold bg-[#900C27] rounded-full w-[250px] h-[50px] ">
               <h1 className="">Dashboard</h1>
             </div>
-          <div className="w-[1170px] h-[660px] mt-6 mx-10 grid grid-cols-2 gap-2 ">
-          <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg p-4">
+          <div className="w-[1170px] h-[660px] mt-6 mx-10 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg pt-4 overflow-y-auto">
     <h2 className="flex justify-center text-white text-xl font-bold mb-3">Rooms</h2>
     {loading ? (
-      <div className="flex justify-center items-center" style={{ height: '250px' }}>
+      <div className="w-full flex justify-center items-center">
         <div className="text-white">Loading...</div>
       </div>
     ) : (
       <DataGrid 
         data={rooms} 
         columns={roomColumns}
-        height="250px"
+        height="270px"
         className="text-white text-[14px] bg-[#292929]"
         showSearch={false}
         pageSize={5}
       />
     )}
 </div>
-              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg p-4">
+              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg pt-4 overflow-y-auto ">
                   <h2 className=" flex justify-center text-white text-xl font-bold mb-3">Logs</h2>
                   {loading ? (
-                    <div className="flex justify-center items-center" style={{ height: '250px' }}>
+                    <div className="flex justify-center items-center">
                       <div className="text-white">Loading...</div>
                     </div>
                   ) : (
@@ -98,10 +99,10 @@ export default function dashboard() {
                     />
                   )}
               </div>
-              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg p-4">
+              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg pt-4 overflow-y-auto">
                   <h2 className=" flex justify-center text-white text-xl font-bold mb-3">Offices</h2>
                   {loading ? (
-                    <div className="flex justify-center items-center" style={{ height: '250px' }}>
+                    <div className="flex justify-center items-center">
                       <div className="text-white">Loading...</div>
                     </div>
                   ) : (
@@ -115,10 +116,10 @@ export default function dashboard() {
                     />
                   )}
               </div>
-              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg p-4">
+              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg pt-4 overflow-y-auto">
                   <h2 className=" flex justify-center text-white text-xl font-bold mb-3">Reports</h2>
                   {loading ? (
-                    <div className="flex justify-center items-center" style={{ height: '250px' }}>
+                    <div className="flex justify-center items-center">
                       <div className="text-white">Loading...</div>
                     </div>
                   ) : (

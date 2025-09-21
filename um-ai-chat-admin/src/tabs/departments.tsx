@@ -1,23 +1,245 @@
 
+import React, {useEffect, useState} from "react";
+import DataGrid from "../components/DataGrid";
+import {departmentAPI} from "../services/api";
 
 export default function Departments() {
+    const [departments, setDepartments] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [newDepartment, setNewDepartment] = useState({
+        name: "",
+        short_name: "",
+        head: "",
+        location: ""
+    });
+    const [editingDepartment, setEditingDepartment] = useState<any>(null);
+    const [editForm, setEditForm] = useState({
+        name: "",
+        short_name: "",
+        head: "",
+        location: ""
+    });
+
+    useEffect(() => {
+        loadDepartments()
+    }, []);
+
+    const loadDepartments = async () => {
+        try {
+            setLoading(true);
+            const departments = await departmentAPI.getAll();
+            setDepartments(departments);
+        } catch (error) {
+            console.error('Error loading departments:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const departmentColumns = [
+        {field: 'id', headerName: 'ID', width: 60},
+        {field: 'name', headerName: 'Department Name', width: 200},
+        {field: 'short_name', headerName: 'Short Name', width: 120},
+        {field: 'head', headerName: 'Head', width: 150},
+        {field: 'location', headerName: 'Location', width: 150},
+        {
+            field: 'actions',
+            headerName: 'Actions',
+            width: 120,
+            cellRenderer: (params: any) => (
+                <div className="flex space-x-2">
+                    <button
+                        onClick={() => startEdit(params.row)}
+                        className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded"
+                    >
+                        Edit
+                    </button>
+                    <button
+                        onClick={() => deleteDepartment(params.row.id)}
+                        className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded"
+                    >
+                        Delete
+                    </button>
+                </div>
+            )
+        },
+    ];
+
+    const addDepartment = async () => {
+        try {
+            setLoading(true);
+            await departmentAPI.create(newDepartment);
+            await loadDepartments();
+            setNewDepartment({
+                name: "",
+                short_name: "",
+                head: "",
+                location: ""
+            });
+        } catch (error) {
+            console.error('Error adding department:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const startEdit = (department: any) => {
+        setEditingDepartment(department);
+        setEditForm({
+            name: department.name,
+            short_name: department.short_name,
+            head: department.head,
+            location: department.location
+        });
+    };
+
+    const cancelEdit = () => {
+        setEditingDepartment(null);
+        setEditForm({
+            name: "",
+            short_name: "",
+            head: "",
+            location: ""
+        });
+    };
+
+    const saveEdit = async () => {
+        try {
+            setLoading(true);
+            await departmentAPI.update(editingDepartment.id, editForm);
+            await loadDepartments();
+            cancelEdit();
+        } catch (error) {
+            console.error('Error updating department:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const deleteDepartment = async (id: number) => {
+        if (window.confirm('Are you sure you want to delete this department?')) {
+            try {
+                setLoading(true);
+                await departmentAPI.delete(id);
+                await loadDepartments();
+            } catch (error) {
+                console.error('Error deleting department:', error);
+            } finally {
+                setLoading(false);
+            }
+        }
+    }
+
     return (
         <>
          <div className="bg-[#3C3C3C] w-[1250px] h-[800px] mt-[-50] pt-10 shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]">
     <div className="flex justify-center justify-self-center text-[32px] font-bold bg-[#900C27] rounded-full w-[250px] h-[50px] ">
       <h1 className="">Departments</h1>
     </div>
-      <div className="w-[1170px] h-[650px]  mt-12 mx-10 flex-col ">
-        <input type="text" className="w-[200px] mr-2 px-2 text-black" placeholder="department name" />
-        <input type="text" className="w-[200px] mr-2 px-2 text-black" placeholder="short name"/>
-        
+      <div className="w-[1170px] h-[800px] mt-6 mx-10 flex flex-col">
+        {/* Form Row - Single form that switches between Add and Edit */}
+        <div className="">
+            <div className="flex flex-wrap gap-4">
+                <div className="flex flex-col">
+                    <label className="text-white text-sm mb-1">Department Name</label>
+                    <input 
+                        type="text"
+                        className="w-[200px] px-3 py-2 text-black rounded"
+                        placeholder="Enter department name" 
+                        value={editingDepartment ? editForm.name : newDepartment.name}
+                        onChange={(e) => editingDepartment 
+                            ? setEditForm({ ...editForm, name: e.target.value })
+                            : setNewDepartment({ ...newDepartment, name: e.target.value })
+                        } 
+                    />
+                </div>
 
-        <button className="w-[150px] h-[25px] bg-green-600 ml-2">add Record</button>
-        <div className="w-full h-[600px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg flex justify-center ">
-          <div className="w-full h-[100px] bg-[#292929] border-white border-2 mt-4 mx-2">
+                <div className="flex flex-col">
+                    <label className="text-white text-sm mb-1">Short Name</label>
+                    <input 
+                        type="text"
+                        className="w-[150px] px-3 py-2 text-black rounded"
+                        placeholder="Enter short name"
+                        value={editingDepartment ? editForm.short_name : newDepartment.short_name}
+                        onChange={(e) => editingDepartment 
+                            ? setEditForm({ ...editForm, short_name: e.target.value })
+                            : setNewDepartment({ ...newDepartment, short_name: e.target.value })
+                        } 
+                    />
+                </div>
 
-          </div>
 
+                <div className="flex flex-col">
+                    <label className="text-white text-sm mb-1">Head</label>
+                    <input 
+                        type="text"
+                        className="w-[150px] px-3 py-2 text-black rounded"
+                        placeholder="Enter head name"
+                        value={editingDepartment ? editForm.head : newDepartment.head}
+                        onChange={(e) => editingDepartment 
+                            ? setEditForm({ ...editForm, head: e.target.value })
+                            : setNewDepartment({ ...newDepartment, head: e.target.value })
+                        } 
+                    />
+                </div>
+
+                <div className="flex flex-col">
+                    <label className="text-white text-sm mb-1">Location</label>
+                    <input 
+                        type="text"
+                        className="w-[150px] px-3 py-2 text-black rounded"
+                        placeholder="Enter location"
+                        value={editingDepartment ? editForm.location : newDepartment.location}
+                        onChange={(e) => editingDepartment 
+                            ? setEditForm({ ...editForm, location: e.target.value })
+                            : setNewDepartment({ ...newDepartment, location: e.target.value })
+                        } 
+                    />
+                </div>
+
+                <div className="flex flex-col justify-end">
+                    {editingDepartment ? (
+                        <div className="flex space-x-2">
+                            <button 
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold" 
+                                onClick={saveEdit}
+                            >
+                                Update
+                            </button>
+                            <button 
+                                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold" 
+                                onClick={cancelEdit}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    ) : (
+                        <button 
+                            className="w-[150px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold" 
+                            onClick={addDepartment}
+                        >
+                            Add Record
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+
+        <div className="w-full h-[590px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg p-4 overflow-y-auto">
+            {loading ? (
+                <div className="flex justify-center items-center h-full">
+                    <div className="text-white text-xl">Loading...</div>
+                </div>
+            ) : (
+                <DataGrid 
+                    data={departments}
+                    columns={departmentColumns}
+                    height="585px"
+                    className="text-white text-[14px] bg-[#292929]"
+                    showSearch={false}
+                    pageSize={5} 
+                />
+            )}
         </div>
       </div>
         

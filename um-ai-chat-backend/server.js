@@ -36,14 +36,14 @@ async function searchDatabase(question) {
     const searchResults = [];
     let completedSearches = 0;
 
-    // Tables to search
+    // Tables to search with priority
     const tablesToSearch = [
-      "departments",
-      "professors",
-      "rooms",
-      "offices",
-      "rules",
-      "settings",
+      { name: "departments", priority: 1 },
+      { name: "professors", priority: 2 },
+      { name: "rooms", priority: 3 },
+      { name: "offices", priority: 4 },
+      { name: "rules", priority: 5 },
+      { name: "settings", priority: 6 }
     ];
 
     if (tablesToSearch.length === 0) {
@@ -51,37 +51,142 @@ async function searchDatabase(question) {
       return;
     }
 
-    tablesToSearch.forEach((table) => {
-      // Search in all text columns of each table
-      const query = `SELECT * FROM ${table} WHERE 
-        CONCAT_WS(' ', ${getSearchableColumns(table)}) LIKE ?`;
+    // Extract keywords from question for better matching
+    const keywords = extractKeywords(question);
+    const searchTerms = [question.toLowerCase(), ...keywords];
 
-      const searchTerm = `%${question.toLowerCase()}%`;
+    tablesToSearch.forEach((tableInfo) => {
+      const table = tableInfo.name;
+      
+      // Create multiple search queries for better results
+      const queries = [
+        // Exact phrase search
+        `SELECT *, 'exact' as match_type FROM ${table} WHERE 
+         CONCAT_WS(' ', ${getSearchableColumns(table)}) LIKE ?`,
+        
+        // Individual keyword search
+        `SELECT *, 'keyword' as match_type FROM ${table} WHERE 
+         CONCAT_WS(' ', ${getSearchableColumns(table)}) LIKE ?`,
+        
+        // Partial word search
+        `SELECT *, 'partial' as match_type FROM ${table} WHERE 
+         CONCAT_WS(' ', ${getSearchableColumns(table)}) LIKE ?`,
+        
+        // Number search (for room numbers, etc.)
+        `SELECT *, 'number' as match_type FROM ${table} WHERE 
+         CONCAT_WS(' ', ${getSearchableColumns(table)}) LIKE ?`
+      ];
 
-      db.query(query, [searchTerm], (err, results) => {
-        if (!err && results.length > 0) {
-          searchResults.push({
-            table: table,
-            data: results,
-          });
+      let tableResults = [];
+      let queryCount = 0;
+
+      queries.forEach((query, index) => {
+        let searchTerm;
+        
+        if (index === 0) {
+          // Exact phrase search
+          searchTerm = `%${question.toLowerCase()}%`;
+        } else if (index === 1) {
+          // Keyword search - use first meaningful keyword
+          searchTerm = `%${keywords[0] || question.toLowerCase()}%`;
+        } else if (index === 2) {
+          // Partial word search - use first word longer than 2 chars
+          const firstWord = question.toLowerCase().split(' ').find(word => word.length > 2);
+          searchTerm = `%${firstWord || question.toLowerCase()}%`;
+        } else {
+          // Number search - extract numbers from question
+          const numbers = question.match(/\d+/g);
+          searchTerm = numbers ? `%${numbers[0]}%` : `%${question.toLowerCase()}%`;
         }
 
-        completedSearches++;
-        if (completedSearches === tablesToSearch.length) {
-          resolve(searchResults);
-        }
+        db.query(query, [searchTerm], (err, results) => {
+          if (!err && results.length > 0) {
+            // Add relevance score based on match type and table priority
+            const scoredResults = results.map(result => ({
+              ...result,
+              relevance_score: calculateRelevance(result, question, tableInfo.priority, index)
+            }));
+            tableResults = tableResults.concat(scoredResults);
+          }
+
+          queryCount++;
+          if (queryCount === queries.length) {
+            // Remove duplicates and sort by relevance
+            const uniqueResults = removeDuplicates(tableResults);
+            const sortedResults = uniqueResults.sort((a, b) => b.relevance_score - a.relevance_score);
+
+            if (sortedResults.length > 0) {
+              searchResults.push({
+                table: table,
+                data: sortedResults.slice(0, 5), // Limit to top 5 results per table
+                priority: tableInfo.priority
+              });
+            }
+
+            completedSearches++;
+            if (completedSearches === tablesToSearch.length) {
+              // Sort results by table priority and relevance
+              const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
+              resolve(finalResults);
+            }
+          }
+        });
       });
     });
+  });
+}
+
+// Extract keywords from question for better search
+function extractKeywords(question) {
+  const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'what', 'where', 'when', 'why', 'how', 'who', 'which'];
+  
+  return question.toLowerCase()
+    .split(/\s+/)
+    .filter(word => word.length > 2 && !stopWords.includes(word))
+    .slice(0, 3); // Take top 3 keywords
+}
+
+// Calculate relevance score for search results
+function calculateRelevance(result, question, tablePriority, matchType) {
+  let score = 0;
+  
+  // Base score from table priority (lower number = higher priority)
+  score += (7 - tablePriority) * 10;
+  
+  // Match type bonus
+  if (matchType === 0) score += 50; // Exact match
+  else if (matchType === 1) score += 30; // Keyword match
+  else score += 10; // Partial match
+  
+  // Length bonus (shorter results often more relevant)
+  const contentLength = Object.values(result).join(' ').length;
+  if (contentLength < 100) score += 20;
+  else if (contentLength < 200) score += 10;
+  
+  return score;
+}
+
+// Remove duplicate results
+function removeDuplicates(results) {
+  const seen = new Set();
+  return results.filter(result => {
+    const key = `${result.id}_${result.table || 'unknown'}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
   });
 }
 
 // Helper function to get searchable columns for each table
 function getSearchableColumns(table) {
   const columnMap = {
-    departments: "name, description, head, location",
-    professors: "name, department, email, specialization, office",
-    rooms: "room_number, building, floor, capacity, type, description",
-    rules: "title, description, category, content",
+    departments: "name, head, location",
+    professors: "name, position, email, department",
+    rooms: "name, location",
+    offices: "name, location",
+    rules: "description",
     settings: "setting_name, setting_value, description",
   };
 
@@ -93,13 +198,13 @@ app.get("/", (req, res) => {
   res.send("UM AI Helpdesk Backend is running 🚀");
 });
 
+
 // AI ask route with database search + GitHub AI
 app.post("/ask", async (req, res) => {
   const { question } = req.body;
 
   try {
     // First, search the database for relevant information
-    console.log("🔍 Searching database for:", question);
     const dbResults = await searchDatabase(question);
 
     // Prepare database context for AI
@@ -118,7 +223,20 @@ app.post("/ask", async (req, res) => {
     }
 
     // Create enhanced system prompt with database context
-    const systemPrompt = `You are a helpful AI assistant for UM Visayan Campus. Answer questions about the university in a friendly and informative way. Use the database information provided when relevant to give accurate answers. Don't answer questions that are not related to UM Visayan Campus topics. If someone just says "miss mo", respond with "Opo 😢" in a sad tone with crying emoji.${dbContext}`;
+    const systemPrompt = `You are a dynamic and helpful AI assistant for UM Visayan Campus. Be engaging and conversational while keeping responses concise.
+
+IMPORTANT INSTRUCTIONS:
+- Use the database information as your source of truth
+- Be dynamic and engaging in your responses
+- Keep answers short and to the point (1-2 sentences max)
+- Use emojis and friendly language appropriately
+- Show personality while being helpful
+- Don't add unnecessary details or long explanations
+- Be conversational but brief
+- Don't answer questions that are not related to UM Visayan Campus topics
+- If someone just says "miss mo", respond with "Opo 😢" in a sad tone with crying emoji
+
+${dbContext}`;
 
     const response = await client.path("/chat/completions").post({
       body: {
@@ -133,8 +251,8 @@ app.post("/ask", async (req, res) => {
           },
         ],
         model: model,
-        max_tokens: 200,
-        temperature: 0.7,
+        max_tokens: 100,
+        temperature: 0.8,
       },
     });
 
@@ -143,7 +261,6 @@ app.post("/ask", async (req, res) => {
     }
 
     const answer = response.body.choices[0].message.content;
-    console.log("✅ AI response generated with database context");
     res.json({ answer });
   } catch (error) {
     console.error("Error:", error);
@@ -165,10 +282,10 @@ app.get('/api/departments', (req, res) => {
 });
 
 app.post('/api/departments', (req, res) => {
-  const { name, short_name, description, head, location } = req.body;
+  const { name, short_name, head, location } = req.body;
   db.query(
-    'INSERT INTO departments (name, short_name, description, head, location) VALUES (?, ?, ?, ?, ?)',
-    [name, short_name, description, head, location],
+    'INSERT INTO departments (name, short_name, head, location) VALUES (?, ?, ?, ?)',
+    [name, short_name, head, location],
     (err, result) => {
       if (err) {
         return res.status(500).json({ error: 'Database error' });
@@ -180,10 +297,10 @@ app.post('/api/departments', (req, res) => {
 
 app.put('/api/departments/:id', (req, res) => {
   const { id } = req.params;
-  const { name, short_name, description, head, location } = req.body;
+  const { name, short_name, head, location } = req.body;
   db.query(
-    'UPDATE departments SET name = ?, short_name = ?, description = ?, head = ?, location = ? WHERE id = ?',
-    [name, short_name, description, head, location, id],
+    'UPDATE departments SET name = ?, short_name = ?, head = ?, location = ? WHERE id = ?',
+    [name, short_name, head, location, id],
     (err, result) => {
       if (err) {
         return res.status(500).json({ error: 'Database error' });
@@ -207,20 +324,33 @@ app.delete('/api/departments/:id', (req, res) => {
 app.get('/api/rooms', (req, res) => {
   db.query('SELECT * FROM rooms', (err, results) => {
     if (err) {
-      return res.status(500).json({ error: 'Database error' });
+      return res.status(500).json({ error: 'Database error', details: err.message });
     }
     res.json(results);
   });
 });
 
+// Check rooms table structure
+app.get('/api/rooms/structure', (req, res) => {
+  db.query('DESCRIBE rooms', (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error', details: err.message });
+    }
+    res.json(results);
+  });
+});
+
+
 app.post('/api/rooms', (req, res) => {
-  const { room_number, building, floor, capacity, type, description, status } = req.body;
+  const { name, location } = req.body;
+  console.log('Received data:', { name, location });
   db.query(
-    'INSERT INTO rooms (room_number, building, floor, capacity, type, description, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [room_number, building, floor, capacity, type, description, status || 'Available'],
+    'INSERT INTO rooms (name, location) VALUES (?, ?)',
+    [name, location],
     (err, result) => {
       if (err) {
-        return res.status(500).json({ error: 'Database error' });
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Database error', details: err.message });
       }
       res.json({ id: result.insertId, message: 'Room created successfully' });
     }
@@ -229,10 +359,10 @@ app.post('/api/rooms', (req, res) => {
 
 app.put('/api/rooms/:id', (req, res) => {
   const { id } = req.params;
-  const { room_number, building, floor, capacity, type, description, status } = req.body;
+  const { name, location } = req.body;
   db.query(
-    'UPDATE rooms SET room_number = ?, building = ?, floor = ?, capacity = ?, type = ?, description = ?, status = ? WHERE id = ?',
-    [room_number, building, floor, capacity, type, description, status, id],
+    'UPDATE rooms SET name = ?, location = ? WHERE id = ?',
+    [name, location, id],
     (err, result) => {
       if (err) {
         return res.status(500).json({ error: 'Database error' });
@@ -263,10 +393,10 @@ app.get('/api/offices', (req, res) => {
 });
 
 app.post('/api/offices', (req, res) => {
-  const { name, department, head, employees, location } = req.body;
+  const { name, location } = req.body;
   db.query(
-    'INSERT INTO offices (name, department, head, employees, location) VALUES (?, ?, ?, ?, ?)',
-    [name, department, head, employees, location],
+    'INSERT INTO offices (name, location) VALUES (?, ?)',
+    [name, location],
     (err, result) => {
       if (err) {
         return res.status(500).json({ error: 'Database error' });
@@ -278,10 +408,10 @@ app.post('/api/offices', (req, res) => {
 
 app.put('/api/offices/:id', (req, res) => {
   const { id } = req.params;
-  const { name, department, head, employees, location } = req.body;
+  const { name, location } = req.body;
   db.query(
-    'UPDATE offices SET name = ?, department = ?, head = ?, employees = ?, location = ? WHERE id = ?',
-    [name, department, head, employees, location, id],
+    'UPDATE offices SET name = ?, location = ? WHERE id = ?',
+    [name, location, id],
     (err, result) => {
       if (err) {
         return res.status(500).json({ error: 'Database error' });
