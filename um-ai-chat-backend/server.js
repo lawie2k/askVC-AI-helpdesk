@@ -70,12 +70,14 @@ async function searchDatabase(question) {
         
         // Partial word search
         `SELECT *, 'partial' as match_type FROM ${table} WHERE 
-         CONCAT_WS(' ', ${getSearchableColumns(table)}) LIKE ?`,
-        
-        // Number search (for room numbers, etc.)
-        `SELECT *, 'number' as match_type FROM ${table} WHERE 
          CONCAT_WS(' ', ${getSearchableColumns(table)}) LIKE ?`
       ];
+
+      // Add individual keyword searches
+      keywords.forEach(keyword => {
+        queries.push(`SELECT *, 'keyword' as match_type FROM ${table} WHERE 
+         CONCAT_WS(' ', ${getSearchableColumns(table)}) LIKE ?`);
+      });
 
       let tableResults = [];
       let queryCount = 0;
@@ -94,9 +96,10 @@ async function searchDatabase(question) {
           const firstWord = question.toLowerCase().split(' ').find(word => word.length > 2);
           searchTerm = `%${firstWord || question.toLowerCase()}%`;
         } else {
-          // Number search - extract numbers from question
-          const numbers = question.match(/\d+/g);
-          searchTerm = numbers ? `%${numbers[0]}%` : `%${question.toLowerCase()}%`;
+          // Individual keyword search - try each keyword separately
+          const keywordIndex = index - 3;
+          const keyword = keywords[keywordIndex] || question.toLowerCase();
+          searchTerm = `%${keyword}%`;
         }
 
         db.query(query, [searchTerm], (err, results) => {
@@ -138,12 +141,35 @@ async function searchDatabase(question) {
 
 // Extract keywords from question for better search
 function extractKeywords(question) {
-  const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'what', 'where', 'when', 'why', 'how', 'who', 'which'];
+  const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'what', 'where', 'when', 'why', 'how', 'who', 'which', 'list', 'show', 'all'];
   
-  return question.toLowerCase()
+  // Handle common abbreviations and synonyms
+  const synonyms = {
+    'profs': 'professor',
+    'prof': 'professor',
+    'teachers': 'professor',
+    'instructors': 'professor',
+    'faculty': 'professor',
+    'rooms': 'room',
+    'offices': 'office',
+    'departments': 'department',
+    'rules': 'rule'
+  };
+  
+  let keywords = question.toLowerCase()
     .split(/\s+/)
     .filter(word => word.length > 2 && !stopWords.includes(word))
-    .slice(0, 3); // Take top 3 keywords
+    .map(word => synonyms[word] || word); // Replace with synonyms if available
+  
+  // If no keywords found, try with shorter words
+  if (keywords.length === 0) {
+    keywords = question.toLowerCase()
+      .split(/\s+/)
+      .filter(word => word.length > 1 && !stopWords.includes(word))
+      .map(word => synonyms[word] || word);
+  }
+  
+  return keywords.slice(0, 5); // Take top 5 keywords
 }
 
 // Calculate relevance score for search results
@@ -196,6 +222,17 @@ function getSearchableColumns(table) {
 // Test route
 app.get("/", (req, res) => {
   res.send("UM AI Helpdesk Backend is running 🚀");
+});
+
+// Debug route to test database search
+app.post("/debug-search", async (req, res) => {
+  const { question } = req.body;
+  try {
+    const dbResults = await searchDatabase(question);
+    res.json({ question, results: dbResults });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 

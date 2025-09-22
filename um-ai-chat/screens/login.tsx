@@ -4,7 +4,7 @@ import React, {useState} from "react";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://192.168.1.5:5050";
+const API_URL = "http://192.168.1.9:5050";
 
 const isUmEmail = (value: string) => {
 	const trimmed = value.trim();

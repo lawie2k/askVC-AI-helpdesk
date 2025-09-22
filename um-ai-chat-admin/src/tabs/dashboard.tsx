@@ -9,13 +9,15 @@ export default function dashboard() {
     const [offices, setOffices] = useState([]);
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     useEffect(() => {
        loadDashboardData();
     }, []);
 
     const loadDashboardData = async () => {
         try{
-  setLoading(true);
+            setLoading(true);
+            setError(null);
             const [rooms, logs, offices, reports] = await Promise.all([
                 roomAPI.getAll(),
                 logsAPI.getAll(),
@@ -29,6 +31,7 @@ export default function dashboard() {
             setReports(reports);
         }catch(error){
             console.error('Error loading dashboard data:', error);
+            setError('Failed to load dashboard data. Please check your connection and try again.');
         }finally{
             setLoading(false);
         }
@@ -64,6 +67,17 @@ export default function dashboard() {
           <div className="flex justify-center justify-self-center text-[32px] font-bold bg-[#900C27] rounded-full w-[250px] h-[50px] ">
               <h1 className="">Dashboard</h1>
             </div>
+          {error && (
+            <div className="w-[1170px] mx-10 mt-4 p-4 bg-red-600 text-white rounded-lg flex justify-between items-center">
+              <span>{error}</span>
+              <button 
+                onClick={loadDashboardData}
+                className="bg-white text-red-600 px-4 py-2 rounded hover:bg-gray-100"
+              >
+                Retry
+              </button>
+            </div>
+          )}
           <div className="w-[1170px] h-[660px] mt-6 mx-10 grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg pt-4 overflow-y-auto">
     <h2 className="flex justify-center text-white text-xl font-bold mb-3">Rooms</h2>
@@ -92,7 +106,7 @@ export default function dashboard() {
                     <DataGrid 
                       data={logs} 
                       columns={logColumns}
-                      height="250px"
+                      height="270px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
                       pageSize={5}
@@ -109,7 +123,7 @@ export default function dashboard() {
                     <DataGrid 
                       data={offices} 
                       columns={officeColumns}
-                      height="250px"
+                      height="270px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
                       pageSize={5}
@@ -126,7 +140,7 @@ export default function dashboard() {
                     <DataGrid 
                       data={reports} 
                       columns={reportColumns}
-                      height="250px"
+                      height="270px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
                       pageSize={5}

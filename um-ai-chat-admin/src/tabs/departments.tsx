@@ -9,15 +9,13 @@ export default function Departments() {
     const [newDepartment, setNewDepartment] = useState({
         name: "",
         short_name: "",
-        head: "",
-        location: ""
+        head: ""
     });
     const [editingDepartment, setEditingDepartment] = useState<any>(null);
     const [editForm, setEditForm] = useState({
         name: "",
         short_name: "",
-        head: "",
-        location: ""
+        head: ""
     });
 
     useEffect(() => {
@@ -41,7 +39,6 @@ export default function Departments() {
         {field: 'name', headerName: 'Department Name', width: 200},
         {field: 'short_name', headerName: 'Short Name', width: 120},
         {field: 'head', headerName: 'Head', width: 150},
-        {field: 'location', headerName: 'Location', width: 150},
         {
             field: 'actions',
             headerName: 'Actions',
@@ -73,8 +70,7 @@ export default function Departments() {
             setNewDepartment({
                 name: "",
                 short_name: "",
-                head: "",
-                location: ""
+                head: ""
             });
         } catch (error) {
             console.error('Error adding department:', error);
@@ -88,8 +84,7 @@ export default function Departments() {
         setEditForm({
             name: department.name,
             short_name: department.short_name,
-            head: department.head,
-            location: department.location
+            head: department.head
         });
     };
 
@@ -98,8 +93,7 @@ export default function Departments() {
         setEditForm({
             name: "",
             short_name: "",
-            head: "",
-            location: ""
+            head: ""
         });
     };
 
@@ -183,19 +177,6 @@ export default function Departments() {
                     />
                 </div>
 
-                <div className="flex flex-col">
-                    <label className="text-white text-sm mb-1">Location</label>
-                    <input 
-                        type="text"
-                        className="w-[150px] px-3 py-2 text-black rounded"
-                        placeholder="Enter location"
-                        value={editingDepartment ? editForm.location : newDepartment.location}
-                        onChange={(e) => editingDepartment 
-                            ? setEditForm({ ...editForm, location: e.target.value })
-                            : setNewDepartment({ ...newDepartment, location: e.target.value })
-                        } 
-                    />
-                </div>
 
                 <div className="flex flex-col justify-end">
                     {editingDepartment ? (
