@@ -22,7 +22,6 @@ export default function Reports() {
     };
 
     const reportColumns = [
-        {field: 'id', headerName: 'ID', width: 60},
         {field: 'title', headerName: 'Title', width: 200},
         {field: 'description', headerName: 'Description', width: 250},
         {field: 'category', headerName: 'Category', width: 150},
@@ -37,7 +36,7 @@ export default function Reports() {
                 <h1 className="">Reports</h1>
             </div>
             <div className="w-[1170px] h-[800px] mt-6 mx-10 flex flex-col">
-                <div className="w-full h-[590px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg p-4 overflow-y-auto">
+                <div className="w-full h-[655px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg overflow-y-auto">
                     {loading ? (
                         <div className="flex justify-center items-center h-full">
                             <div className="text-white text-xl">Loading...</div>
@@ -46,9 +45,9 @@ export default function Reports() {
                         <DataGrid 
                             data={reports}
                             columns={reportColumns}
-                            height="585px"
+                            height="655px"
                             className="text-white text-[14px] bg-[#292929]"
-                            showSearch={true}
+                            showSearch={false}
                             pageSize={10} 
                         />
                     )}

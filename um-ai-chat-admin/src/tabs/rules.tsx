@@ -27,10 +27,8 @@ export default function rules () {
     }
   }
   const ruleColumns = [
-    {field: 'id', headerName: 'ID', width: 60},
-    {field: 'description', headerName: 'Description', width: 250},
-    {field: 'admin_id', headerName: 'Admin ID', width: 80},
-    {field: 'created_at', headerName: 'Created', width: 100},
+    {field: 'description', headerName: 'Description', width: 300},
+    {field: 'created_at', headerName: 'Created', width: 50},
     {
       field: 'actions',
       headerName: 'Actions',
@@ -127,7 +125,7 @@ export default function rules () {
       <h1 className="">Rules</h1>
     </div>
       <div className="w-[1170px] h-[650px]  mt-6 mx-10 flex-col">
-        <div className="flex space-x-4 mb-4">
+        <div className="flex space-x-4 mb-3">
           <div className="flex-1">
             <label className="text-white text-sm font-semibold mb-1 block">Add New Rule</label>
             <div className="flex space-x-2">

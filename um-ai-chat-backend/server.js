@@ -26,7 +26,7 @@ app.get("/auth/_debug", (req, res) => {
 // Initialize GitHub AI
 const token = process.env.GITHUB_TOKEN;
 const endpoint = "https://models.github.ai/inference";
-const model = "openai/gpt-4o";
+const model = process.env.MODEL_ID || "openai/gpt-4o-mini";
 
 const client = ModelClient(endpoint, new AzureKeyCredential(token));
 
@@ -35,6 +35,11 @@ async function searchDatabase(question) {
   return new Promise((resolve) => {
     const searchResults = [];
     let completedSearches = 0;
+
+    // Check if this is a rules or professors question
+    const isRules = isRulesQuestion(question);
+    const isProfessors = isProfessorsQuestion(question);
+    const targetDepartment = extractDepartmentFromQuestion(question);
 
     // Tables to search with priority
     const tablesToSearch = [
@@ -57,6 +62,87 @@ async function searchDatabase(question) {
 
     tablesToSearch.forEach((tableInfo) => {
       const table = tableInfo.name;
+      
+      // Special handling for rules questions
+      if (isRules && table === 'rules') {
+        // For rules questions, get all rules
+        db.query('SELECT *, "rules_query" as match_type FROM rules', (err, results) => {
+          if (!err && results.length > 0) {
+            const scoredResults = results.map(result => ({
+              ...result,
+              relevance_score: 100 // High relevance for rules when asking about rules
+            }));
+            searchResults.push({
+              table: table,
+              data: scoredResults,
+              priority: tableInfo.priority
+            });
+          }
+
+          completedSearches++;
+          if (completedSearches === tablesToSearch.length) {
+            // Sort results by table priority and relevance
+            const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
+            resolve(finalResults);
+          }
+        });
+        return;
+      }
+
+      // Special handling for professors questions
+      if (isProfessors && table === 'professors') {
+        if (targetDepartment) {
+          // Narrow to professors in the target department (e.g., BSIT)
+          db.query(
+            'SELECT *, "professors_query" as match_type FROM professors WHERE department LIKE ?',
+            [`%${targetDepartment}%`],
+            (err, results) => {
+              if (!err && results.length > 0) {
+                const scoredResults = results.map(result => ({
+                  ...result,
+                  relevance_score: 100
+                }));
+                searchResults.push({
+                  table: table,
+                  data: scoredResults,
+                  priority: tableInfo.priority
+                });
+              }
+
+              completedSearches++;
+              if (completedSearches === tablesToSearch.length) {
+                const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
+                resolve(finalResults);
+              }
+            }
+          );
+        } else {
+          // If no department specified, return all professors (limited)
+          db.query(
+            'SELECT *, "professors_query" as match_type FROM professors LIMIT 25',
+            (err, results) => {
+              if (!err && results.length > 0) {
+                const scoredResults = results.map(result => ({
+                  ...result,
+                  relevance_score: 80
+                }));
+                searchResults.push({
+                  table: table,
+                  data: scoredResults,
+                  priority: tableInfo.priority
+                });
+              }
+
+              completedSearches++;
+              if (completedSearches === tablesToSearch.length) {
+                const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
+                resolve(finalResults);
+              }
+            }
+          );
+        }
+        return;
+      }
       
       // Create multiple search queries for better results
       const queries = [
@@ -172,6 +258,36 @@ function extractKeywords(question) {
   return keywords.slice(0, 5); // Take top 5 keywords
 }
 
+// Check if question is asking about rules specifically
+function isRulesQuestion(question) {
+  const rulesKeywords = ['rules', 'rule', 'regulations', 'policies', 'guidelines', 'code', 'conduct'];
+  const questionLower = question.toLowerCase();
+  return rulesKeywords.some(keyword => questionLower.includes(keyword));
+}
+
+// Check if question is asking about professors/faculty
+function isProfessorsQuestion(question) {
+  const profKeywords = ['professor', 'professors', 'profs', 'teacher', 'teachers', 'instructor', 'instructors', 'faculty'];
+  const q = question.toLowerCase();
+  return profKeywords.some(k => q.includes(k));
+}
+
+// Try to extract department from question (maps to DB department values)
+function extractDepartmentFromQuestion(question) {
+  const q = question.toLowerCase();
+  // Common department aliases
+  if (q.includes('bsit') || q.includes(' it ') || q.endsWith(' it') || q.startsWith('it ') || q.includes('information technology')) {
+    return 'BSIT';
+  }
+  if (q.includes('bscs') || q.includes(' cs ') || q.endsWith(' cs') || q.startsWith('cs ') || q.includes('computer science')) {
+    return 'BSCS';
+  }
+  if (q.includes('it?') || q.includes('it,')) {
+    return 'BSIT';
+  }
+  return null;
+}
+
 // Calculate relevance score for search results
 function calculateRelevance(result, question, tablePriority, matchType) {
   let score = 0;
@@ -236,7 +352,7 @@ app.post("/debug-search", async (req, res) => {
 });
 
 
-// AI ask route with database search + GitHub AI
+// AI ask route with database search + GitHub AI (with timeout & fallback)
 app.post("/ask", async (req, res) => {
   const { question } = req.body;
 
@@ -275,30 +391,48 @@ IMPORTANT INSTRUCTIONS:
 
 ${dbContext}`;
 
-    const response = await client.path("/chat/completions").post({
-      body: {
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-          {
-            role: "user",
-            content: question,
-          },
-        ],
-        model: model,
-        max_tokens: 100,
-        temperature: 0.8,
-      },
-    });
+    // Helper to enforce timeout on AI call
+    const withTimeout = (promise, ms) => {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), ms)),
+      ]);
+    };
 
-    if (isUnexpected(response)) {
-      throw response.body.error;
+    try {
+      const response = await withTimeout(
+        client.path("/chat/completions").post({
+          body: {
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: question },
+            ],
+            model: model,
+            max_tokens: 80,
+            temperature: 0.5,
+          },
+        }),
+        Number(process.env.AI_TIMEOUT_MS || 8000)
+      );
+
+      if (isUnexpected(response)) {
+        throw response.body.error;
+      }
+
+      const answer = response.body.choices[0].message.content;
+      return res.json({ answer });
+    } catch (aiErr) {
+      // Fallback to quick DB-based response
+      const first = dbResults[0];
+      const sample = first && (first.data || []).slice(0, 2);
+      let fallback = "I couldn't find specific info in the database right now. Please try rephrasing your question.";
+      if (first && sample && sample.length > 0) {
+        if (first.table === "rules") fallback = `Here are some rules I found: ${sample.map(r => r.description).filter(Boolean).join(" | ")}`;
+        else if (first.table === "professors") fallback = `Some professors: ${sample.map(p => p.name).filter(Boolean).join(", ")}`;
+        else fallback = `I found some info in ${first.table}.`;
+      }
+      return res.json({ answer: fallback });
     }
-
-    const answer = response.body.choices[0].message.content;
-    res.json({ answer });
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({
@@ -310,7 +444,7 @@ ${dbContext}`;
 
 // Admin API Routes
 app.get('/api/departments', (req, res) => {
-  db.query('SELECT * FROM departments', (err, results) => {
+  db.query('SELECT id, name, short_name, head_id AS head, admin_id FROM departments', (err, results) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
@@ -319,13 +453,16 @@ app.get('/api/departments', (req, res) => {
 });
 
 app.post('/api/departments', (req, res) => {
-  const { name, short_name, head, location } = req.body;
+  const { name, short_name } = req.body;
+  const head_id = null; // Not provided by UI
+  const admin_id = null; // Avoid FK error if no admins row exists
   db.query(
-    'INSERT INTO departments (name, short_name, head, location) VALUES (?, ?, ?, ?)',
-    [name, short_name, head, location],
+    'INSERT INTO departments (name, short_name, head_id, admin_id) VALUES (?, ?, ?, ?)',
+    [name, short_name, head_id, admin_id],
     (err, result) => {
       if (err) {
-        return res.status(500).json({ error: 'Database error' });
+        console.error('Departments insert error:', err);
+        return res.status(500).json({ error: 'Database error', details: err.message });
       }
       res.json({ id: result.insertId, message: 'Department created successfully' });
     }
@@ -334,17 +471,29 @@ app.post('/api/departments', (req, res) => {
 
 app.put('/api/departments/:id', (req, res) => {
   const { id } = req.params;
-  const { name, short_name, head, location } = req.body;
+  const { name, short_name } = req.body;
+  const head_id = null; // Not handled in UI
   db.query(
-    'UPDATE departments SET name = ?, short_name = ?, head = ?, location = ? WHERE id = ?',
-    [name, short_name, head, location, id],
+    'UPDATE departments SET name = ?, short_name = ?, head_id = ? WHERE id = ?',
+    [name, short_name, head_id, id],
     (err, result) => {
       if (err) {
-        return res.status(500).json({ error: 'Database error' });
+        console.error('Departments update error:', err);
+        return res.status(500).json({ error: 'Database error', details: err.message });
       }
       res.json({ message: 'Department updated successfully' });
     }
   );
+});
+
+// Departments structure (debug)
+app.get('/api/departments/structure', (req, res) => {
+  db.query('DESCRIBE departments', (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error', details: err.message });
+    }
+    res.json(results);
+  });
 });
 
 app.delete('/api/departments/:id', (req, res) => {

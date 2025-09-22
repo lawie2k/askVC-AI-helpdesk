@@ -16,12 +16,40 @@ export function Chat({messages, setMessages}: {
 }) {
 
     const BASE_URL = Platform.select({
-        ios: "http://192.168.1.9:5050",
-        android: "http://192.168.1.9:5050",
-        default: "http://192.168.1.9:5050",
+        ios: "http://192.168.1.23:5050",
+        android: "http://192.168.1.23:5050",
+        default: "http://192.168.1.23:5050",
     });
 
     const [isThinking, setIsThinking] = React.useState(false);
+
+    const renderEmailHighlightedText = (text: string) => {
+        const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig;
+        const parts: React.ReactNode[] = [];
+        let lastIndex = 0;
+        let segmentIndex = 0;
+
+        const matches = [...text.matchAll(emailRegex)];
+        matches.forEach((m) => {
+            const match = m[0];
+            const offset = m.index ?? 0;
+            if (offset > lastIndex) {
+                parts.push(
+                    <Text key={`t-${segmentIndex++}`}>{text.slice(lastIndex, offset)}</Text>
+                );
+            }
+            parts.push(
+                <Text key={`e-${segmentIndex++}`} className="text-blue-400">{match}</Text>
+            );
+            lastIndex = offset + match.length;
+        });
+
+        if (lastIndex < text.length) {
+            parts.push(<Text key={`t-${segmentIndex++}`}>{text.slice(lastIndex)}</Text>);
+        }
+
+        return <Text className="text-white">{parts}</Text>;
+    };
 
     const onSend = React.useCallback(async (messages: IMessage[] = []) => {
         setIsThinking(true);
@@ -92,6 +120,18 @@ export function Chat({messages, setMessages}: {
                 }}
                 placeholder="Ask UM"
                 isTyping={isThinking}
+                renderMessageText={(props) => {
+                    const { key, ...messageTextProps } = props as any;
+                    const msg = (messageTextProps.currentMessage || {}) as IMessage;
+                    if (msg && (msg.user as any)?._id === 2 && typeof msg.text === 'string') {
+                        return (
+                            <View className="pr-0">
+                                {renderEmailHighlightedText(msg.text)}
+                            </View>
+                        );
+                    }
+                    return <Text className="text-white">{(msg && msg.text) || ''}</Text>;
+                }}
                 renderInputToolbar={(props) => {
                     const { key, ...toolbarProps } = props as any;
                     return (
@@ -230,7 +270,14 @@ export function Chat({messages, setMessages}: {
                     <TouchableOpacity
                         onPress={() => {
                             setIsThinking(true);
-                            // Add behavior as needed
+                            const msg: IMessage = {
+                                _id: Date.now(),
+                                text: "who are the professors in IT?",
+                                createdAt: new Date(),
+                                user: { _id: 1 },
+                            };
+                            onSend([msg]);
+
                         }}
                         className="bg-[#3C3C3C] px-3 py-2 rounded-full"
                     >
@@ -239,12 +286,19 @@ export function Chat({messages, setMessages}: {
                     <TouchableOpacity
                         onPress={() => {
                             setIsThinking(true);
-                            // Add behavior as needed
+                            const msg: IMessage = {
+                                _id: Date.now(),
+                                text: "what are the rules of UM",
+                                createdAt: new Date(),
+                                user: { _id: 1 },
+                            };
+                            onSend([msg]);
                         }}
                         className="bg-[#3C3C3C] px-3 py-2 rounded-full"
                     >
-                        <Text className="text-white font-bold">📚 Programs</Text>
+                        <Text className="text-white font-bold">📚 Rules</Text>
                     </TouchableOpacity>
+
                 </View>
             )}
         </View>

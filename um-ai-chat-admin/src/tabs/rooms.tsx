@@ -32,10 +32,8 @@ export default function Rooms() {
     };
 
     const roomColumns = [
-        {field: 'id', headerName: 'ID', width: 60},
         {field: 'name', headerName: 'Room Name', width: 200},
         {field: 'location', headerName: 'Location', width: 200},
-        {field: 'admin_id', headerName: 'Admin ID', width: 100},
         {
             field: 'actions',
             headerName: 'Actions',

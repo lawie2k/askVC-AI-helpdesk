@@ -1,0 +1,6 @@
+[dotenv@17.2.2] injecting env (4) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.2] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+✅ Server running on http://localhost:5050
+✅ Server also accessible on http://192.168.1.11:5050
+📱 Make sure your phone is connected to the same WiFi network
+✅ Connected to MySQL database!

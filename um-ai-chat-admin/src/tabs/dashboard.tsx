@@ -38,24 +38,20 @@ export default function dashboard() {
     };
 
     const roomColumns = [
-        {field: 'id', headerName: 'ID'},
         {field: 'name', headerName: 'Room name'},
         {field: 'location', headerName: 'Location'},
     ];
     const officeColumns = [
-        {field: 'id', headerName: 'ID'},
         {field: 'name', headerName: 'Office name'},
         {field: 'location', headerName: 'Location'},
     ];
     const logColumns = [
-        {field: 'id', headerName: 'ID'},
         {field: 'admin_id', headerName: 'Admin id'},
         {field: 'action', headerName: 'Action'},
         {field: 'details', headerName: 'Details'},
         {field: 'created_at', headerName: 'Created at'},
     ];
     const reportColumns = [
-        {field: 'id', headerName: 'ID'},
         {field: 'admin_id', headerName: 'Admin id'},
         {field: 'title', headerName: 'Title'},
         {field: 'content', headerName: 'content'},
@@ -79,8 +75,7 @@ export default function dashboard() {
             </div>
           )}
           <div className="w-[1170px] h-[660px] mt-6 mx-10 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg pt-4 overflow-y-auto">
-    <h2 className="flex justify-center text-white text-xl font-bold mb-3">Rooms</h2>
+          <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto">
     {loading ? (
       <div className="w-full flex justify-center items-center">
         <div className="text-white">Loading...</div>
@@ -89,15 +84,14 @@ export default function dashboard() {
       <DataGrid 
         data={rooms} 
         columns={roomColumns}
-        height="270px"
+        height="325px"
         className="text-white text-[14px] bg-[#292929]"
         showSearch={false}
         pageSize={5}
       />
     )}
 </div>
-              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg pt-4 overflow-y-auto ">
-                  <h2 className=" flex justify-center text-white text-xl font-bold mb-3">Logs</h2>
+              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto ">
                   {loading ? (
                     <div className="flex justify-center items-center">
                       <div className="text-white">Loading...</div>
@@ -106,15 +100,15 @@ export default function dashboard() {
                     <DataGrid 
                       data={logs} 
                       columns={logColumns}
-                      height="270px"
+                      height="325px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
                       pageSize={5}
                     />
                   )}
               </div>
-              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg pt-4 overflow-y-auto">
-                  <h2 className=" flex justify-center text-white text-xl font-bold mb-3">Offices</h2>
+              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto">
+
                   {loading ? (
                     <div className="flex justify-center items-center">
                       <div className="text-white">Loading...</div>
@@ -123,15 +117,14 @@ export default function dashboard() {
                     <DataGrid 
                       data={offices} 
                       columns={officeColumns}
-                      height="270px"
+                      height="325px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
                       pageSize={5}
                     />
                   )}
               </div>
-              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg pt-4 overflow-y-auto">
-                  <h2 className=" flex justify-center text-white text-xl font-bold mb-3">Reports</h2>
+              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto">
                   {loading ? (
                     <div className="flex justify-center items-center">
                       <div className="text-white">Loading...</div>
@@ -140,7 +133,7 @@ export default function dashboard() {
                     <DataGrid 
                       data={reports} 
                       columns={reportColumns}
-                      height="270px"
+                      height="325px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
                       pageSize={5}

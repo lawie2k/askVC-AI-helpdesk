@@ -44,7 +44,6 @@ export default function professor(){
     }
   };
   const professorColumns = [
-    {field: 'id', headerName: 'ID', width: 60},
     {field: 'name', headerName: 'Name', width: 150},
     {field: 'position', headerName: 'Position', width: 150},
     {field: 'email', headerName: 'Email', width: 200},
@@ -75,7 +74,7 @@ export default function professor(){
     try {
       setLoading(true);
       await professorAPI.create(newProfessor);
-      await loadProfessors(); // Reload the list
+      await loadProfessors();
       setNewProfessor({
         name: "",
         position: "",
@@ -92,7 +91,7 @@ export default function professor(){
     try {
       setLoading(true);
       await professorAPI.update(id, updatedData);
-      await loadProfessors(); // Reload the list
+      await loadProfessors();
     } catch (error) {
       console.error('Error updating professor:', error);
     } finally {
@@ -105,7 +104,7 @@ export default function professor(){
       try {
         setLoading(true);
         await professorAPI.delete(id);
-        await loadProfessors(); // Reload the list
+        await loadProfessors();
       } catch (error) {
         console.error('Error deleting professor:', error);
       } finally {
@@ -138,7 +137,7 @@ export default function professor(){
     try {
       setLoading(true);
       await professorAPI.update(editingProfessor.id, editForm);
-      await loadProfessors(); // Reload the list
+      await loadProfessors();
       cancelEdit();
     } catch (error) {
       console.error('Error updating professor:', error);
@@ -153,8 +152,7 @@ export default function professor(){
       <h1 className="">Professor</h1>
     </div>
       <div className="w-[1170px] h-[800px] mt-6 mx-10 flex flex-col">
-        
-        {/* Form Row - Single form that switches between Add and Edit */}
+
         <div className="">
           <div className="flex flex-wrap gap-4">
             <div className="flex flex-col">
@@ -189,7 +187,6 @@ export default function professor(){
                 <option value="Associate Professor I">Associate Professor I</option>
                 <option value="Professor I">Professor I</option>
                 <option value="Program Head">Program Head</option>
-                <option value="Department Chair">Department Chair</option>
               </select>
             </div>
 
@@ -257,7 +254,7 @@ export default function professor(){
           </div>
         </div>
 
-        <div className="w-full h-[590px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg p-4 overflow-y-auto">
+        <div className="w-full h-[590px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg overflow-y-auto">
           {loading ?(
             <div className="flex justify-center items-center h-full">
               <div className="text-white text-xl">Loading...</div>
