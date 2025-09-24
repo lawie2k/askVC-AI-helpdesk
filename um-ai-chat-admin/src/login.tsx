@@ -20,6 +20,7 @@ export default function login() {
                 type="email"
                 inputMode="email"
                 autoComplete="email"
+                autoCapitalize="false"
               />
               <label className="text-[20px] font-extrabold mt-8 w-[310px] text-left">Password</label>
               <input

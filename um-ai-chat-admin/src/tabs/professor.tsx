@@ -10,14 +10,16 @@ export default function professor(){
     name: "",
     position: "",
     email: "",
-    department: ""
+    department: "",
+    program: ""
   });
   const [editingProfessor, setEditingProfessor] = useState<any>(null);
   const [editForm, setEditForm] = useState({
     name: "",
     position: "",
     email: "",
-    department: ""
+    department: "",
+    program: ""
   });
   useEffect(() => {
     loadProfessors();
@@ -27,7 +29,12 @@ export default function professor(){
     try {
       setLoading(true);
       const professors = await professorAPI.getAll();
-      setProfessors(professors);
+      const normalized = (professors || []).map((p: any) => ({
+        ...p,
+        program: typeof p.program === 'undefined' || p.program === null ? '' : p.program
+      }));
+      console.log('Professors loaded:', normalized);
+      setProfessors(normalized);
     } catch (error) {
       console.error('Error loading professors:', error);
     } finally {
@@ -48,6 +55,9 @@ export default function professor(){
     {field: 'position', headerName: 'Position', width: 150},
     {field: 'email', headerName: 'Email', width: 200},
     {field: 'department', headerName: 'Department', width: 120},
+    {field: 'program', headerName: 'Program', width: 160, cellRenderer: ({ value }: any) => (
+      <span>{value || '-'}</span>
+    )},
     {
       field: 'actions',
       headerName: 'Actions',
@@ -79,7 +89,8 @@ export default function professor(){
         name: "",
         position: "",
         email: "",
-        department: ""
+        department: "",
+        program: ""
       });
     } catch (error) {
       console.error('Error adding professor:', error);
@@ -119,7 +130,8 @@ export default function professor(){
       name: professor.name,
       position: professor.position,
       email: professor.email,
-      department: professor.department
+      department: professor.department,
+      program: professor.program || ""
     });
   };
 
@@ -129,7 +141,8 @@ export default function professor(){
       name: "",
       position: "",
       email: "",
-      department: ""
+      department: "",
+      program: ""
     });
   };
 
@@ -215,16 +228,29 @@ export default function professor(){
                 className="w-[200px] h-[40px] px-3 py-2 text-black rounded"
               >
                 <option value="">-- Choose Department --</option>
-                <option value="BSIT">BSIT</option>
-                <option value="BSCS">BSCS</option>
-                <option value="BSEE">BSEE</option>
                 {departments.map((dept) => (
-                  <option key={dept.id} value={dept.name}>
-                    {dept.name}
+                  <option key={dept.id} value={dept.short_name}>
+                    {dept.short_name}
                   </option>
                 ))}
               </select>
             </div>
+
+              <div className="flex flex-col">
+                  <label className="text-white text-sm mb-1">Program</label>
+                  <select
+                    value={editingProfessor ? editForm.program : newProfessor.program}
+                    onChange={(e) => editingProfessor
+                      ? setEditForm({ ...editForm, program: e.target.value })
+                      : setNewProfessor({ ...newProfessor, program: e.target.value })
+                    }
+                    className="w-[100px] h-[40px] px-3 py-2 text-black rounded"
+                  >
+                    <option value=""> Program</option>
+                    <option value="BSIT">BSIT</option>
+                    <option value="BSCS">BSCS</option>
+                  </select>
+              </div>
 
             <div className="flex flex-col justify-end">
               {editingProfessor ? (

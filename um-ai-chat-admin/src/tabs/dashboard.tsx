@@ -40,6 +40,20 @@ export default function dashboard() {
     const roomColumns = [
         {field: 'name', headerName: 'Room name'},
         {field: 'location', headerName: 'Location'},
+        {field: 'status', headerName: 'Status', width: 180, cellRenderer: (params: any) => (
+                <div
+                    className={
+                        `px-3 py-1 w-[90px] text-center rounded font-semibold ` +
+                        (params.value === 'Occupied'
+                            ? 'bg-red-600 hover:bg-red-700'
+                            : params.value === 'Reserved'
+                                ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
+                                : 'bg-green-600 hover:bg-green-700')
+                    }
+                >
+                    {params.value || 'Vacant'}
+                </div>
+            )},
     ];
     const officeColumns = [
         {field: 'name', headerName: 'Office name'},

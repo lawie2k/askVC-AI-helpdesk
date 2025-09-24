@@ -3,8 +3,9 @@ const cors = require("cors");
 const ModelClient = require("@azure-rest/ai-inference").default;
 const { isUnexpected } = require("@azure-rest/ai-inference");
 const { AzureKeyCredential } = require("@azure/core-auth");
+const path = require("path");
 const db = require("./database");
-require("dotenv").config();
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const app = express();
 app.use(cors());
@@ -23,12 +24,21 @@ app.get("/auth/_debug", (req, res) => {
   }
 });
 
-// Initialize GitHub AI
+// Initialize GitHub AI (optional)
 const token = process.env.GITHUB_TOKEN;
 const endpoint = "https://models.github.ai/inference";
 const model = process.env.MODEL_ID || "openai/gpt-4o-mini";
-
-const client = ModelClient(endpoint, new AzureKeyCredential(token));
+let client = null;
+try {
+  if (token && typeof token === 'string' && token.trim().length > 0) {
+    client = ModelClient(endpoint, new AzureKeyCredential(token));
+  } else {
+    console.warn('GITHUB_TOKEN not set. AI features disabled.');
+  }
+} catch (e) {
+  console.warn('Failed to initialize AI client. AI features disabled.', String(e));
+  client = null;
+}
 
 // Ensure database schema: add rooms.status if missing
 function ensureRoomsStatusColumn() {
@@ -85,6 +95,7 @@ function ensureRoomsTypeColumn() {
 
 ensureRoomsStatusColumn();
 ensureRoomsTypeColumn();
+
 
 // Function to search database for relevant information
 async function searchDatabase(question) {
@@ -381,7 +392,7 @@ function removeDuplicates(results) {
 function getSearchableColumns(table) {
   const columnMap = {
     departments: "name, head, location",
-    professors: "name, position, email, department",
+    professors: "name, position, email, department, program",
     rooms: "name, location, status, type",
     offices: "name, location",
     rules: "description",
@@ -455,44 +466,48 @@ ${dbContext}`;
       ]);
     };
 
-    try {
-      const response = await withTimeout(
-        client.path("/chat/completions").post({
-          body: {
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: question },
-            ],
-            model: model,
-            max_tokens: 80,
-            temperature: 0.5,
-          },
-        }),
-        Number(process.env.AI_TIMEOUT_MS || 8000)
-      );
+    if (client) {
+      try {
+        const response = await withTimeout(
+          client.path("/chat/completions").post({
+            body: {
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: question },
+              ],
+              model: model,
+              max_tokens: 80,
+              temperature: 0.5,
+            },
+          }),
+          Number(process.env.AI_TIMEOUT_MS || 8000)
+        );
 
-      if (isUnexpected(response)) {
-        throw response.body.error;
-      }
-
-      const answer = response.body.choices[0].message.content;
-      return res.json({ answer });
-    } catch (aiErr) {
-      // Fallback to quick DB-based response
-      const first = dbResults[0];
-      const sample = first && (first.data || []).slice(0, 2);
-      let fallback = "I couldn't find specific info in the database right now. Please try rephrasing your question.";
-      if (first && sample && sample.length > 0) {
-        if (first.table === "rules") fallback = `Here are some rules I found: ${sample.map(r => r.description).filter(Boolean).join(" | ")}`;
-        else if (first.table === "professors") fallback = `Some professors: ${sample.map(p => p.name).filter(Boolean).join(", ")}`;
-        else if (first.table === "rooms") {
-          const roomsAvail = sample.map(r => `${r.name || 'Room'}: ${r.status || 'Vacant'}`).join(" | ");
-          fallback = `Rooms status: ${roomsAvail}`;
+        if (isUnexpected(response)) {
+          throw response.body.error;
         }
-        else fallback = `I found some info in ${first.table}.`;
+
+        const answer = response.body.choices[0].message.content;
+        return res.json({ answer });
+      } catch (aiErr) {
+        // continue to fallback below
       }
-      return res.json({ answer: fallback });
     }
+
+    // Fallback to quick DB-based response
+    const first = dbResults[0];
+    const sample = first && (first.data || []).slice(0, 2);
+    let fallback = "I couldn't find specific info in the database right now. Please try rephrasing your question.";
+    if (first && sample && sample.length > 0) {
+      if (first.table === "rules") fallback = `Here are some rules I found: ${sample.map(r => r.description).filter(Boolean).join(" | ")}`;
+      else if (first.table === "professors") fallback = `Some professors: ${sample.map(p => p.name).filter(Boolean).join(", ")}`;
+      else if (first.table === "rooms") {
+        const roomsAvail = sample.map(r => `${r.name || 'Room'}: ${r.status || 'Vacant'}`).join(" | ");
+        fallback = `Rooms status: ${roomsAvail}`;
+      }
+      else fallback = `I found some info in ${first.table}.`;
+    }
+    return res.json({ answer: fallback });
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({
@@ -746,41 +761,103 @@ app.delete('/api/offices/:id', (req, res) => {
 
 // Professor API Routes
 app.get('/api/professors', (req, res) => {
+  // Ensure schema is up to date
+  try { ensureProfessorsProgramColumn(); } catch(_) {}
   db.query('SELECT * FROM professors', (err, results) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
+    }
+    const withProgram = (results || []).map(r => ({
+      ...r,
+      program: typeof r.program === 'undefined' || r.program === null ? '' : r.program
+    }));
+    res.json(withProgram);
+  });
+});
+
+// Professors structure (debug)
+app.get('/api/professors/structure', (req, res) => {
+  db.query('DESCRIBE professors', (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error', details: err.message });
     }
     res.json(results);
   });
 });
 
+// Professors migrate: ensure program column
+app.post('/api/professors/migrate', (req, res) => {
+  db.query("SHOW COLUMNS FROM professors LIKE 'program'", (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error', details: err.message });
+    }
+    if (results && results.length > 0) {
+      return res.json({ ok: true, message: 'program column already exists' });
+    }
+    db.query(
+      "ALTER TABLE professors ADD COLUMN program VARCHAR(50) NULL AFTER department",
+      (alterErr) => {
+        if (alterErr) {
+          return res.status(500).json({ ok: false, error: 'Migration failed', details: alterErr.message });
+        }
+        return res.json({ ok: true, message: 'program column added successfully' });
+      }
+    );
+  });
+});
+
 app.post('/api/professors', (req, res) => {
-  const { name, position, email, department } = req.body;
-  db.query(
-    'INSERT INTO professors (name, position, email, department) VALUES (?, ?, ?, ?)',
-    [name, position, email, department],
+  const { name, position, email, department, program } = req.body;
+  const insert = () => db.query(
+    'INSERT INTO professors (name, position, email, department, program) VALUES (?, ?, ?, ?, ?)',
+    [name, position, email, department, program || null],
     (err, result) => {
       if (err) {
-        return res.status(500).json({ error: 'Database error' });
+        // If program column is missing, add it then retry once
+        if (err && (err.code === 'ER_BAD_FIELD_ERROR' || err.errno === 1054)) {
+          return db.query(
+            "ALTER TABLE professors ADD COLUMN program VARCHAR(50) NULL AFTER department",
+            (alterErr) => {
+              if (alterErr) {
+                return res.status(500).json({ error: 'Database error', details: alterErr.message });
+              }
+              return insert();
+            }
+          );
+        }
+        return res.status(500).json({ error: 'Database error', details: err.message });
       }
       res.json({ id: result.insertId, message: 'Professor created successfully' });
     }
   );
+  insert();
 });
 
 app.put('/api/professors/:id', (req, res) => {
   const { id } = req.params;
-  const { name, position, email, department } = req.body;
-  db.query(
-    'UPDATE professors SET name = ?, position = ?, email = ?, department = ? WHERE id = ?',
-    [name, position, email, department, id],
+  const { name, position, email, department, program } = req.body;
+  const update = () => db.query(
+    'UPDATE professors SET name = ?, position = ?, email = ?, department = ?, program = COALESCE(?, program) WHERE id = ?',
+    [name, position, email, department, program ?? null, id],
     (err, result) => {
       if (err) {
-        return res.status(500).json({ error: 'Database error' });
+        if (err && (err.code === 'ER_BAD_FIELD_ERROR' || err.errno === 1054)) {
+          return db.query(
+            "ALTER TABLE professors ADD COLUMN program VARCHAR(50) NULL AFTER department",
+            (alterErr) => {
+              if (alterErr) {
+                return res.status(500).json({ error: 'Database error', details: alterErr.message });
+              }
+              return update();
+            }
+          );
+        }
+        return res.status(500).json({ error: 'Database error', details: err.message });
       }
       res.json({ message: 'Professor updated successfully' });
     }
   );
+  update();
 });
 
 app.delete('/api/professors/:id', (req, res) => {
