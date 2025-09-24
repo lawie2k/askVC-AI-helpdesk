@@ -35,7 +35,6 @@ export default function Departments() {
     };
 
     const departmentColumns = [
-        {field: 'id', headerName: 'ID', width: 60},
         {field: 'name', headerName: 'Department Name', width: 200},
         {field: 'short_name', headerName: 'Short Name', width: 120},
         {field: 'head', headerName: 'Head', width: 150},
@@ -220,7 +219,7 @@ export default function Departments() {
                     height="585px"
                     className="text-white text-[14px] bg-[#292929]"
                     showSearch={false}
-                    pageSize={5} 
+                    pageSize={14}
                 />
             )}
         </div>

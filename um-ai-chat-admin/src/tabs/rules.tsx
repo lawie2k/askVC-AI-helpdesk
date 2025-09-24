@@ -134,11 +134,13 @@ export default function rules () {
                 className="flex-1 px-3 py-2 text-black rounded"
                 placeholder="Add new rule description"
                 value={newrule}
-                onChange={(e) => setnewrule(e.target.value)} 
+                onChange={(e) => setnewrule(e.target.value)}
+                disabled={!!editingRule}
               />
               <button 
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold" 
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold"
                 onClick={addRule}
+                disabled={!!editingRule}
               >
                 Add
               </button>
@@ -185,7 +187,7 @@ export default function rules () {
               height="585px"
               className="text-white text-[14px] bg-[#292929]"
               showSearch={false}
-              pageSize={5}
+              pageSize={14}
               
               />
               

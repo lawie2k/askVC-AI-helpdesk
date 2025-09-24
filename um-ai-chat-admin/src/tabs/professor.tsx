@@ -266,7 +266,7 @@ export default function professor(){
               height="585px"
               className="text-white text-[14px] bg-[#292929]"
               showSearch={false}
-              pageSize={5} 
+              pageSize={14}
             />
           )}
 

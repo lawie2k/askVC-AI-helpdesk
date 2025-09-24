@@ -48,7 +48,7 @@ export default function logs (){
                                 height="655px"
                                 className="text-white text-[14px] bg-[#292929]"
                                 showSearch={false}
-                                pageSize={10} 
+                                pageSize={14}
                             />
                         )}
                     </div>

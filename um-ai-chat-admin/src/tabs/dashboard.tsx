@@ -87,7 +87,7 @@ export default function dashboard() {
         height="325px"
         className="text-white text-[14px] bg-[#292929]"
         showSearch={false}
-        pageSize={5}
+        pageSize={8}
       />
     )}
 </div>
@@ -103,7 +103,7 @@ export default function dashboard() {
                       height="325px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
-                      pageSize={5}
+                      pageSize={8}
                     />
                   )}
               </div>
@@ -120,7 +120,7 @@ export default function dashboard() {
                       height="325px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
-                      pageSize={5}
+                      pageSize={8}
                     />
                   )}
               </div>
@@ -136,7 +136,7 @@ export default function dashboard() {
                       height="325px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
-                      pageSize={5}
+                      pageSize={8}
                     />
                   )}
               </div>

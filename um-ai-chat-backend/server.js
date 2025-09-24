@@ -30,6 +30,62 @@ const model = process.env.MODEL_ID || "openai/gpt-4o-mini";
 
 const client = ModelClient(endpoint, new AzureKeyCredential(token));
 
+// Ensure database schema: add rooms.status if missing
+function ensureRoomsStatusColumn() {
+  try {
+    db.query("SHOW COLUMNS FROM rooms LIKE 'status'", (err, results) => {
+      if (err) {
+        console.warn('Schema check failed for rooms.status:', err.message);
+        return;
+      }
+      if (!results || results.length === 0) {
+        console.log('Adding missing column rooms.status ...');
+        db.query(
+          "ALTER TABLE rooms ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'Vacant'",
+          (alterErr) => {
+            if (alterErr) {
+              console.warn('Failed to add rooms.status column:', alterErr.message);
+            } else {
+              console.log('Added rooms.status column successfully');
+            }
+          }
+        );
+      }
+    });
+  } catch (e) {
+    console.warn('Schema ensure error:', String(e));
+  }
+}
+
+function ensureRoomsTypeColumn() {
+  try {
+    db.query("SHOW COLUMNS FROM rooms LIKE 'type'", (err, results) => {
+      if (err) {
+        console.warn('Schema check failed for rooms.type:', err.message);
+        return;
+      }
+      if (!results || results.length === 0) {
+        console.log('Adding missing column rooms.type ...');
+        db.query(
+          "ALTER TABLE rooms ADD COLUMN type VARCHAR(30) NOT NULL DEFAULT 'Lecture'",
+          (alterErr) => {
+            if (alterErr) {
+              console.warn('Failed to add rooms.type column:', alterErr.message);
+            } else {
+              console.log('Added rooms.type column successfully');
+            }
+          }
+        );
+      }
+    });
+  } catch (e) {
+    console.warn('Schema ensure error:', String(e));
+  }
+}
+
+ensureRoomsStatusColumn();
+ensureRoomsTypeColumn();
+
 // Function to search database for relevant information
 async function searchDatabase(question) {
   return new Promise((resolve) => {
@@ -326,7 +382,7 @@ function getSearchableColumns(table) {
   const columnMap = {
     departments: "name, head, location",
     professors: "name, position, email, department",
-    rooms: "name, location",
+    rooms: "name, location, status, type",
     offices: "name, location",
     rules: "description",
     settings: "setting_name, setting_value, description",
@@ -429,6 +485,10 @@ ${dbContext}`;
       if (first && sample && sample.length > 0) {
         if (first.table === "rules") fallback = `Here are some rules I found: ${sample.map(r => r.description).filter(Boolean).join(" | ")}`;
         else if (first.table === "professors") fallback = `Some professors: ${sample.map(p => p.name).filter(Boolean).join(", ")}`;
+        else if (first.table === "rooms") {
+          const roomsAvail = sample.map(r => `${r.name || 'Room'}: ${r.status || 'Vacant'}`).join(" | ");
+          fallback = `Rooms status: ${roomsAvail}`;
+        }
         else fallback = `I found some info in ${first.table}.`;
       }
       return res.json({ answer: fallback });
@@ -528,34 +588,101 @@ app.get('/api/rooms/structure', (req, res) => {
 
 
 app.post('/api/rooms', (req, res) => {
-  const { name, location } = req.body;
-  console.log('Received data:', { name, location });
-  db.query(
-    'INSERT INTO rooms (name, location) VALUES (?, ?)',
-    [name, location],
-    (err, result) => {
-      if (err) {
-        console.error('Database error:', err);
-        return res.status(500).json({ error: 'Database error', details: err.message });
+  const { name, location, status, type } = req.body;
+  console.log('Received data:', { name, location, status, type });
+
+  // Try to insert with status if provided; fall back if column doesn't exist
+  const insertWithStatus = typeof status !== 'undefined';
+  const insertWithType = typeof type !== 'undefined';
+
+  if (insertWithStatus || insertWithType) {
+    db.query(
+      'INSERT INTO rooms (name, location, status, type) VALUES (?, ?, ?, ?)',
+      [name, location, status ?? 'Vacant', type ?? 'Lecture'],
+      (err, result) => {
+        if (err) {
+          // If status column doesn't exist, fall back to inserting without status
+          if (err && (err.code === 'ER_BAD_FIELD_ERROR' || err.errno === 1054)) {
+            db.query(
+              'INSERT INTO rooms (name, location) VALUES (?, ?)',
+              [name, location],
+              (fallbackErr, fallbackResult) => {
+                if (fallbackErr) {
+                  console.error('Database error (fallback insert):', fallbackErr);
+                  return res.status(500).json({ error: 'Database error', details: fallbackErr.message });
+                }
+                return res.json({ id: fallbackResult.insertId, message: 'Room created successfully (status not stored)' });
+              }
+            );
+          } else {
+            console.error('Database error:', err);
+            return res.status(500).json({ error: 'Database error', details: err.message });
+          }
+        } else {
+          return res.json({ id: result.insertId, message: 'Room created successfully' });
+        }
       }
-      res.json({ id: result.insertId, message: 'Room created successfully' });
-    }
-  );
+    );
+  } else {
+    db.query(
+      'INSERT INTO rooms (name, location) VALUES (?, ?)',
+      [name, location],
+      (err, result) => {
+        if (err) {
+          console.error('Database error:', err);
+          return res.status(500).json({ error: 'Database error', details: err.message });
+        }
+        res.json({ id: result.insertId, message: 'Room created successfully' });
+      }
+    );
+  }
 });
 
 app.put('/api/rooms/:id', (req, res) => {
   const { id } = req.params;
-  const { name, location } = req.body;
-  db.query(
-    'UPDATE rooms SET name = ?, location = ? WHERE id = ?',
-    [name, location, id],
-    (err, result) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
+  const { name, location, status, type } = req.body;
+
+  const updateWithStatus = typeof status !== 'undefined';
+  const updateWithType = typeof type !== 'undefined';
+
+  if (updateWithStatus || updateWithType) {
+    db.query(
+      'UPDATE rooms SET name = ?, location = ?, status = COALESCE(?, status), type = COALESCE(?, type) WHERE id = ?',
+      [name, location, status ?? null, type ?? null, id],
+      (err, result) => {
+        if (err) {
+          // Fall back if status column doesn't exist
+          if (err && (err.code === 'ER_BAD_FIELD_ERROR' || err.errno === 1054)) {
+            db.query(
+              'UPDATE rooms SET name = ?, location = ? WHERE id = ?',
+              [name, location, id],
+              (fallbackErr) => {
+                if (fallbackErr) {
+                  return res.status(500).json({ error: 'Database error', details: fallbackErr.message });
+                }
+                return res.json({ message: 'Room updated successfully (status not stored)' });
+              }
+            );
+          } else {
+            return res.status(500).json({ error: 'Database error', details: err.message });
+          }
+        } else {
+          return res.json({ message: 'Room updated successfully' });
+        }
       }
-      res.json({ message: 'Room updated successfully' });
-    }
-  );
+    );
+  } else {
+    db.query(
+      'UPDATE rooms SET name = ?, location = ? WHERE id = ?',
+      [name, location, id],
+      (err) => {
+        if (err) {
+          return res.status(500).json({ error: 'Database error', details: err.message });
+        }
+        res.json({ message: 'Room updated successfully' });
+      }
+    );
+  }
 });
 
 app.delete('/api/rooms/:id', (req, res) => {

@@ -7,12 +7,16 @@ export default function Rooms() {
     const [loading, setLoading] = useState(false);
     const [newRoom, setNewRoom] = useState({
         name: "",
-        location: ""
+        location: "",
+        status: "Vacant",
+        type: "Lecture"
     });
     const [editingRoom, setEditingRoom] = useState<any>(null);
     const [editForm, setEditForm] = useState({
         name: "",
-        location: ""
+        location: "",
+        status: "Vacant",
+        type: "Lecture"
     });
 
     useEffect(() => {
@@ -34,6 +38,23 @@ export default function Rooms() {
     const roomColumns = [
         {field: 'name', headerName: 'Room Name', width: 200},
         {field: 'location', headerName: 'Location', width: 200},
+        {field: 'type', headerName: 'Type', width: 140},
+        {field: 'status', headerName: 'Status', width: 180, cellRenderer: (params: any) => (
+            <button
+                className={
+                    `px-3 py-1 rounded font-semibold ` +
+                    (params.value === 'Occupied'
+                        ? 'bg-red-600 hover:bg-red-700'
+                        : params.value === 'Reserved'
+                        ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
+                        : 'bg-green-600 hover:bg-green-700')
+                }
+                onClick={() => toggleStatus(params.row)}
+                title="Toggle status"
+            >
+                {params.value || 'Vacant'}
+            </button>
+        )},
         {
             field: 'actions',
             headerName: 'Actions',
@@ -64,7 +85,9 @@ export default function Rooms() {
             await loadRooms();
             setNewRoom({
                 name: "",
-                location: ""
+                location: "",
+                status: "Vacant",
+                type: "Lecture"
             });
         } catch (error) {
             console.error('Error adding room:', error);
@@ -77,7 +100,9 @@ export default function Rooms() {
         setEditingRoom(room);
         setEditForm({
             name: room.name,
-            location: room.location
+            location: room.location,
+            status: room.status || 'Vacant',
+            type: room.type || 'Lecture'
         });
     };
 
@@ -85,7 +110,9 @@ export default function Rooms() {
         setEditingRoom(null);
         setEditForm({
             name: "",
-            location: ""
+            location: "",
+            status: "Vacant",
+            type: "Lecture"
         });
     };
 
@@ -97,6 +124,25 @@ export default function Rooms() {
             cancelEdit();
         } catch (error) {
             console.error('Error updating room:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getNextStatus = (current?: string) => {
+        if (current === 'Vacant' || !current) return 'Reserved';
+        if (current === 'Reserved') return 'Occupied';
+        return 'Vacant';
+    };
+
+    const toggleStatus = async (room: any) => {
+        const next = getNextStatus(room.status);
+        try {
+            setLoading(true);
+            await roomAPI.update(room.id, { name: room.name, location: room.location, status: next });
+            await loadRooms();
+        } catch (error) {
+            console.error('Error toggling status:', error);
         } finally {
             setLoading(false);
         }
@@ -154,6 +200,24 @@ export default function Rooms() {
                                 />
                             </div>
 
+                            {/* Room Type */}
+                            <div className="flex flex-col">
+                                <label className="text-white text-sm mb-1">Type</label>
+                                <select
+                                    className="w-[200px] px-3 py-2 text-black rounded"
+                                    value={editingRoom ? editForm.type : newRoom.type}
+                                    onChange={(e) => editingRoom
+                                        ? setEditForm({ ...editForm, type: e.target.value })
+                                        : setNewRoom({ ...newRoom, type: e.target.value })
+                                    }
+                                >
+                                    <option value="Lecture">Lecture</option>
+                                    <option value="ComLab">ComLab</option>
+                                </select>
+                            </div>
+
+                            {/* Status is set automatically to Vacant on add and toggled via button in the grid */}
+
 
                             <div className="flex flex-col justify-end">
                                 {editingRoom ? (
@@ -195,7 +259,7 @@ export default function Rooms() {
                                 height="585px"
                                 className="text-white text-[14px] bg-[#292929]"
                                 showSearch={false}
-                                pageSize={5} 
+                                pageSize={14}
                             />
                         )}
                     </div>
