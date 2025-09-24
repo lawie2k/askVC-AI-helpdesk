@@ -45,7 +45,7 @@ export default function MainChat() {
                             <FontAwesomeIcon icon={faTimes} color="#ffffff" size={20} />
                         </TouchableOpacity>
                         <View className="p-4">
-                            <Text className="text-white text-3xl mb-4">Menu</Text>
+                            <Text className="text-[#900C27] text-3xl mb-4">Menu</Text>
 
                             <Pressable
                                 accessibilityRole="button"

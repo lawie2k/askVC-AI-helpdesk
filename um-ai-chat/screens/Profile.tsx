@@ -45,20 +45,23 @@ export default function Profile(){
                     </View>
 
                     <View className="flex items-center ">
-                        <View className=" w-[360px] h-[140px] bg-[#3C3C3C] rounded-lg px-3">
+                        <View className=" w-[360px] h-[100px] bg-[#3C3C3C] rounded-lg px-3">
                             <Text className="text-white text-[18px] py-4 font-extrabold">
                                 Email
                             </Text>
                             <Text className="text-white text-[16px] font-bold">
                                 {email || "—"}
                             </Text>
+                        </View>
 
-                            <TouchableOpacity onPress={() =>{
+                            <TouchableOpacity
+                                className="w-[360px] h-[50px] mt-5 bg-[#3C3C3C] rounded-lg px-3"
+                                onPress={() =>{
                                 navigation.navigate("ResetPass" as never)
                             }}>
                                 <Text className="text-white py-4 font-bold">Reset Password</Text>
                             </TouchableOpacity>
-                        </View>
+
                     </View>
                 </View>
 
