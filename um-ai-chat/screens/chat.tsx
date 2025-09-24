@@ -7,6 +7,7 @@ import {
   Composer,
   Send,
   Bubble,
+  Time,
   Message,
 } from "react-native-gifted-chat";
 
@@ -16,9 +17,9 @@ export function Chat({messages, setMessages}: {
 }) {
 
     const BASE_URL = Platform.select({
-        ios: "http://192.168.1.23:5050",
-        android: "http://192.168.1.23:5050",
-        default: "http://192.168.1.23:5050",
+        ios: "http://172.19.129.91:5050",
+        android: "http://172.19.129.91:5050",
+        default: "http://172.19.129.91:5050",
     });
 
     const [isThinking, setIsThinking] = React.useState(false);
@@ -120,6 +121,19 @@ export function Chat({messages, setMessages}: {
                 }}
                 placeholder="Ask UM"
                 isTyping={isThinking}
+                renderTime={(props) => {
+                    return (
+                        <View className="pr-[-3px] pt-1">
+                            <Time
+                                {...props}
+                                timeTextStyle={{
+                                    left: { color: "#9CA3AF" },
+                                    right: { color: "#9CA3AF" },
+                                }}
+                            />
+                        </View>
+                    );
+                }}
                 renderMessageText={(props) => {
                     const { key, ...messageTextProps } = props as any;
                     const msg = (messageTextProps.currentMessage || {}) as IMessage;
@@ -198,16 +212,26 @@ export function Chat({messages, setMessages}: {
                             wrapperStyle={{
                                 right: {
                                     backgroundColor: "#3C3C3C",
+                                    textAlign: "right",
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 8,
+                                    maxWidth: 200,
+                                    width:"auto",
+                                    textSize: 12,
                                 },
                                 left: {
                                     backgroundColor: "#292929",
                                     marginLeft: -50,
                                     maxWidth: 250,
+                                        paddingHorizontal: 12,
+                                        paddingVertical: 8,
+                                        textSize: 12,
                                 },
                             }}
                             textStyle={{
                                 left: {
-                                    color: "white",
+                                    color: "white"
+                        
                                 },
                             }}
                             containerStyle={{
