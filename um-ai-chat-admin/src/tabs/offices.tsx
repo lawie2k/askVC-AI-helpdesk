@@ -35,7 +35,6 @@ export default function offices() {
     const officeColumns = [
         {field: 'name', headerName: 'Office Name', width: 200},
         {field: 'location', headerName: 'Location', width: 200},
-        {field: 'admin_id', headerName: 'Admin ID', width: 100},
         {
             field: 'actions',
             headerName: 'Actions',
@@ -61,6 +60,12 @@ export default function offices() {
 
     const addOffice = async () => {
         try {
+            const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+            const required = ['name', 'location'];
+            if (!hasAllRequired(newOffice as any, required)) {
+                alert('Please fill out all required fields.');
+                return;
+            }
             setLoading(true);
             await officeAPI.create(newOffice);
             await loadOffices();
@@ -93,6 +98,12 @@ export default function offices() {
 
     const saveEdit = async () => {
         try {
+            const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+            const required = ['name', 'location'];
+            if (!hasAllRequired(editForm as any, required)) {
+                alert('Please fill out all required fields.');
+                return;
+            }
             setLoading(true);
             await officeAPI.update(editingOffice.id, editForm);
             await loadOffices();

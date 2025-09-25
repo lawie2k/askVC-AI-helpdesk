@@ -82,6 +82,12 @@ export default function professor(){
   ];
   const addProfessor = async () => {
     try {
+      const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+      const required = ['name', 'position', 'email', 'department'];
+      if (!hasAllRequired(newProfessor as any, required)) {
+        alert('Please fill out all required fields.');
+        return;
+      }
       setLoading(true);
       await professorAPI.create(newProfessor);
       await loadProfessors();
@@ -148,6 +154,12 @@ export default function professor(){
 
   const saveEdit = async () => {
     try {
+      const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+      const required = ['name', 'position', 'email', 'department'];
+      if (!hasAllRequired(editForm as any, required)) {
+        alert('Please fill out all required fields.');
+        return;
+      }
       setLoading(true);
       await professorAPI.update(editingProfessor.id, editForm);
       await loadProfessors();
@@ -199,7 +211,6 @@ export default function professor(){
                 <option value="Assistant Professor II">Assistant Professor II</option>
                 <option value="Associate Professor I">Associate Professor I</option>
                 <option value="Professor I">Professor I</option>
-                <option value="Program Head">Program Head</option>
               </select>
             </div>
 

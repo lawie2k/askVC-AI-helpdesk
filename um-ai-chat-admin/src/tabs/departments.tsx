@@ -22,11 +22,24 @@ export default function Departments() {
         loadDepartments()
     }, []);
 
+    // Simple required-field validator
+    const hasAllRequired = (values: Record<string, any>, required: string[]) => {
+        return required.every((key) => String(values[key] ?? "").trim() !== "");
+    };
+
+    const deptRequired = ["name", "short_name"];
+    const isNewValid = hasAllRequired(newDepartment, deptRequired);
+    const isEditValid = hasAllRequired(editForm, deptRequired);
+
     const loadDepartments = async () => {
         try {
             setLoading(true);
             const departments = await departmentAPI.getAll();
-            setDepartments(departments);
+            const normalized = (departments || []).map((d: any) => ({
+                ...d,
+                head: typeof d.head === 'undefined' || d.head === null ? '' : d.head
+            }));
+            setDepartments(normalized);
         } catch (error) {
             console.error('Error loading departments:', error);
         } finally {
@@ -37,7 +50,7 @@ export default function Departments() {
     const departmentColumns = [
         {field: 'name', headerName: 'Department Name', width: 200},
         {field: 'short_name', headerName: 'Short Name', width: 120},
-        {field: 'head', headerName: 'Head', width: 150},
+
         {
             field: 'actions',
             headerName: 'Actions',
@@ -63,6 +76,10 @@ export default function Departments() {
 
     const addDepartment = async () => {
         try {
+            if (!isNewValid) {
+                alert('Please fill out all required fields.');
+                return;
+            }
             setLoading(true);
             await departmentAPI.create(newDepartment);
             await loadDepartments();
@@ -83,7 +100,7 @@ export default function Departments() {
         setEditForm({
             name: department.name,
             short_name: department.short_name,
-            head: department.head
+            head: department.head || ""
         });
     };
 
@@ -98,6 +115,10 @@ export default function Departments() {
 
     const saveEdit = async () => {
         try {
+            if (!isEditValid) {
+                alert('Please fill out all required fields.');
+                return;
+            }
             setLoading(true);
             await departmentAPI.update(editingDepartment.id, editForm);
             await loadDepartments();
@@ -161,30 +182,13 @@ export default function Departments() {
                     />
                 </div>
 
-
-                <div className="flex flex-col">
-                    <label className="text-white text-sm mb-1">Head</label>
-                    <input 
-                        type="text"
-                        className="w-[150px] px-3 py-2 text-black rounded"
-                        placeholder="Enter head name"
-                        value={editingDepartment ? editForm.head : newDepartment.head}
-                        onChange={(e) => editingDepartment 
-                            ? setEditForm({ ...editForm, head: e.target.value })
-                            : setNewDepartment({ ...newDepartment, head: e.target.value })
-                        } 
-                    />
-                </div>
-
-                
-
-
                 <div className="flex flex-col justify-end">
                     {editingDepartment ? (
                         <div className="flex space-x-2">
                             <button 
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold" 
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50 disabled:cursor-not-allowed" 
                                 onClick={saveEdit}
+                                disabled={!isEditValid}
                             >
                                 Update
                             </button>
@@ -197,8 +201,9 @@ export default function Departments() {
                         </div>
                     ) : (
                         <button 
-                            className="w-[150px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold" 
+                            className="w-[150px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold disabled:opacity-50 disabled:cursor-not-allowed" 
                             onClick={addDepartment}
+                            disabled={!isNewValid}
                         >
                             Add Record
                         </button>

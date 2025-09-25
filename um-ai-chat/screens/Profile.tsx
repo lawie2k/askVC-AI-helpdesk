@@ -55,7 +55,7 @@ export default function Profile(){
                         </View>
 
                             <TouchableOpacity
-                                className="w-[360px] h-[50px] mt-5 bg-[#3C3C3C] rounded-lg px-3"
+                                className="w-[360px] h-[40px] mt-5 bg-[#3C3C3C] rounded-lg px-3"
                                 onPress={() =>{
                                 navigation.navigate("ResetPass" as never)
                             }}>

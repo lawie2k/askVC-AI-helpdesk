@@ -53,6 +53,10 @@ export default function rules () {
   ];
     const addRule = async () => {
       try{
+      if ((newrule || '').trim() === '') {
+        alert('Please enter a rule description.');
+        return;
+      }
         setloading(true);
         console.log('Adding rule:', newrule);
         const response = await rulesAPI.create({
@@ -73,6 +77,10 @@ export default function rules () {
 
     const updateRule = async () => {
       try{
+      if ((editDescription || '').trim() === '') {
+        alert('Please enter a rule description.');
+        return;
+      }
         setloading(true);
         console.log('Updating rule:', editingRule.id, editDescription);
         await rulesAPI.update(editingRule.id, {

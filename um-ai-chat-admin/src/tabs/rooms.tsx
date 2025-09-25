@@ -80,6 +80,12 @@ export default function Rooms() {
 
     const addRoom = async () => {
         try {
+            const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+            const required = ['name', 'location'];
+            if (!hasAllRequired(newRoom as any, required)) {
+                alert('Please fill out all required fields.');
+                return;
+            }
             setLoading(true);
             await roomAPI.create(newRoom);
             await loadRooms();
@@ -118,6 +124,12 @@ export default function Rooms() {
 
     const saveEdit = async () => {
         try {
+            const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+            const required = ['name', 'location'];
+            if (!hasAllRequired(editForm as any, required)) {
+                alert('Please fill out all required fields.');
+                return;
+            }
             setLoading(true);
             await roomAPI.update(editingRoom.id, editForm);
             await loadRooms();

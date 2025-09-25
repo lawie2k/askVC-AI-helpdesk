@@ -5,6 +5,9 @@ import {reportsAPI} from "../services/api";
 export default function Reports() {
     const [reports, setReports] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [newReport, setNewReport] = useState({ title: '', description: '', type: '' });
+    const [editingReport, setEditingReport] = useState<any>(null);
+    const [editForm, setEditForm] = useState({ title: '', description: '', type: '' });
     useEffect(() => {
         loadReports()
     }, []);
@@ -16,6 +19,56 @@ export default function Reports() {
             setReports(reports);
         } catch (error) {
             console.error('Error loading reports:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+    const reportRequired = ['title', 'description', 'type'];
+
+    const addReport = async () => {
+        try {
+            if (!hasAllRequired(newReport, reportRequired)) {
+                alert('Please fill out all required fields.');
+                return;
+            }
+            setLoading(true);
+            await reportsAPI.create({
+                title: newReport.title,
+                description: newReport.description,
+                type: newReport.type,
+                status: 'Draft',
+                data: {}
+            });
+            await loadReports();
+            setNewReport({ title: '', description: '', type: '' });
+        } catch (error) {
+            console.error('Error adding report:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const saveEdit = async () => {
+        try {
+            if (!hasAllRequired(editForm, reportRequired)) {
+                alert('Please fill out all required fields.');
+                return;
+            }
+            setLoading(true);
+            await reportsAPI.update(editingReport.id, {
+                title: editForm.title,
+                description: editForm.description,
+                type: editForm.type,
+                status: editingReport.status,
+                data: editingReport.data || {}
+            });
+            await loadReports();
+            setEditingReport(null);
+            setEditForm({ title: '', description: '', type: '' });
+        } catch (error) {
+            console.error('Error updating report:', error);
         } finally {
             setLoading(false);
         }
