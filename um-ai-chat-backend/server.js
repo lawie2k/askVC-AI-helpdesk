@@ -5,6 +5,7 @@ const { isUnexpected } = require("@azure-rest/ai-inference");
 const { AzureKeyCredential } = require("@azure/core-auth");
 const path = require("path");
 const db = require("./database");
+const jwt = require("jsonwebtoken");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const app = express();
@@ -517,45 +518,107 @@ ${dbContext}`;
   }
 });
 
+// Helper function to log admin activities
+function logAdminActivity(adminId, action, details, tableName = null) {
+  const logDetails = tableName ? `${action} on ${tableName}: ${details}` : details;
+  
+  db.query(
+    'INSERT INTO logs (admin_id, action, details, created_at) VALUES (?, ?, ?, NOW())',
+    [adminId, action, logDetails],
+    (err) => {
+      if (err) {
+        console.error('Failed to log admin activity:', err);
+      }
+    }
+  );
+}
+
+// Helper function to create activity report
+function createActivityReport(adminId, action, details, tableName = null) {
+  const title = `${action} - ${tableName || 'System'}`;
+  const content = `Admin performed: ${action}\nDetails: ${details}\nTable: ${tableName || 'N/A'}`;
+  
+  db.query(
+    'INSERT INTO reports (admin_id, title, content, created_at) VALUES (?, ?, ?, NOW())',
+    [adminId, title, content],
+    (err) => {
+      if (err) {
+        console.error('Failed to create activity report:', err);
+      }
+    }
+  );
+}
+
+// Middleware to authenticate admin from JWT token
+function authenticateAdmin(req, res, next) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-not-for-prod');
+    req.admin = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
 // Admin API Routes
 app.get('/api/departments', (req, res) => {
-  db.query('SELECT id, name, short_name, head_id AS head, admin_id FROM departments', (err, results) => {
+  db.query('SELECT id, name, short_name, admin_id FROM departments', (err, results) => {
     if (err) {
-      return res.status(500).json({ error: 'Database error' });
+      console.error('Departments GET error:', err);
+      return res.status(500).json({ error: 'Database error', details: err.message });
     }
     res.json(results);
   });
 });
 
-app.post('/api/departments', (req, res) => {
+app.post('/api/departments', authenticateAdmin, (req, res) => {
   const { name, short_name } = req.body;
-  const head_id = null; // Not provided by UI
-  const admin_id = null; // Avoid FK error if no admins row exists
+  const admin_id = req.admin.sub; // Use authenticated admin ID
+  
   db.query(
-    'INSERT INTO departments (name, short_name, head_id, admin_id) VALUES (?, ?, ?, ?)',
-    [name, short_name, head_id, admin_id],
+    'INSERT INTO departments (name, short_name, admin_id) VALUES (?, ?, ?)',
+    [name, short_name, admin_id],
     (err, result) => {
       if (err) {
         console.error('Departments insert error:', err);
         return res.status(500).json({ error: 'Database error', details: err.message });
       }
+      
+      // Log the activity
+      const details = `Created department: ${name} (${short_name})`;
+      logAdminActivity(admin_id, 'CREATE_DEPARTMENT', details, 'departments');
+      createActivityReport(admin_id, 'CREATE_DEPARTMENT', details, 'departments');
+      
       res.json({ id: result.insertId, message: 'Department created successfully' });
     }
   );
 });
 
-app.put('/api/departments/:id', (req, res) => {
+app.put('/api/departments/:id', authenticateAdmin, (req, res) => {
   const { id } = req.params;
   const { name, short_name } = req.body;
-  const head_id = null; // Not handled in UI
+  const admin_id = req.admin.sub;
+  
   db.query(
-    'UPDATE departments SET name = ?, short_name = ?, head_id = ? WHERE id = ?',
-    [name, short_name, head_id, id],
+    'UPDATE departments SET name = ?, short_name = ? WHERE id = ?',
+    [name, short_name, id],
     (err, result) => {
       if (err) {
         console.error('Departments update error:', err);
         return res.status(500).json({ error: 'Database error', details: err.message });
       }
+      
+      // Log the activity
+      const details = `Updated department ID ${id}: ${name} (${short_name})`;
+      logAdminActivity(admin_id, 'UPDATE_DEPARTMENT', details, 'departments');
+      createActivityReport(admin_id, 'UPDATE_DEPARTMENT', details, 'departments');
+      
       res.json({ message: 'Department updated successfully' });
     }
   );
@@ -571,12 +634,20 @@ app.get('/api/departments/structure', (req, res) => {
   });
 });
 
-app.delete('/api/departments/:id', (req, res) => {
+app.delete('/api/departments/:id', authenticateAdmin, (req, res) => {
   const { id } = req.params;
+  const admin_id = req.admin.sub;
+  
   db.query('DELETE FROM departments WHERE id = ?', [id], (err, result) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
+    
+    // Log the activity
+    const details = `Deleted department ID ${id}`;
+    logAdminActivity(admin_id, 'DELETE_DEPARTMENT', details, 'departments');
+    createActivityReport(admin_id, 'DELETE_DEPARTMENT', details, 'departments');
+    
     res.json({ message: 'Department deleted successfully' });
   });
 });
@@ -602,8 +673,9 @@ app.get('/api/rooms/structure', (req, res) => {
 });
 
 
-app.post('/api/rooms', (req, res) => {
+app.post('/api/rooms', authenticateAdmin, (req, res) => {
   const { name, location, status, type } = req.body;
+  const admin_id = req.admin.sub;
   console.log('Received data:', { name, location, status, type });
 
   // Try to insert with status if provided; fall back if column doesn't exist
@@ -626,6 +698,12 @@ app.post('/api/rooms', (req, res) => {
                   console.error('Database error (fallback insert):', fallbackErr);
                   return res.status(500).json({ error: 'Database error', details: fallbackErr.message });
                 }
+                
+                // Log the activity
+                const details = `Created room: ${name} at ${location}`;
+                logAdminActivity(admin_id, 'CREATE_ROOM', details, 'rooms');
+                createActivityReport(admin_id, 'CREATE_ROOM', details, 'rooms');
+                
                 return res.json({ id: fallbackResult.insertId, message: 'Room created successfully (status not stored)' });
               }
             );
@@ -634,6 +712,11 @@ app.post('/api/rooms', (req, res) => {
             return res.status(500).json({ error: 'Database error', details: err.message });
           }
         } else {
+          // Log the activity
+          const details = `Created room: ${name} at ${location} (${status || 'Vacant'}, ${type || 'Lecture'})`;
+          logAdminActivity(admin_id, 'CREATE_ROOM', details, 'rooms');
+          createActivityReport(admin_id, 'CREATE_ROOM', details, 'rooms');
+          
           return res.json({ id: result.insertId, message: 'Room created successfully' });
         }
       }
@@ -647,15 +730,22 @@ app.post('/api/rooms', (req, res) => {
           console.error('Database error:', err);
           return res.status(500).json({ error: 'Database error', details: err.message });
         }
+        
+        // Log the activity
+        const details = `Created room: ${name} at ${location}`;
+        logAdminActivity(admin_id, 'CREATE_ROOM', details, 'rooms');
+        createActivityReport(admin_id, 'CREATE_ROOM', details, 'rooms');
+        
         res.json({ id: result.insertId, message: 'Room created successfully' });
       }
     );
   }
 });
 
-app.put('/api/rooms/:id', (req, res) => {
+app.put('/api/rooms/:id', authenticateAdmin, (req, res) => {
   const { id } = req.params;
   const { name, location, status, type } = req.body;
+  const admin_id = req.admin.sub;
 
   const updateWithStatus = typeof status !== 'undefined';
   const updateWithType = typeof type !== 'undefined';
@@ -675,6 +765,12 @@ app.put('/api/rooms/:id', (req, res) => {
                 if (fallbackErr) {
                   return res.status(500).json({ error: 'Database error', details: fallbackErr.message });
                 }
+                
+                // Log the activity
+                const details = `Updated room ID ${id}: ${name} at ${location}`;
+                logAdminActivity(admin_id, 'UPDATE_ROOM', details, 'rooms');
+                createActivityReport(admin_id, 'UPDATE_ROOM', details, 'rooms');
+                
                 return res.json({ message: 'Room updated successfully (status not stored)' });
               }
             );
@@ -682,6 +778,11 @@ app.put('/api/rooms/:id', (req, res) => {
             return res.status(500).json({ error: 'Database error', details: err.message });
           }
         } else {
+          // Log the activity
+          const details = `Updated room ID ${id}: ${name} at ${location} (${status || 'unchanged'}, ${type || 'unchanged'})`;
+          logAdminActivity(admin_id, 'UPDATE_ROOM', details, 'rooms');
+          createActivityReport(admin_id, 'UPDATE_ROOM', details, 'rooms');
+          
           return res.json({ message: 'Room updated successfully' });
         }
       }
@@ -694,18 +795,32 @@ app.put('/api/rooms/:id', (req, res) => {
         if (err) {
           return res.status(500).json({ error: 'Database error', details: err.message });
         }
+        
+        // Log the activity
+        const details = `Updated room ID ${id}: ${name} at ${location}`;
+        logAdminActivity(admin_id, 'UPDATE_ROOM', details, 'rooms');
+        createActivityReport(admin_id, 'UPDATE_ROOM', details, 'rooms');
+        
         res.json({ message: 'Room updated successfully' });
       }
     );
   }
 });
 
-app.delete('/api/rooms/:id', (req, res) => {
+app.delete('/api/rooms/:id', authenticateAdmin, (req, res) => {
   const { id } = req.params;
+  const admin_id = req.admin.sub;
+  
   db.query('DELETE FROM rooms WHERE id = ?', [id], (err, result) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
+    
+    // Log the activity
+    const details = `Deleted room ID ${id}`;
+    logAdminActivity(admin_id, 'DELETE_ROOM', details, 'rooms');
+    createActivityReport(admin_id, 'DELETE_ROOM', details, 'rooms');
+    
     res.json({ message: 'Room deleted successfully' });
   });
 });
@@ -720,8 +835,10 @@ app.get('/api/offices', (req, res) => {
   });
 });
 
-app.post('/api/offices', (req, res) => {
+app.post('/api/offices', authenticateAdmin, (req, res) => {
   const { name, location } = req.body;
+  const admin_id = req.admin.sub;
+  
   db.query(
     'INSERT INTO offices (name, location) VALUES (?, ?)',
     [name, location],
@@ -729,14 +846,22 @@ app.post('/api/offices', (req, res) => {
       if (err) {
         return res.status(500).json({ error: 'Database error' });
       }
+      
+      // Log the activity
+      const details = `Created office: ${name} at ${location}`;
+      logAdminActivity(admin_id, 'CREATE_OFFICE', details, 'offices');
+      createActivityReport(admin_id, 'CREATE_OFFICE', details, 'offices');
+      
       res.json({ id: result.insertId, message: 'Office created successfully' });
     }
   );
 });
 
-app.put('/api/offices/:id', (req, res) => {
+app.put('/api/offices/:id', authenticateAdmin, (req, res) => {
   const { id } = req.params;
   const { name, location } = req.body;
+  const admin_id = req.admin.sub;
+  
   db.query(
     'UPDATE offices SET name = ?, location = ? WHERE id = ?',
     [name, location, id],
@@ -744,17 +869,31 @@ app.put('/api/offices/:id', (req, res) => {
       if (err) {
         return res.status(500).json({ error: 'Database error' });
       }
+      
+      // Log the activity
+      const details = `Updated office ID ${id}: ${name} at ${location}`;
+      logAdminActivity(admin_id, 'UPDATE_OFFICE', details, 'offices');
+      createActivityReport(admin_id, 'UPDATE_OFFICE', details, 'offices');
+      
       res.json({ message: 'Office updated successfully' });
     }
   );
 });
 
-app.delete('/api/offices/:id', (req, res) => {
+app.delete('/api/offices/:id', authenticateAdmin, (req, res) => {
   const { id } = req.params;
+  const admin_id = req.admin.sub;
+  
   db.query('DELETE FROM offices WHERE id = ?', [id], (err, result) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
+    
+    // Log the activity
+    const details = `Deleted office ID ${id}`;
+    logAdminActivity(admin_id, 'DELETE_OFFICE', details, 'offices');
+    createActivityReport(admin_id, 'DELETE_OFFICE', details, 'offices');
+    
     res.json({ message: 'Office deleted successfully' });
   });
 });
@@ -806,8 +945,10 @@ app.post('/api/professors/migrate', (req, res) => {
   });
 });
 
-app.post('/api/professors', (req, res) => {
+app.post('/api/professors', authenticateAdmin, (req, res) => {
   const { name, position, email, department, program } = req.body;
+  const admin_id = req.admin.sub;
+  
   const insert = () => db.query(
     'INSERT INTO professors (name, position, email, department, program) VALUES (?, ?, ?, ?, ?)',
     [name, position, email, department, program || null],
@@ -827,15 +968,23 @@ app.post('/api/professors', (req, res) => {
         }
         return res.status(500).json({ error: 'Database error', details: err.message });
       }
+      
+      // Log the activity
+      const details = `Created professor: ${name} (${position}) in ${department}`;
+      logAdminActivity(admin_id, 'CREATE_PROFESSOR', details, 'professors');
+      createActivityReport(admin_id, 'CREATE_PROFESSOR', details, 'professors');
+      
       res.json({ id: result.insertId, message: 'Professor created successfully' });
     }
   );
   insert();
 });
 
-app.put('/api/professors/:id', (req, res) => {
+app.put('/api/professors/:id', authenticateAdmin, (req, res) => {
   const { id } = req.params;
   const { name, position, email, department, program } = req.body;
+  const admin_id = req.admin.sub;
+  
   const update = () => db.query(
     'UPDATE professors SET name = ?, position = ?, email = ?, department = ?, program = COALESCE(?, program) WHERE id = ?',
     [name, position, email, department, program ?? null, id],
@@ -854,18 +1003,32 @@ app.put('/api/professors/:id', (req, res) => {
         }
         return res.status(500).json({ error: 'Database error', details: err.message });
       }
+      
+      // Log the activity
+      const details = `Updated professor ID ${id}: ${name} (${position}) in ${department}`;
+      logAdminActivity(admin_id, 'UPDATE_PROFESSOR', details, 'professors');
+      createActivityReport(admin_id, 'UPDATE_PROFESSOR', details, 'professors');
+      
       res.json({ message: 'Professor updated successfully' });
     }
   );
   update();
 });
 
-app.delete('/api/professors/:id', (req, res) => {
+app.delete('/api/professors/:id', authenticateAdmin, (req, res) => {
   const { id } = req.params;
+  const admin_id = req.admin.sub;
+  
   db.query('DELETE FROM professors WHERE id = ?', [id], (err, result) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
+    
+    // Log the activity
+    const details = `Deleted professor ID ${id}`;
+    logAdminActivity(admin_id, 'DELETE_PROFESSOR', details, 'professors');
+    createActivityReport(admin_id, 'DELETE_PROFESSOR', details, 'professors');
+    
     res.json({ message: 'Professor deleted successfully' });
   });
 });
@@ -880,48 +1043,77 @@ app.get('/api/rules', (req, res) => {
   });
 });
 
-app.post('/api/rules', (req, res) => {
-  const { description, admin_id } = req.body;
+app.post('/api/rules', authenticateAdmin, (req, res) => {
+  const { description } = req.body;
+  const admin_id = req.admin.sub; // Use authenticated admin ID
+  
   db.query(
     'INSERT INTO rules (description, admin_id) VALUES (?, ?)',
-    [description, admin_id || 1], // Default admin_id to 1 if not provided
+    [description, admin_id],
     (err, result) => {
       if (err) {
         return res.status(500).json({ error: 'Database error' });
       }
+      
+      // Log the activity
+      const details = `Created rule: ${description}`;
+      logAdminActivity(admin_id, 'CREATE_RULE', details, 'rules');
+      createActivityReport(admin_id, 'CREATE_RULE', details, 'rules');
+      
       res.json({ id: result.insertId, message: 'Rule created successfully' });
     }
   );
 });
 
-app.put('/api/rules/:id', (req, res) => {
+app.put('/api/rules/:id', authenticateAdmin, (req, res) => {
   const { id } = req.params;
-  const { description, admin_id } = req.body;
+  const { description } = req.body;
+  const admin_id = req.admin.sub;
+  
   db.query(
     'UPDATE rules SET description = ?, admin_id = ? WHERE id = ?',
-    [description, admin_id || 1, id],
+    [description, admin_id, id],
     (err, result) => {
       if (err) {
         return res.status(500).json({ error: 'Database error' });
       }
+      
+      // Log the activity
+      const details = `Updated rule ID ${id}: ${description}`;
+      logAdminActivity(admin_id, 'UPDATE_RULE', details, 'rules');
+      createActivityReport(admin_id, 'UPDATE_RULE', details, 'rules');
+      
       res.json({ message: 'Rule updated successfully' });
     }
   );
 });
 
-app.delete('/api/rules/:id', (req, res) => {
+app.delete('/api/rules/:id', authenticateAdmin, (req, res) => {
   const { id } = req.params;
+  const admin_id = req.admin.sub;
+  
   db.query('DELETE FROM rules WHERE id = ?', [id], (err, result) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
+    
+    // Log the activity
+    const details = `Deleted rule ID ${id}`;
+    logAdminActivity(admin_id, 'DELETE_RULE', details, 'rules');
+    createActivityReport(admin_id, 'DELETE_RULE', details, 'rules');
+    
     res.json({ message: 'Rule deleted successfully' });
   });
 });
 
 // Logs API Routes
 app.get('/api/logs', (req, res) => {
-  db.query('SELECT * FROM logs ORDER BY created_at DESC', (err, results) => {
+  db.query(`
+    SELECT l.*, a.username as admin_username 
+    FROM logs l 
+    LEFT JOIN admins a ON l.admin_id = a.id 
+    ORDER BY l.created_at DESC
+  `, (err, results) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
@@ -970,7 +1162,12 @@ app.delete('/api/logs/:id', (req, res) => {
 
 // Reports API Routes
 app.get('/api/reports', (req, res) => {
-  db.query('SELECT * FROM reports ORDER BY created_at DESC', (err, results) => {
+  db.query(`
+    SELECT r.*, a.username as admin_username 
+    FROM reports r 
+    LEFT JOIN admins a ON r.admin_id = a.id 
+    ORDER BY r.created_at DESC
+  `, (err, results) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }

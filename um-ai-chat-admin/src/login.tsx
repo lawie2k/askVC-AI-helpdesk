@@ -1,7 +1,31 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { adminAuthAPI } from "./services/api";
 
 export default function login() {
     const navigate = useNavigate();
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+        
+        try {
+            const response = await adminAuthAPI.login(username, password);
+            localStorage.setItem('adminToken', response.token);
+            localStorage.setItem('adminUser', JSON.stringify(response.admin));
+            navigate("/dashboard");
+        } catch (error: any) {
+            setError(error.message || "Login failed");
+            console.error("Login error:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
       <div className="min-h-screen bg-[#292929] text-white">
@@ -13,29 +37,39 @@ export default function login() {
         <main className="flex justify-center items-center py-16">
           <div className="bg-[#3C3C3C] w-[550px] min-h-[650px] flex flex-col items-center">
             <h2 className="text-[40px] font-extrabold mt-10">Admin</h2>
-            <div className="mt-12 w-full flex flex-col items-center">
-              <label className="text-[20px] font-extrabold w-[310px] text-left">Email</label>
+            <form onSubmit={handleLogin} className="mt-12 w-full flex flex-col items-center">
+              <label className="text-[20px] font-extrabold w-[310px] text-left">Username</label>
               <input
                 className="w-[310px] h-[50px] mt-2 bg-[#292929] text-white px-3"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                autoCapitalize="false"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
               />
               <label className="text-[20px] font-extrabold mt-8 w-[310px] text-left">Password</label>
               <input
                 className="w-[310px] h-[50px] mt-2 bg-[#292929] text-white px-3"
                 type="password"
-                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
               />
-              <button className="bg-[#900C27] text-white w-[310px] h-[40px] mt-8 font-extrabold hover:bg-[#661424] transition-colors"
-              onClick={() => navigate("/dashboard") }>
-                Login
+              {error && (
+                <div className="text-red-500 mt-4 text-center w-[310px]">
+                  {error}
+                </div>
+              )}
+              <button 
+                className="bg-[#900C27] text-white w-[310px] h-[40px] mt-8 font-extrabold hover:bg-[#661424] transition-colors disabled:opacity-50"
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? "Logging in..." : "Login"}
               </button>
+            </form>
                 <h2 className="mt-24 font-bold">add new <button className="text-[#900C27]"
                     onClick={()=>navigate("/signup")}>Admin</button>
                 </h2>
-            </div>
           </div>
         </main>
       </div>

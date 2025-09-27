@@ -8,14 +8,12 @@ export default function Departments() {
     const [loading, setLoading] = useState(false);
     const [newDepartment, setNewDepartment] = useState({
         name: "",
-        short_name: "",
-        head: ""
+        short_name: ""
     });
     const [editingDepartment, setEditingDepartment] = useState<any>(null);
     const [editForm, setEditForm] = useState({
         name: "",
-        short_name: "",
-        head: ""
+        short_name: ""
     });
 
     useEffect(() => {
@@ -35,10 +33,7 @@ export default function Departments() {
         try {
             setLoading(true);
             const departments = await departmentAPI.getAll();
-            const normalized = (departments || []).map((d: any) => ({
-                ...d,
-                head: typeof d.head === 'undefined' || d.head === null ? '' : d.head
-            }));
+            const normalized = departments || [];
             setDepartments(normalized);
         } catch (error) {
             console.error('Error loading departments:', error);
@@ -85,8 +80,7 @@ export default function Departments() {
             await loadDepartments();
             setNewDepartment({
                 name: "",
-                short_name: "",
-                head: ""
+                short_name: ""
             });
         } catch (error) {
             console.error('Error adding department:', error);
@@ -99,8 +93,7 @@ export default function Departments() {
         setEditingDepartment(department);
         setEditForm({
             name: department.name,
-            short_name: department.short_name,
-            head: department.head || ""
+            short_name: department.short_name
         });
     };
 
@@ -108,8 +101,7 @@ export default function Departments() {
         setEditingDepartment(null);
         setEditForm({
             name: "",
-            short_name: "",
-            head: ""
+            short_name: ""
         });
     };
 

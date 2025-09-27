@@ -2,9 +2,37 @@ import { useNavigate } from "react-router-dom";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faArrowLeft} from "@fortawesome/free-solid-svg-icons";
 import {IconProp} from "@fortawesome/fontawesome-svg-core";
+import {adminAuthAPI} from "./services/api";
+import {FormEvent, useState} from "react";
 
 export default function signup() {
     const navigate = useNavigate();
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+
+    const handleSignUp= async (e: FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+        setSuccess("");
+
+        try{
+            const response = await adminAuthAPI.register(username, password);
+            setSuccess("Admin account created successfully! Redirecting to login...");
+
+            setTimeout(() =>{
+                navigate("/login");
+            },2000)
+        }catch(error: any){
+            setError(error.message || "Registration failed");
+            console.error("Signup error:", error);
+        }finally{
+            setLoading(false);
+        }
+    };
 
     return (
         <>
@@ -26,25 +54,41 @@ export default function signup() {
                        </div>
                         <div className="flex flex-col items-center">
                             <h2 className="text-[40px] font-extrabold mt-10">Register</h2>
-                            <div className="mt-12 w-full flex flex-col items-center">
-                                <label className="text-[20px] font-extrabold w-[310px] text-left">Email</label>
+                            <form onSubmit={handleSignUp} className="mt-12 w-full flex flex-col items-center">
+                                <label className="text-[20px] font-extrabold w-[310px] text-left">Username</label>
                                 <input
                                     className="w-[310px] h-[50px] mt-2 bg-[#292929] text-white px-3"
-                                    type="email"
-                                    inputMode="email"
-                                    autoComplete="email"
+                                    type="text"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    required
                                 />
                                 <label className="text-[20px] font-extrabold mt-8 w-[310px] text-left">Password</label>
                                 <input
                                     className="w-[310px] h-[50px] mt-2 bg-[#292929] text-white px-3"
                                     type="password"
-                                    autoComplete="current-password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
                                 />
-                                <button className="bg-[#900C27] text-white w-[310px] h-[40px] mt-8 font-extrabold hover:bg-[#661424] transition-colors"
-                                        onClick={() => navigate("/dashboard") }>
-                                    Sign up
+                                {error && (
+                                    <div className="text-red-500 mt-4 text-center w-[310px]">
+                                        {error}
+                                    </div>
+                                )}
+                                {success && (
+                                    <div className="text-green-500 mt-4 text-center w-[310px]">
+                                        {success}
+                                    </div>
+                                )}
+                                <button 
+                                    className="bg-[#900C27] text-white w-[310px] h-[40px] mt-8 font-extrabold hover:bg-[#661424] transition-colors disabled:opacity-50"
+                                    type="submit"
+                                    disabled={loading}
+                                >
+                                    {loading ? "Creating Account..." : "Sign up"}
                                 </button>
-                            </div>
+                            </form>
                         </div>
                     </div>
                 </main>

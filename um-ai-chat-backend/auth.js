@@ -126,4 +126,84 @@ router.post("/reset-password", async (req, res) => {
     }
 })
 
+router.post("/admin/login", async (req, res) => {
+    try{
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: "Username and password are required" });
+        }
+
+        db.query(
+            "SELECT id, username, password_hashed FROM admins WHERE username = ?",
+            [username],
+            async(err, rows) => {
+                if (err) {
+                    return res.status(500).json({ error: "DATABASE ERROR", details: err.message });
+                }
+                if (!rows || rows.length === 0) {
+                    return res.status(401).json({ error: "Invalid username or password" });
+                }
+                const admin = rows[0];
+                const passwordMatch = await bcrypt.compare(password, admin.password_hashed);
+                if (!passwordMatch) {
+                    return res.status(401).json({ error: "Invalid username or password" });
+                }
+                const token = jwt.sign({ sub: admin.id, username: admin.username }, JWT_SECRET, { expiresIn: "7d" });
+                return res.status(200).json({ token, admin: { id: admin.id, username: admin.username } });
+            })
+    }catch(e){
+        return res.status(500).json({ error: "Unexpected error" });
+    }
+})
+
+router.post("/admin/register", async (req, res) => {
+    try{
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: "Username and password are required" });
+        }
+        db.query("SELECT id FROM admins WHERE username = ?", [username], async (err, rows) => {
+            if (err) {
+                return res.status(500).json({ error: "DATABASE ERROR", details: err.message });
+            }
+            if (rows.length > 0) {
+                return res.status(409).json({ error: "Admin already exists" });
+            }
+            const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+            db.query(
+                "INSERT INTO admins(username, password_hashed) VALUES (?, ?)",
+                [username, hashedPassword],
+                (insertErr, insertResult) => {
+                    if (insertErr) return res.status(500).json({ error: "Failed to create admin", details: insertErr.message });
+
+                    const adminId = insertResult.insertId;
+                    return res.status(201).json({ adminId, username });
+                })
+        })
+    }catch(e){
+        return res.status(500).json({ error: "Unexpected error" });
+    }
+})
+
+router.post("/admin/logout", async (req, res) => {
+    try {
+        // For JWT tokens, logout is typically handled on the frontend by removing the token
+        // This endpoint can be used for logging logout events or future token blacklisting
+        const { username } = req.body;
+        
+        // Log the logout event (optional)
+        console.log(`Admin logout: ${username || 'Unknown'} at ${new Date().toISOString()}`);
+        
+        // Return success response
+        return res.status(200).json({ 
+            message: "Logout successful",
+            timestamp: new Date().toISOString()
+        });
+    } catch (e) {
+        return res.status(500).json({ error: "Unexpected error" });
+    }
+})
+
+
 module.exports = router;

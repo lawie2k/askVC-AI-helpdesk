@@ -2,11 +2,19 @@ import API_BASE_URL from '../config/api';
 
 // Generic API call function
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem('adminToken');
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     ...options,
   });
 
@@ -126,5 +134,21 @@ export const reportsAPI = {
   }),
   delete: (id: number) => apiCall(`/api/reports/${id}`, {
     method: 'DELETE',
+  }),
+};
+
+// Admin Authentication API functions
+export const adminAuthAPI = {
+  login: (username: string, password: string) => apiCall('/auth/admin/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  }),
+  register: (username: string, password: string) => apiCall('/auth/admin/register', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  }),
+  logout: (username: string) => apiCall('/auth/admin/logout', {
+    method: 'POST',
+    body: JSON.stringify({ username }),
   }),
 };

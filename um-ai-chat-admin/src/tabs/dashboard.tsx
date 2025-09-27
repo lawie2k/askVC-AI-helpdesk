@@ -73,8 +73,8 @@ export default function dashboard() {
     ];
 
   return <>
-      <div className="bg-[#3C3C3C] w-[1250px] h-[800px] mt-[-50] pt-10 shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]">
-          <div className="flex justify-center justify-self-center text-[32px] font-bold bg-[#900C27] rounded-full w-[250px] h-[50px] ">
+      <div className="bg-[#3C3C3C] w-[1250px] h-[800px] mt-[-50] pt-10 overflow-hidden  shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]">
+          <div className="flex justify-center justify-self-center text-[32px] font-bold bg-[#900C27] rounded-full w-[250px] h-[50px]">
               <h1 className="">Dashboard</h1>
             </div>
           {error && (

@@ -75,10 +75,9 @@ export default function Reports() {
     };
 
     const reportColumns = [
+        {field: 'admin_username', headerName: 'Admin', width: 120},
         {field: 'title', headerName: 'Title', width: 200},
-        {field: 'description', headerName: 'Description', width: 250},
-        {field: 'category', headerName: 'Category', width: 150},
-        {field: 'status', headerName: 'Status', width: 100},
+        {field: 'content', headerName: 'Content', width: 300},
         {field: 'created_at', headerName: 'Created At', width: 150},
     ];
 
