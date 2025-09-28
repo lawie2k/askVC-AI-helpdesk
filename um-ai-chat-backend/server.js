@@ -162,8 +162,8 @@ async function searchDatabase(question) {
         if (targetDepartment) {
           // Narrow to professors in the target department (e.g., BSIT)
           db.query(
-            'SELECT *, "professors_query" as match_type FROM professors WHERE department LIKE ?',
-            [`%${targetDepartment}%`],
+            'SELECT *, "professors_query" as match_type FROM professors WHERE department LIKE ? OR program LIKE ?',
+            [`%${targetDepartment}%`, `%${targetDepartment}%`],
             (err, results) => {
               if (!err && results.length > 0) {
                 const scoredResults = results.map(result => ({
@@ -344,7 +344,7 @@ function isProfessorsQuestion(question) {
 function extractDepartmentFromQuestion(question) {
   const q = question.toLowerCase();
   // Common department aliases
-  if (q.includes('bsit') || q.includes(' it ') || q.endsWith(' it') || q.startsWith('it ') || q.includes('information technology')) {
+  if (q.includes('bsit') || q.includes(' it ') || q.endsWith(' it') || q.startsWith('it ') || q.includes('information technology') || q.includes('in it') || q.includes('it department')) {
     return 'BSIT';
   }
   if (q.includes('bscs') || q.includes(' cs ') || q.endsWith(' cs') || q.startsWith('cs ') || q.includes('computer science')) {

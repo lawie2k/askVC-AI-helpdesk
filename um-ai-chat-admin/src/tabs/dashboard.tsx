@@ -60,13 +60,13 @@ export default function dashboard() {
         {field: 'location', headerName: 'Location'},
     ];
     const logColumns = [
-        {field: 'admin_id', headerName: 'Admin id'},
+        {field: 'admin_username', headerName: 'Admin Logs'},
         {field: 'action', headerName: 'Action'},
         {field: 'details', headerName: 'Details'},
         {field: 'created_at', headerName: 'Created at'},
     ];
     const reportColumns = [
-        {field: 'admin_id', headerName: 'Admin id'},
+        {field: 'admin_username', headerName: 'Admin Reports'},
         {field: 'title', headerName: 'Title'},
         {field: 'content', headerName: 'content'},
         {field: 'created_at', headerName: 'Created at'},
@@ -117,7 +117,7 @@ export default function dashboard() {
                       height="325px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
-                      pageSize={8}
+                      pageSize={2}
                     />
                   )}
               </div>
@@ -150,7 +150,7 @@ export default function dashboard() {
                       height="325px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
-                      pageSize={8}
+                      pageSize={2}
                     />
                   )}
               </div>

@@ -87,7 +87,7 @@ export default function Reports() {
             <div className="flex justify-center justify-self-center text-[32px] font-bold bg-[#900C27] rounded-full w-[250px] h-[50px] ">
                 <h1 className="">Reports</h1>
             </div>
-            <div className="w-[1170px] h-[800px] mt-6 mx-10 flex flex-col">
+            <div className="w-[1170px] h-auto mt-6 mx-10 flex flex-col">
                 <div className="w-full h-[655px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg overflow-y-auto">
                     {loading ? (
                         <div className="flex justify-center items-center h-full">
@@ -100,7 +100,7 @@ export default function Reports() {
                             height="655px"
                             className="text-white text-[14px] bg-[#292929]"
                             showSearch={false}
-                            pageSize={14}
+                            pageSize={9}
                         />
                     )}
                 </div>

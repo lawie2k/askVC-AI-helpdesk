@@ -35,7 +35,7 @@ export default function logs (){
                 <div className="flex justify-center justify-self-center text-[32px] font-bold bg-[#900C27] rounded-full w-[250px] h-[50px] ">
                     <h1 className="">Logs</h1>
                 </div>
-                <div className="w-[1170px] h-[800px] mt-6 mx-10 flex flex-col">
+                <div className="w-[1170px] h-auto mt-6 mx-10 flex flex-col">
                     <div className="w-full h-[655px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg overflow-y-auto">
                         {loading ? (
                             <div className="flex justify-center items-center h-full">

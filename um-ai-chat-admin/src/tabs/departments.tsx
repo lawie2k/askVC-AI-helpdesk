@@ -142,7 +142,7 @@ export default function Departments() {
     <div className="flex justify-center justify-self-center text-[32px] font-bold bg-[#900C27] rounded-full w-[250px] h-[50px] ">
       <h1 className="">Departments</h1>
     </div>
-      <div className="w-[1170px] h-[800px] mt-6 mx-10 flex flex-col">
+      <div className="w-[1170px] h-auto mt-6 mx-10 flex flex-col">
         {/* Form Row - Single form that switches between Add and Edit */}
         <div className="">
             <div className="flex flex-wrap gap-4">
