@@ -1,13 +1,13 @@
 import React, {useEffect, useState} from "react";
 import DataGrid from "../components/DataGrid";
-import { roomAPI,officeAPI,logsAPI,reportsAPI } from "../services/api";
+import { roomAPI, officeAPI, logsAPI, rulesAPI } from "../services/api";
 
 
-export default function dashboard() {
+export default function Dashboard() {
     const [rooms, setRooms] = useState<any[]>([]);
     const [logs, setLogs] = useState([]);
     const [offices, setOffices] = useState([]);
-    const [reports, setReports] = useState([]);
+    const [rules, setRules] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     useEffect(() => {
@@ -18,17 +18,17 @@ export default function dashboard() {
         try{
             setLoading(true);
             setError(null);
-            const [rooms, logs, offices, reports] = await Promise.all([
+            const [rooms, logs, offices, rules] = await Promise.all([
                 roomAPI.getAll(),
                 logsAPI.getAll(),
                 officeAPI.getAll(),
-                reportsAPI.getAll()
+                rulesAPI.getAll()
             ]);
-            console.log('Dashboard data loaded:', { rooms, logs, offices, reports });
+            console.log('Dashboard data loaded:', { rooms, logs, offices, rules });
             setRooms(rooms);
             setLogs(logs);
             setOffices(offices);
-            setReports(reports);
+            setRules(rules);
         }catch(error){
             console.error('Error loading dashboard data:', error);
             setError('Failed to load dashboard data. Please check your connection and try again.');
@@ -38,8 +38,10 @@ export default function dashboard() {
     };
 
     const roomColumns = [
-        {field: 'name', headerName: 'Room name'},
-        {field: 'location', headerName: 'Location'},
+        { field: 'name', headerName: 'Room Name' },
+        { field: 'building_name', headerName: 'Building' },
+        { field: 'floor', headerName: 'Floor' },
+        { field: 'type', headerName: 'Type' },
         {field: 'status', headerName: 'Status', width: 180, cellRenderer: (params: any) => (
                 <div
                     className={
@@ -56,20 +58,18 @@ export default function dashboard() {
             )},
     ];
     const officeColumns = [
-        {field: 'name', headerName: 'Office name'},
-        {field: 'location', headerName: 'Location'},
+        { field: 'name', headerName: 'Office Name' },
+        { field: 'building_name', headerName: 'Building' },
+        { field: 'floor', headerName: 'Floor' },
     ];
     const logColumns = [
-        {field: 'admin_username', headerName: 'Admin Logs'},
+        {field: 'username', headerName: 'Admin'},
         {field: 'action', headerName: 'Action'},
         {field: 'details', headerName: 'Details'},
         {field: 'created_at', headerName: 'Created at'},
     ];
-    const reportColumns = [
-        {field: 'admin_username', headerName: 'Admin Reports'},
-        {field: 'title', headerName: 'Title'},
-        {field: 'content', headerName: 'content'},
-        {field: 'created_at', headerName: 'Created at'},
+    const ruleColumns = [
+        { field: 'description', headerName: 'Description' },
     ];
 
   return <>
@@ -145,12 +145,12 @@ export default function dashboard() {
                     </div>
                   ) : (
                     <DataGrid 
-                      data={reports} 
-                      columns={reportColumns}
+                      data={rules} 
+                      columns={ruleColumns}
                       height="325px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
-                      pageSize={2}
+                      pageSize={6}
                     />
                   )}
               </div>

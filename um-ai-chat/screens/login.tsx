@@ -23,7 +23,10 @@ export default function Login(){
     const [password, setPassword] = React.useState("");
     const [rememberMe, setRememberMe] = React.useState(false);
     const [error, setError] = useState('');
-    
+    const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    const isStrongPassword = (pw: string) => PASSWORD_REGEX.test(pw);
+    const [pwError, setPwError] = React.useState("");
+
     const isFormValid = () => {
         return email.trim() !== '' && password.trim() !== '';
     };
@@ -140,7 +143,8 @@ export default function Login(){
                                onChangeText={(t) => setEmail(t)}
                            />
 
-                           <TextInput className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
+                           <TextInput
+                                      className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
                                       placeholder="Password"
                                       placeholderTextColor="#9CA3AF"
                                       secureTextEntry
@@ -150,8 +154,12 @@ export default function Login(){
                                       textContentType="password"
                                       returnKeyType="done"
                                       value={password}
-                                      onChangeText={(t) => setPassword(t)}
+                                      onChangeText={(t) => {
+                                          setPassword(t);
+                                          setPwError(isStrongPassword(t) ? "" : "Min 8 chars, 1 uppercase, 1 number");
+                                      }}
                            />
+                           
                            <Pressable
                                onPress={toggleRemember}
                                className="flex-row items-center mt-3"

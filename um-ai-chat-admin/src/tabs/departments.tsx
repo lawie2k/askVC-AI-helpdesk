@@ -178,9 +178,8 @@ export default function Departments() {
                     {editingDepartment ? (
                         <div className="flex space-x-2">
                             <button 
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50 disabled:cursor-not-allowed" 
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold" 
                                 onClick={saveEdit}
-                                disabled={!isEditValid}
                             >
                                 Update
                             </button>
@@ -193,9 +192,8 @@ export default function Departments() {
                         </div>
                     ) : (
                         <button 
-                            className="w-[150px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold disabled:opacity-50 disabled:cursor-not-allowed" 
+                            className="w-[150px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold" 
                             onClick={addDepartment}
-                            disabled={!isNewValid}
                         >
                             Add Record
                         </button>

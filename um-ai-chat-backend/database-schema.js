@@ -46,6 +46,32 @@ function ensureRoomsTypeColumn() {
   }
 }
 
+// Ensure created_at column exists for a table
+function ensureCreatedAtColumn(tableName) {
+  try {
+    db.query(`SHOW COLUMNS FROM ${tableName} LIKE 'created_at'`, (err, results) => {
+      if (err) {
+        console.warn(`Schema check failed for ${tableName}.created_at:`, err.message);
+        return;
+      }
+      if (!results || results.length === 0) {
+        db.query(
+          `ALTER TABLE ${tableName} ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`,
+          (alterErr) => {
+            if (alterErr) {
+              console.warn(`Failed to add ${tableName}.created_at column:`, alterErr.message);
+            } else {
+              console.log(`✅ Added ${tableName}.created_at column`);
+            }
+          }
+        );
+      }
+    });
+  } catch (e) {
+    console.warn(`Error checking ${tableName}.created_at:`, e.message);
+  }
+}
+
 // Ensure rooms has building_id column and foreign key relationship
 function ensureRoomsBuildingIdColumn() {
   try {
@@ -277,6 +303,10 @@ function initializeDatabaseSchema() {
   ensureRoomsFloorColumn();
   ensureOfficesFloorColumn();
   removeBuildingsLocationColumn();
+  // Ensure created_at exists on frequently reported tables
+  ensureCreatedAtColumn('rooms');
+  ensureCreatedAtColumn('offices');
+  ensureCreatedAtColumn('departments');
   console.log('✅ Database schema initialization complete');
 }
 

@@ -1,5 +1,5 @@
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
-import {View, Text, TextInput, TouchableOpacity, Pressable} from "react-native";
+import {View, Text, TextInput, TouchableOpacity, Pressable, Alert} from "react-native";
 import React from "react";
 import {faArrowLeft} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
@@ -21,6 +21,9 @@ export default function Signup() {
     const [email, setEmail] = React.useState("");
     const [password, setPassword] = React.useState("");
     const [loading, setLoading] = React.useState(false);
+    const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    const isStrongPassword = (pw: string) => PASSWORD_REGEX.test(pw);
+    const [pwError, setPwError] = React.useState("");
     
     const isFormValid = () => {
         return email.trim() !== '' && password.trim() !== '';
@@ -32,6 +35,15 @@ export default function Signup() {
             const normalizedEmail = email.trim();
             if (!isUmEmail(normalizedEmail)) {
                 throw new Error("Use your @umindanao.edu.ph email");
+            }
+            if (!isStrongPassword(password)) {
+                setPwError("Min 8 chars, 1 uppercase, 1 number");
+                Alert.alert(
+                    "Invalid password",
+                    "Password must have at least 8 characters, 1 uppercase letter, and 1 number."
+                );
+                setLoading(false);
+                return;
             }
             const response = await fetch(`${API_URL}/auth/register`, {
                 method: "POST",
@@ -78,6 +90,7 @@ export default function Signup() {
                             keyboardType="email-address"
                             inputMode="email"
                             textContentType="emailAddress"
+                            autoCapitalize="none"
                             value={email}
                             onChangeText={(t) => setEmail(t)}
                         />
@@ -92,9 +105,12 @@ export default function Signup() {
                                    textContentType="password"
                                    returnKeyType="done"
                                    value={password}
-                                   onChangeText={(t) => setPassword(t)}
+                                   onChangeText={(t) =>{
+                                       setPassword(t);
+                                       setPwError(isStrongPassword(t) ? "" : "Min 8 chars, 1 uppercase, 1 number");
+                        }}
                         />
-
+                        {pwError ? <Text style={{ color: "red" }}>{pwError}</Text> : null}
                         <TouchableOpacity className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${
                             loading 
                                 ? 'bg-gray-500' 

@@ -16,9 +16,22 @@ export default function login() {
         
         try {
             const response = await adminAuthAPI.login(username, password);
-            localStorage.setItem('adminToken', response.token);
-            localStorage.setItem('adminUser', JSON.stringify(response.admin));
-            navigate("/dashboard");
+            // Accept common response shapes
+            const token = response?.token || response?.data?.token || response?.result?.token;
+            if (!token) {
+                const msg = response?.error || response?.message || "Invalid credentials";
+                throw new Error(msg);
+            }
+            localStorage.setItem('adminToken', token);
+
+            const resolvedUsername = response?.user?.username || response?.admin?.username || username;
+            if (resolvedUsername) {
+                localStorage.setItem('adminUsername', resolvedUsername);
+            }
+            if (response?.admin) {
+                localStorage.setItem('adminUser', JSON.stringify(response.admin));
+            }
+            navigate("/dashboard", { replace: true });
         } catch (error: any) {
             setError(error.message || "Login failed");
             console.error("Login error:", error);

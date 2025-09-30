@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import DataGrid from "../components/DataGrid";
 import {roomAPI, buildingAPI} from "../services/api";
 
@@ -6,6 +6,7 @@ export default function Rooms() {
     const [rooms, setRooms] = useState<any[]>([]);
     const [buildings, setBuildings] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [filterRoomsByid, setFilterRoomsByid] = useState("");
     const [newRoom, setNewRoom] = useState({
         name: "",
         building_id: "",
@@ -21,6 +22,13 @@ export default function Rooms() {
         status: "Vacant",
         type: "Lecture"
     });
+
+    const filteredRooms = useMemo(() => {
+  return rooms.filter(r =>{
+    if(filterRoomsByid && String(r.building_id) !== filterRoomsByid) return false;
+    return true;
+  });
+    }, [rooms, filterRoomsByid]);
 
     useEffect(() => {
         loadRooms();
@@ -298,14 +306,31 @@ export default function Rooms() {
                         </div>
                     </div>
 
-                    <div className="w-full h-[590px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg overflow-y-auto">
+                    
+                    <div className="flex items-center gap-3 mt-3">
+                        <div className="flex flex-col">
+                        <label className="text-white text-sm">Filter by Building</label>
+                        <select
+                            className="w-[200px] px-3 py-2 text-black rounded"
+                            value={filterRoomsByid}
+                            onChange={(e) => setFilterRoomsByid(e.target.value)}
+                        >
+                            <option value="">All Buildings</option>
+                            {buildings.map((b: any) => (
+                                <option key={b.id} value={String(b.id)}>{b.name}</option>
+                            ))}
+                        </select>
+                        </div>
+                    </div>
+
+                    <div className="w-full h-[520px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg overflow-y-auto">
                         {loading ? (
                             <div className="flex justify-center items-center h-full">
                                 <div className="text-white text-xl">Loading...</div>
                             </div>
                         ) : (
                             <DataGrid 
-                                data={rooms}
+                                data={filteredRooms}
                                 columns={roomColumns}
                                 height="585px"
                                 className="text-white text-[14px] bg-[#292929]"

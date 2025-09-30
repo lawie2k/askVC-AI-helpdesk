@@ -15,6 +15,8 @@ export default function ResetPass() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    const isStrongPassword = (pw: string) => PASSWORD_REGEX.test(pw);
     
     const isFormValid = () => {
         return currentPassword.trim() !== '' && 
@@ -31,6 +33,10 @@ export default function ResetPass() {
         
         if (!newPassword.trim()) {
             setError('Please enter a new password');
+            return;
+        }
+        if (!isStrongPassword(newPassword)) {
+            setError('Password must have min 8 chars, 1 uppercase, 1 number');
             return;
         }
         
