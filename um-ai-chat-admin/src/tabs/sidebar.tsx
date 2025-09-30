@@ -1,7 +1,7 @@
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {
     faBriefcase,
-    faBuilding, faEnvelope, faFile, faRightFromBracket,
+    faBuilding, faBuildingColumns, faEnvelope, faFile, faRightFromBracket,
     faScaleBalanced,
     faTableColumns,
     faUsers,
@@ -60,6 +60,16 @@ export default function Sidebar() {
                 </div>
                 <div className="text-white pt-5">
                     <NavLink
+                        to="/Buildings"
+                        className={`text-[28px] font-extrabold w-[250px] text-left px-3 py-2 rounded-xl ${active === "buildings" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
+                        onClick={() => setActive("buildings")}>
+                        <FontAwesomeIcon icon={faBuildingColumns} />
+                        <span className="ml-2">Buildings</span>
+                    </NavLink>
+
+                </div>
+                <div className="text-white pt-5">
+                    <NavLink
                         to="/Offices"
                         className={`text-[28px] font-extrabold w-[250px] text-left px-3 py-2 rounded-xl ${active === "offices" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
                         onClick={() => setActive("offices")}>
@@ -95,16 +105,6 @@ export default function Sidebar() {
                         onClick={() => setActive("logs")}>
                         <FontAwesomeIcon icon={faFile} />
                         <span className="ml-2">Logs</span>
-                    </NavLink>
-
-                </div>
-                <div className="text-white pt-5">
-                    <NavLink
-                        to="/Login"
-                        className={`text-[28px] font-extrabold w-[250px] text-left px-3 py-2 rounded-xl ${active === "logout" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
-                        onClick={() => setActive("logout")}>
-                        <FontAwesomeIcon icon={faRightFromBracket} />
-                        <span className="ml-2">Logout</span>
                     </NavLink>
 
                 </div>

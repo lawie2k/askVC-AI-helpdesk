@@ -57,6 +57,22 @@ export const roomAPI = {
   }),
 };
 
+// Building API functions
+export const buildingAPI = {
+  getAll: () => apiCall('/api/buildings'),
+  create: (data: any) => apiCall('/api/buildings', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: number, data: any) => apiCall(`/api/buildings/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: number) => apiCall(`/api/buildings/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
 // Office API functions
 export const officeAPI = {
   getAll: () => apiCall('/api/offices'),

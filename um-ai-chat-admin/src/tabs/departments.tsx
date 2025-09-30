@@ -150,7 +150,7 @@ export default function Departments() {
                     <label className="text-white text-sm mb-1">Department Name</label>
                     <input 
                         type="text"
-                        className="w-[200px] px-3 py-2 text-black rounded"
+                        className="w-[200px] px-3 py-2 text-black rounded capitalize"
                         placeholder="Enter department name" 
                         value={editingDepartment ? editForm.name : newDepartment.name}
                         onChange={(e) => editingDepartment 
@@ -164,7 +164,7 @@ export default function Departments() {
                     <label className="text-white text-sm mb-1">Short Name</label>
                     <input 
                         type="text"
-                        className="w-[150px] px-3 py-2 text-black rounded"
+                        className="w-[150px] px-3 py-2 text-black rounded capitalize"
                         placeholder="Enter short name"
                         value={editingDepartment ? editForm.short_name : newDepartment.short_name}
                         onChange={(e) => editingDepartment 

@@ -184,7 +184,7 @@ export default function professor(){
               <label className="text-white text-sm mb-1">Name</label>
               <input 
                 type="text"
-                className="w-[200px] px-3 py-2 text-black rounded"
+                className="w-[200px] px-3 py-2 text-black rounded capitalize"
                 placeholder="Enter name" 
                 value={editingProfessor ? editForm.name : newProfessor.name}
                 onChange={(e) => editingProfessor 
@@ -255,7 +255,7 @@ export default function professor(){
                       ? setEditForm({ ...editForm, program: e.target.value })
                       : setNewProfessor({ ...newProfessor, program: e.target.value })
                     }
-                    className="w-[100px] h-[40px] px-3 py-2 text-black rounded"
+                    className="w-[120px] h-[40px] px-3 py-2 text-black rounded"
                   >
                     <option value=""> Program</option>
                     <option value="BSIT">BSIT</option>

@@ -1,27 +1,40 @@
 import React, {useEffect, useState} from "react";
 import DataGrid from "../components/DataGrid";
-import {roomAPI} from "../services/api";
+import {roomAPI, buildingAPI} from "../services/api";
 
 export default function Rooms() {
     const [rooms, setRooms] = useState<any[]>([]);
+    const [buildings, setBuildings] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [newRoom, setNewRoom] = useState({
         name: "",
-        location: "",
+        building_id: "",
+        floor: "",
         status: "Vacant",
         type: "Lecture"
     });
     const [editingRoom, setEditingRoom] = useState<any>(null);
     const [editForm, setEditForm] = useState({
         name: "",
-        location: "",
+        building_id: "",
+        floor: "",
         status: "Vacant",
         type: "Lecture"
     });
 
     useEffect(() => {
-        loadRooms()
+        loadRooms();
+        loadBuildings();
     }, []);
+
+    const loadBuildings = async () => {
+        try {
+            const buildings = await buildingAPI.getAll();
+            setBuildings(buildings);
+        } catch (error) {
+            console.error('Error loading buildings:', error);
+        }
+    };
 
     const loadRooms = async () => {
         try {
@@ -37,7 +50,8 @@ export default function Rooms() {
 
     const roomColumns = [
         {field: 'name', headerName: 'Room Name', width: 200},
-        {field: 'location', headerName: 'Location', width: 200},
+        {field: 'building_name', headerName: 'Building', width: 200},
+        {field: 'floor', headerName: 'Floor', width: 150},
         {field: 'type', headerName: 'Type', width: 140},
         {field: 'status', headerName: 'Status', width: 180, cellRenderer: (params: any) => (
             <button
@@ -81,7 +95,7 @@ export default function Rooms() {
     const addRoom = async () => {
         try {
             const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
-            const required = ['name', 'location'];
+            const required = ['name', 'building_id', 'floor'];
             if (!hasAllRequired(newRoom as any, required)) {
                 alert('Please fill out all required fields.');
                 return;
@@ -91,7 +105,8 @@ export default function Rooms() {
             await loadRooms();
             setNewRoom({
                 name: "",
-                location: "",
+                building_id: "",
+                floor: "",
                 status: "Vacant",
                 type: "Lecture"
             });
@@ -106,7 +121,8 @@ export default function Rooms() {
         setEditingRoom(room);
         setEditForm({
             name: room.name,
-            location: room.location,
+            building_id: room.building_id || '',
+            floor: room.floor || '',
             status: room.status || 'Vacant',
             type: room.type || 'Lecture'
         });
@@ -116,7 +132,8 @@ export default function Rooms() {
         setEditingRoom(null);
         setEditForm({
             name: "",
-            location: "",
+            building_id: "",
+            floor: "",
             status: "Vacant",
             type: "Lecture"
         });
@@ -125,7 +142,7 @@ export default function Rooms() {
     const saveEdit = async () => {
         try {
             const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
-            const required = ['name', 'location'];
+            const required = ['name', 'building_id', 'floor'];
             if (!hasAllRequired(editForm as any, required)) {
                 alert('Please fill out all required fields.');
                 return;
@@ -151,7 +168,7 @@ export default function Rooms() {
         const next = getNextStatus(room.status);
         try {
             setLoading(true);
-            await roomAPI.update(room.id, { name: room.name, location: room.location, status: next });
+            await roomAPI.update(room.id, { name: room.name, building_id: room.building_id, floor: room.floor, status: next });
             await loadRooms();
         } catch (error) {
             console.error('Error toggling status:', error);
@@ -188,8 +205,9 @@ export default function Rooms() {
                                 <label className="text-white text-sm mb-1">Room Name</label>
                                 <input 
                                     type="text"
-                                    className="w-[200px] px-3 py-2 text-black rounded"
-                                    placeholder="Enter room name" 
+                                    className="w-[200px] px-3 py-2 text-black rounded capitalize"
+                                    placeholder="Enter room name"
+                                    autoCapitalize="sentences"
                                     value={editingRoom ? editForm.name : newRoom.name}
                                     onChange={(e) => editingRoom 
                                         ? setEditForm({ ...editForm, name: e.target.value })
@@ -199,17 +217,39 @@ export default function Rooms() {
                             </div>
 
                             <div className="flex flex-col">
-                                <label className="text-white text-sm mb-1">Location</label>
-                                <input 
-                                    type="text"
+                                <label className="text-white text-sm mb-1">Building</label>
+                                <select 
                                     className="w-[200px] px-3 py-2 text-black rounded"
-                                    placeholder="Enter location"
-                                    value={editingRoom ? editForm.location : newRoom.location}
+                                    value={editingRoom ? editForm.building_id : newRoom.building_id}
                                     onChange={(e) => editingRoom 
-                                        ? setEditForm({ ...editForm, location: e.target.value })
-                                        : setNewRoom({ ...newRoom, location: e.target.value })
-                                    } 
-                                />
+                                        ? setEditForm({ ...editForm, building_id: e.target.value })
+                                        : setNewRoom({ ...newRoom, building_id: e.target.value })
+                                    }
+                                >
+                                    <option value="">--Select Building--</option>
+                                    {buildings.map((building) => (
+                                        <option key={building.id} value={building.id}>
+                                            {building.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex flex-col">
+                                <label className="text-white text-sm mb-1">Floor</label>
+                                <select 
+                                    className="w-[200px] px-3 py-2 text-black rounded"
+                                    value={editingRoom ? editForm.floor : newRoom.floor}
+                                    onChange={(e) => editingRoom 
+                                        ? setEditForm({ ...editForm, floor: e.target.value })
+                                        : setNewRoom({ ...newRoom, floor: e.target.value })
+                                    }
+                                >
+                                    <option value="">--Select Floor--</option>
+                                    <option value="1st floor">1st floor</option>
+                                    <option value="2nd floor">2nd floor</option>
+                                    <option value="3rd floor">3rd floor</option>
+                                </select>
                             </div>
 
                             {/* Room Type */}
@@ -228,7 +268,6 @@ export default function Rooms() {
                                 </select>
                             </div>
 
-                            {/* Status is set automatically to Vacant on add and toggled via button in the grid */}
 
 
                             <div className="flex flex-col justify-end">

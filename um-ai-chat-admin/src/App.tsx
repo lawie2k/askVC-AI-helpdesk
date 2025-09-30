@@ -6,6 +6,7 @@ import Dashboard from "./tabs/dashboard";
 import Rules from "./tabs/rules";
 import Professor from "./tabs/professor";
 import Rooms from "./tabs/rooms";
+import Buildings from "./tabs/buildings";
 import Offices from "./tabs/offices"
 import Departments from "./tabs/departments";
 import Reports from "./tabs/reports";
@@ -25,6 +26,7 @@ export default function App() {
                     <Route path="Rules" element={<Rules/>}/>
                     <Route path="Professor" element={<Professor/>}/>
                     <Route path="Rooms" element={<Rooms/>}/>
+                    <Route path="Buildings" element={<Buildings/>}/>
                     <Route path="Offices" element={<Offices/>}/>
                     <Route path="Departments" element={<Departments/>}/>
                     <Route path="Reports" element={<Reports/>}/>

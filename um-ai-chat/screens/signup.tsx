@@ -6,7 +6,7 @@ import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
 import {IconProp} from "@fortawesome/fontawesome-svg-core";
 import {useNavigation} from "@react-navigation/native";
 
-const API_URL = "http://192.168.1.4:5050";
+const API_URL = "http://192.168.1.33:5050";
 
 const isUmEmail = (value: string) => {
     const trimmed = value.trim();
