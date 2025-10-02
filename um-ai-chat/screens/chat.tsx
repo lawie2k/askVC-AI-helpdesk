@@ -17,9 +17,9 @@ export function Chat({messages, setMessages}: {
 }) {
 
     const BASE_URL = Platform.select({
-        ios: "http://192.168.1.33:5050",
-        android: "http://192.168.1.33:5050",
-        default: "http://192.168.1.33:5050",
+        ios: "http://192.168.1.8:5050",
+        android: "http://192.168.1.8:5050",
+        default: "http://192.168.1.8:5050",
     });
 
     const [isThinking, setIsThinking] = React.useState(false);

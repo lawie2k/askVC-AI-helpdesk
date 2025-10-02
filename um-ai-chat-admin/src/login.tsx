@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { adminAuthAPI } from "./services/api";
+import { useMobileDetection } from "./utils/mobileDetection";
+import MobileRestriction from "./components/MobileRestriction";
 
 export default function login() {
     const navigate = useNavigate();
@@ -8,6 +10,7 @@ export default function login() {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const isMobile = useMobileDetection();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -39,6 +42,11 @@ export default function login() {
             setLoading(false);
         }
     };
+
+    // Show mobile restriction if accessed on mobile device
+    if (isMobile) {
+        return <MobileRestriction />;
+    }
 
     return (
       <div className="min-h-screen bg-[#292929] text-white">

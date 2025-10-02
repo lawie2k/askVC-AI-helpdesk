@@ -117,7 +117,7 @@ export default function Dashboard() {
                       height="325px"
                       className="text-white text-[14px] bg-[#292929]"
                       showSearch={false}
-                      pageSize={2}
+                      pageSize={3}
                     />
                   )}
               </div>

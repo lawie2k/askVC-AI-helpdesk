@@ -3,10 +3,13 @@ import {NavLink, Outlet, useNavigate} from "react-router-dom";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faRightFromBracket} from "@fortawesome/free-solid-svg-icons";
 import React from "react";
+import { useMobileDetection } from "./utils/mobileDetection";
+import MobileRestriction from "./components/MobileRestriction";
 
 export default function MainDashboard() {
     const [active, setActive] = React.useState<string>("dashboard");
     const [adminname, setAdminname] = React.useState("");
+    const isMobile = useMobileDetection();
     const navigate = useNavigate();
 
     React.useEffect(() => {
@@ -22,6 +25,11 @@ export default function MainDashboard() {
         localStorage.removeItem("adminUsername");
         localStorage.removeItem("adminUser");
         navigate("/login", { replace: true });
+    }
+
+    // Show mobile restriction if accessed on mobile device
+    if (isMobile) {
+        return <MobileRestriction />;
     }
 
     return (

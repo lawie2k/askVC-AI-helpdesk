@@ -3,7 +3,9 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faArrowLeft} from "@fortawesome/free-solid-svg-icons";
 import {IconProp} from "@fortawesome/fontawesome-svg-core";
 import {adminAuthAPI} from "./services/api";
-import {FormEvent, useState} from "react";
+import {FormEvent, useState, useEffect} from "react";
+import { useMobileDetection } from "./utils/mobileDetection";
+import MobileRestriction from "./components/MobileRestriction";
 
 export default function signup() {
     const navigate = useNavigate();
@@ -12,6 +14,7 @@ export default function signup() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const isMobile = useMobileDetection();
 
     const handleSignUp= async (e: FormEvent) => {
         e.preventDefault();
@@ -33,6 +36,11 @@ export default function signup() {
             setLoading(false);
         }
     };
+
+    // Show mobile restriction if accessed on mobile device
+    if (isMobile) {
+        return <MobileRestriction />;
+    }
 
     return (
         <>
