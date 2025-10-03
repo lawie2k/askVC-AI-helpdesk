@@ -23,7 +23,7 @@ export default function logs (){
     };
 
     const logColumns = [
-        {field: 'admin_username', headerName: 'Admin', width: 120},
+        {field: 'username', headerName: 'Admin', width: 120},
         {field: 'action', headerName: 'Action', width: 150},
         {field: 'details', headerName: 'Details', width: 300},
         {field: 'created_at', headerName: 'Created At', width: 150},

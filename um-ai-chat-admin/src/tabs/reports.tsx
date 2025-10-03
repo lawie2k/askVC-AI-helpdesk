@@ -134,7 +134,7 @@ XLSX.writeFile(workbook,`${fileBase}_${timestamp}.xlsx`);
                         <DataGrid 
                             data={rows}
                             columns={activeColumns}
-                            height="655px"
+                            height="615px"
                             className="text-white text-[14px] bg-[#292929]"
                             showSearch={false}
                             pageSize={11}

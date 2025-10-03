@@ -268,7 +268,7 @@ export default function offices() {
                 <DataGrid 
                     data={filteredOffices}
                     columns={officeColumns}
-                    height="585px"
+                    height="520px"
                     className="text-white text-[14px] bg-[#292929]"
                     showSearch={false}
                     pageSize={14}

@@ -332,7 +332,7 @@ export default function Rooms() {
                             <DataGrid 
                                 data={filteredRooms}
                                 columns={roomColumns}
-                                height="585px"
+                                height="520px"
                                 className="text-white text-[14px] bg-[#292929]"
                                 showSearch={false}
                                 pageSize={14}

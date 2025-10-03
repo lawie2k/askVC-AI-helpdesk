@@ -43,3 +43,4 @@ const MobileRestriction: React.FC = () => {
 };
 
 export default MobileRestriction;
+
