@@ -172,8 +172,8 @@ export default function professor(){
   };
     return (
         <>
-        <div className=" flex flex-col 2xl:items-center bg-[#3C3C3C] mx-4 xl:mx-7 h-[800px] mt-[-50] pt-10 shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]">
-   <div className="flex justify-center justify-self-center text-xl xl:text-2xl 2xl:text-[32px] font-bold bg-[#900C27] rounded-full w-[180px] xl:w-[220px] 2xl:w-[250px] h-[42px] xl:h-[46px] 2xl:h-[50px] mx-auto ">
+        <div className=" flex flex-col 2xl:items-center bg-[#3C3C3C] mx-4 xl:mx-7 h-[800px] mt-[-50] pt-10 overflow-y-hidden shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]">
+   <div className="flex justify-center justify-self-center text-xl xl:text-2xl 2xl:text-[32px] font-bold w-[180px] xl:w-[220px] 2xl:w-[250px] h-[42px] xl:h-[46px] 2xl:h-[50px] mx-auto ">
       <h1 className="truncate">Professor</h1>
     </div>
       <div className="w-full max-w-[1170px] h-auto mt-6 xl:mx-10 px-4 flex flex-col">
@@ -236,9 +236,9 @@ export default function professor(){
                   ? setEditForm({ ...editForm, department: e.target.value })
                   : setNewProfessor({ ...newProfessor, department: e.target.value })
                 }
-                className="w-[200px] h-[40px] px-3 py-2 text-black rounded"
+                className="w-[150px] h-[40px] px-3 py-2 text-black rounded"
               >
-                <option value="">-- Choose Department --</option>
+                <option value="">--Department--</option>
                 {departments.map((dept) => (
                   <option key={dept.id} value={dept.short_name}>
                     {dept.short_name}
@@ -281,7 +281,7 @@ export default function professor(){
                 </div>
               ) : (
                 <button 
-                  className="w-[150px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold" 
+                  className="w-[100px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold"
                   onClick={addProfessor}
                 >
                   Add Record
