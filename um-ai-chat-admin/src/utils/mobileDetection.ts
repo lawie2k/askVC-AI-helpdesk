@@ -14,8 +14,8 @@ export const isMobileDevice = (): boolean => {
   // Check user agent
   const isMobileUserAgent = mobileRegex.test(navigator.userAgent);
   
-  // Consider device restricted if viewport is small OR clearly a mobile/touch device
-  return isSmallViewport || (isTouchDevice && isMobileUserAgent);
+  // Consider device restricted ONLY by viewport width to avoid false positives on large touch devices
+  return isSmallViewport;
 };
 
 // Hook for responsive mobile detection

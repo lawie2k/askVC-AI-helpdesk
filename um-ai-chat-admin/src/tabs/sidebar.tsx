@@ -17,94 +17,94 @@ export default function Sidebar() {
     return (
         <>
             <div
-                className='bg-[#3C3C3C] w-[320px] h-[800px] px-8 ml-10 mr-5 shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]'>
+                className='bg-[#3C3C3C] w-56 xl:w-64 2xl:w-[320px] h-[800px] px-4 xl:px-6 2xl:px-8 ml-4 xl:ml-8 2xl:ml-10 shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]'>
               <div className='text-white pt-10'>
                   <NavLink
                       to="/dashboard"
-                      className={` text-[28px] font-extrabold w-[250px] text-left px-3 py-2 rounded-xl ${active === "dashboard" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
+                      className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "dashboard" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
                       onClick={() => setActive("dashboard")}>
                       <FontAwesomeIcon icon={faTableColumns} />
-                      <span className="ml-2">Dashboard</span>
+                      <span className="ml-2 truncate">Dashboard</span>
                   </NavLink>
 
               </div>
                 <div className="text-white pt-5">
                     <NavLink
                         to="/Rules"
-                        className={`text-[28px] font-extrabold w-[250px] text-left px-3 py-2 rounded-xl ${active === "rules" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
+                        className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "rules" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
                         onClick={() => setActive("rules")}>
                         <FontAwesomeIcon icon={faScaleBalanced} />
-                        <span className="ml-2">Rules</span>
+                        <span className="ml-2 truncate">Rules</span>
                     </NavLink>
 
                 </div>
                 <div className="text-white pt-5">
                     <NavLink
                         to="/Professor"
-                        className={`text-[28px] font-extrabold w-[250px] text-left px-3 py-2 rounded-xl ${active === "professor" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
+                        className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "professor" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
                         onClick={() => setActive("professor")}>
                         <FontAwesomeIcon icon={faUserTie} />
-                        <span className="ml-2">Professor</span>
+                        <span className="ml-2 truncate">Professor</span>
                     </NavLink>
 
                 </div>
                 <div className="text-white pt-5">
                     <NavLink
                         to="/Rooms"
-                        className={`text-[28px] font-extrabold w-[250px] text-left px-3 py-2 rounded-xl ${active === "rooms" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
+                        className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "rooms" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
                         onClick={() => setActive("rooms")}>
                         <FontAwesomeIcon icon={faBuilding} />
-                        <span className="ml-2">Rooms</span>
+                        <span className="ml-2 truncate">Rooms</span>
                     </NavLink>
 
                 </div>
                 <div className="text-white pt-5">
                     <NavLink
                         to="/Buildings"
-                        className={`text-[28px] font-extrabold w-[250px] text-left px-3 py-2 rounded-xl ${active === "buildings" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
+                        className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "buildings" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
                         onClick={() => setActive("buildings")}>
                         <FontAwesomeIcon icon={faBuildingColumns} />
-                        <span className="ml-2">Buildings</span>
+                        <span className="ml-2 truncate">Buildings</span>
                     </NavLink>
 
                 </div>
                 <div className="text-white pt-5">
                     <NavLink
                         to="/Offices"
-                        className={`text-[28px] font-extrabold w-[250px] text-left px-3 py-2 rounded-xl ${active === "offices" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
+                        className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "offices" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
                         onClick={() => setActive("offices")}>
                         <FontAwesomeIcon icon={faBriefcase} />
-                        <span className="ml-2">Offices</span>
+                        <span className="ml-2 truncate">Offices</span>
                     </NavLink>
 
                 </div>
                 <div className="text-white pt-5">
                     <NavLink
                         to="/Departments"
-                        className={`text-[28px] font-extrabold w-[250px] text-left px-3 py-2 rounded-xl ${active === "departments" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
+                        className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "departments" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
                         onClick={() => setActive("departments")}>
                         <FontAwesomeIcon icon={faUsers} />
-                        <span className="ml-2">Departments</span>
+                        <span className="ml-2 truncate">Departments</span>
                     </NavLink>
 
                 </div>
                 <div className="text-white pt-5">
                     <NavLink
                         to="/Reports"
-                        className={`text-[28px] font-extrabold w-[250px] text-left px-3 py-2 rounded-xl ${active === "reports" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
+                        className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "reports" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
                         onClick={() => setActive("reports")}>
                         <FontAwesomeIcon icon={faEnvelope} />
-                        <span className="ml-2">Reports</span>
+                        <span className="ml-2 truncate">Reports</span>
                     </NavLink>
 
                 </div>
                 <div className="text-white pt-5">
                     <NavLink
                         to="/Logs"
-                        className={`text-[28px] font-extrabold w-[250px] text-left px-3 py-2 rounded-xl ${active === "logs" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
+                        className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "logs" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
                         onClick={() => setActive("logs")}>
                         <FontAwesomeIcon icon={faFile} />
-                        <span className="ml-2">Logs</span>
+                        <span className="ml-2 truncate">Logs</span>
                     </NavLink>
 
                 </div>

@@ -128,11 +128,11 @@ export default function rules () {
 
     return (
    <>
-   <div className="bg-[#3C3C3C] w-[1250px] h-[800px] mt-[-50] pt-10 shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]">
-    <div className="flex justify-center justify-self-center text-[32px] font-bold bg-[#900C27] rounded-full w-[250px] h-[50px] ">
-      <h1 className="">Rules</h1>
+   <div className=" flex flex-col 2xl:items-center bg-[#3C3C3C] mx-4 xl:mx-7 h-[800px] mt-[-50] pt-10 shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]">
+    <div className="flex justify-center justify-self-center text-xl xl:text-2xl 2xl:text-[32px] font-bold bg-[#900C27] rounded-full w-[180px] xl:w-[220px] 2xl:w-[250px] h-[42px] xl:h-[46px] 2xl:h-[50px] mx-auto ">
+      <h1 className="truncate">Rules</h1>
     </div>
-      <div className="w-[1170px] h-[650px]  mt-6 mx-10 flex-col">
+      <div className="w-full max-w-[1170px] h-[650px]  mt-6 xl:mx-10 px-4 flex-col">
         <div className="flex space-x-4 mb-3">
           <div className="flex-1">
             <label className="text-white text-sm font-semibold mb-1 block">Add New Rule</label>

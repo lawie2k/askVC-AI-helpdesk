@@ -73,12 +73,12 @@ export default function Dashboard() {
     ];
 
   return <>
-      <div className="bg-[#3C3C3C] w-[1250px] h-[800px] mt-[-50] pt-10 overflow-hidden  shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]">
-          <div className="flex justify-center justify-self-center text-[32px] font-bold bg-[#900C27] rounded-full w-[250px] h-[50px]">
-              <h1 className="">Dashboard</h1>
+      <div className=" flex flex-col bg-[#3C3C3C] mx-4 xl:mx-7 h-[800px] mt-[-50] pt-10 overflow-hidden 2xl:items-center  shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]">
+          <div className="flex justify-center justify-self-center text-xl xl:text-2xl 2xl:text-[32px] font-bold bg-[#900C27] rounded-full w-[180px] xl:w-[220px] 2xl:w-[250px] h-[42px] xl:h-[46px] 2xl:h-[50px] mx-auto">
+              <h1 className="truncate">Dashboard</h1>
             </div>
           {error && (
-            <div className="w-[1170px] mx-10 mt-4 p-4 bg-red-600 text-white rounded-lg flex justify-between items-center">
+            <div className="w-full max-w-[1170px] xl:mx-10 mt-4 px-4 p-4 bg-red-600 text-white rounded-lg flex justify-between items-center">
               <span>{error}</span>
               <button 
                 onClick={loadDashboardData}
@@ -88,8 +88,8 @@ export default function Dashboard() {
               </button>
             </div>
           )}
-          <div className="w-[1170px] h-[660px] mt-6 mx-10 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto">
+          <div className="w-full max-w-[1170px] h-[660px] mt-6 xl:mx-10 px-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto">
     {loading ? (
       <div className="w-full flex justify-center items-center">
         <div className="text-white">Loading...</div>
@@ -105,7 +105,7 @@ export default function Dashboard() {
       />
     )}
 </div>
-              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto ">
+              <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto ">
                   {loading ? (
                     <div className="flex justify-center items-center">
                       <div className="text-white">Loading...</div>
@@ -121,7 +121,7 @@ export default function Dashboard() {
                     />
                   )}
               </div>
-              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto">
+              <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto">
 
                   {loading ? (
                     <div className="flex justify-center items-center">
@@ -138,7 +138,7 @@ export default function Dashboard() {
                     />
                   )}
               </div>
-              <div className="w-[580px] h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto">
+              <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto">
                   {loading ? (
                     <div className="flex justify-center items-center">
                       <div className="text-white">Loading...</div>
