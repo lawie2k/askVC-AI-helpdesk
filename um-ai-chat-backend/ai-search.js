@@ -10,6 +10,7 @@ async function searchDatabase(question) {
     const isRules = isRulesQuestion(question);
     const isProfessors = isProfessorsQuestion(question);
     const isBuildings = isBuildingsQuestion(question);
+    const isOffices = isOfficesQuestion(question);
     const isRooms = isRoomsQuestion(question);
     const targetDepartment = extractDepartmentFromQuestion(question);
     const targetRoomNumber = extractRoomNumber(question);
@@ -137,6 +138,35 @@ async function searchDatabase(question) {
           completedSearches++;
           if (completedSearches === tablesToSearch.length) {
             // Sort results by table priority and relevance
+            const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
+            resolve(finalResults);
+          }
+        });
+        return;
+      }
+
+      // Special handling for offices questions
+      if (isOffices && table === 'offices') {
+        // For offices questions, get all offices with building info
+        db.query(`
+          SELECT o.*, b.name as building_name, "office_query" as match_type 
+          FROM offices o 
+          LEFT JOIN buildings b ON o.building_id = b.id
+        `, (err, results) => {
+          if (!err && results.length > 0) {
+            const scoredResults = results.map(result => ({
+              ...result,
+              relevance_score: 100 // High relevance for offices when asking about offices
+            }));
+            searchResults.push({
+              table: table,
+              data: scoredResults,
+              priority: tableInfo.priority
+            });
+          }
+
+          completedSearches++;
+          if (completedSearches === tablesToSearch.length) {
             const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
             resolve(finalResults);
           }
@@ -336,6 +366,13 @@ function isBuildingsQuestion(question) {
   return buildingKeywords.some(k => q.includes(k));
 }
 
+// Check if question is asking about offices
+function isOfficesQuestion(question) {
+  const officeKeywords = ['office', 'offices', 'sao', 'student affairs', 'registrar', 'cashier', 'clinic', 'library', 'faculty', 'where is', 'location'];
+  const q = question.toLowerCase();
+  return officeKeywords.some(k => q.includes(k));
+}
+
 // Check if question is asking about specific rooms
 function isRoomsQuestion(question) {
   const roomKeywords = ['room', 'rooms', 'where is', 'location of', 'find room'];
@@ -424,7 +461,7 @@ module.exports = {
   isRulesQuestion,
   isProfessorsQuestion,
   isBuildingsQuestion,
-  isRoomsQuestion,
+  isOfficesQuestion,
   extractRoomNumber,
   extractDepartmentFromQuestion,
   getSearchableColumns,

@@ -5,7 +5,6 @@ const path = require("path");
 // Import our modular components
 const authRoutes = require("./auth");
 const apiRoutes = require("./api-routes");
-const { initializeDatabaseSchema } = require("./database-schema");
 
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
@@ -27,14 +26,10 @@ app.get("/auth/_debug", (req, res) => {
   }
 });
 
-// Initialize database schema
-initializeDatabaseSchema();
-
 // Start server
 const PORT = process.env.PORT || 5050;
 app.listen(PORT, () => {
   console.log(`🚀 UM AI Helpdesk Backend running on port ${PORT}`);
-  console.log(`📊 Database schema initialized`);
   console.log(`🤖 AI Service: Initialized`);
 });
 

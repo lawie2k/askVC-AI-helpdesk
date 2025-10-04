@@ -123,6 +123,14 @@ ${dbContext}`;
       if (first.table === "rules") fallback = `Here are some rules I found: ${sample.map(r => r.description).filter(Boolean).join(" | ")}`;
       else if (first.table === "professors") fallback = `Some professors: ${sample.map(p => p.name).filter(Boolean).join(", ")}`;
       else if (first.table === "buildings") fallback = `Buildings on campus: ${sample.map(b => b.name).filter(Boolean).join(", ")}`;
+      else if (first.table === "offices") {
+        const officeInfo = sample.map(o => {
+          const building = o.building_name || 'Unknown Building';
+          const floor = o.floor || 'Unknown Floor';
+          return `${o.name}: ${building} ${floor}`;
+        }).join(" | ");
+        fallback = `Office locations: ${officeInfo}`;
+      }
       else if (first.table === "rooms") {
         if (targetRoomNumber) {
           // Specific room query
