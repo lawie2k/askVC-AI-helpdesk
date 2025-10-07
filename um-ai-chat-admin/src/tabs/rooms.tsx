@@ -61,6 +61,11 @@ export default function Rooms() {
         {field: 'building_name', headerName: 'Building', width: 200},
         {field: 'floor', headerName: 'Floor', width: 150},
         {field: 'type', headerName: 'Type', width: 140},
+        {field: 'created_at', headerName: 'Created At', width: 200, cellRenderer: (params: any) => {
+            const v = params.value;
+            if (!v) return '';
+            try { return new Date(v).toLocaleString(); } catch { return String(v); }
+        }},
         {field: 'status', headerName: 'Status', width: 180, cellRenderer: (params: any) => (
             <button
                 className={

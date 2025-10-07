@@ -57,6 +57,11 @@ export default function offices() {
         {field: 'name', headerName: 'Office Name', width: 200},
         {field: 'building_name', headerName: 'Building', width: 200},
         {field: 'floor', headerName: 'Floor', width: 150},
+        {field: 'created_at', headerName: 'Created At', width: 200, cellRenderer: (params: any) => {
+            const v = params.value;
+            if (!v) return '';
+            try { return new Date(v).toLocaleString(); } catch { return String(v); }
+        }},
         {
             field: 'actions',
             headerName: 'Actions',

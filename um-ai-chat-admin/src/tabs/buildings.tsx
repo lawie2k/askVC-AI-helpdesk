@@ -147,6 +147,8 @@ export default function Buildings() {
                     />
                 </div>
 
+                
+
 
                 <div className="flex flex-col justify-end">
                     {editingBuilding ? (

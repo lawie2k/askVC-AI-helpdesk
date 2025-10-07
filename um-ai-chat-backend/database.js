@@ -4,7 +4,7 @@ const db = mysql.createConnection({
   host: "127.0.0.1",
   user: "root",
   password: "imforsaken1",
-  database: "um_ai_db",
+  database: "askVC",
   port: 3306,
 });
 

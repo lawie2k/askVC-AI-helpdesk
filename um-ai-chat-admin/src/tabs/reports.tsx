@@ -137,7 +137,7 @@ XLSX.writeFile(workbook,`${fileBase}_${timestamp}.xlsx`);
                             height="615px"
                             className="text-white text-[14px] bg-[#292929]"
                             showSearch={false}
-                            pageSize={11}
+                            pageSize={18}
                         />
                     )}
                 </div>

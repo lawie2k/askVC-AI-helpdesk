@@ -42,6 +42,7 @@ export default function Dashboard() {
         { field: 'building_name', headerName: 'Building' },
         { field: 'floor', headerName: 'Floor' },
         { field: 'type', headerName: 'Type' },
+        { field: 'created_at', headerName: 'Created At', cellRenderer: (params: any) => { const v = params.value; if (!v) return ''; try { return new Date(v).toLocaleString(); } catch { return String(v); } } },
         {field: 'status', headerName: 'Status', width: 180, cellRenderer: (params: any) => (
                 <div
                     className={
@@ -61,6 +62,7 @@ export default function Dashboard() {
         { field: 'name', headerName: 'Office Name' },
         { field: 'building_name', headerName: 'Building' },
         { field: 'floor', headerName: 'Floor' },
+        { field: 'created_at', headerName: 'Created At', cellRenderer: (params: any) => { const v = params.value; if (!v) return ''; try { return new Date(v).toLocaleString(); } catch { return String(v); } } },
     ];
     const logColumns = [
         {field: 'username', headerName: 'Admin'},

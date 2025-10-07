@@ -1,11 +1,75 @@
 const express = require("express");
 const db = require("./database");
 const jwt = require("jsonwebtoken");
-const { searchDatabase, extractRoomNumber } = require("./ai-search");
+const { searchDatabase, extractRoomNumber, extractDepartmentFromQuestion } = require("./ai-search");
 const AIService = require("./ai-service");
 
 const router = express.Router();
 const aiService = new AIService();
+
+// Ensure created_at columns exist for rooms and offices, enforce NOT NULL DEFAULT, and backfill NULLs
+(function ensureCreatedAtColumns() {
+  try {
+    const ensureForTable = (table) => {
+      db.query(`SHOW COLUMNS FROM ${table} LIKE 'created_at'`, (err, results) => {
+        if (err) {
+          console.warn(`Schema check failed for ${table}.created_at:`, err.message);
+          return;
+        }
+
+        // If column is missing, add it
+        if (!results || results.length === 0) {
+          console.log(`Adding missing column ${table}.created_at ...`);
+          db.query(
+            `ALTER TABLE ${table} ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`,
+            (alterErr) => {
+              if (alterErr) {
+                console.warn(`Failed to add ${table}.created_at column:`, alterErr.message);
+              } else {
+                console.log(`Added ${table}.created_at column successfully`);
+              }
+            }
+          );
+        } else {
+          // If column exists but is nullable or missing default, modify it
+          const col = results[0];
+          const isNullable = String(col.Null).toUpperCase() !== 'NO';
+          const hasDefault = col.Default !== null && col.Default !== undefined;
+          const type = String(col.Type).toLowerCase();
+          const needsTypeFix = !(type.includes('timestamp') || type.includes('datetime'));
+
+          if (isNullable || !hasDefault || needsTypeFix) {
+            console.log(`Altering ${table}.created_at to TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ...`);
+            db.query(
+              `ALTER TABLE ${table} MODIFY created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`,
+              (modErr) => {
+                if (modErr) {
+                  console.warn(`Failed to modify ${table}.created_at:`, modErr.message);
+                } else {
+                  console.log(`Modified ${table}.created_at successfully`);
+                }
+              }
+            );
+          }
+        }
+
+        // Backfill NULL values just in case
+        db.query(`UPDATE ${table} SET created_at = NOW() WHERE created_at IS NULL`, (updErr, updRes) => {
+          if (updErr) {
+            console.warn(`Failed to backfill ${table}.created_at:`, updErr.message);
+          } else if (updRes && updRes.affectedRows) {
+            console.log(`Backfilled ${updRes.affectedRows} ${table}.created_at values.`);
+          }
+        });
+      });
+    };
+
+    ensureForTable('rooms');
+    ensureForTable('offices');
+  } catch (e) {
+    console.warn('Schema ensure error (created_at):', String(e));
+  }
+})();
 
 // Middleware to authenticate admin
 function authenticateAdmin(req, res, next) {
@@ -55,11 +119,48 @@ router.post("/debug-search", async (req, res) => {
   }
 });
 
+// Simple DB debug: verify professors can be read and joined with departments
+router.get('/debug/professors-db', (req, res) => {
+  const sql = `
+    SELECT p.id, p.name, p.position, p.email,
+           p.program,
+           p.department_id,
+           d.short_name AS department_short,
+           d.name AS department_name
+    FROM professors p
+    LEFT JOIN departments d ON p.department_id = d.id
+    ORDER BY p.name
+    LIMIT 50`;
+  db.query(sql, (err, rows) => {
+    if (err) {
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+    res.json({ ok: true, count: rows?.length || 0, sample: rows });
+  });
+});
+
+// AI-focused debug: run searchDatabase and return only professors slice
+router.post('/debug/ai-professors', async (req, res) => {
+  try {
+    const question = (req.body && req.body.question) || 'who are the professors in BSIT';
+    const results = await searchDatabase(question);
+    const prof = (results || []).find(r => r.table === 'professors');
+    return res.json({ ok: true, question, professors: prof ? prof.data : [] });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: String(e) });
+  }
+});
+
 // AI ask route with database search + GitHub AI (with timeout & fallback)
 router.post("/ask", async (req, res) => {
   const { question } = req.body;
 
   try {
+    // Special-case: answer only if the question is exactly "miss mo"
+    if (typeof question === 'string' && question.trim().toLowerCase() === 'miss mo') {
+      return res.json({ answer: 'Opo 😢' });
+    }
+
     // Extract room number for fallback responses
     const targetRoomNumber = extractRoomNumber(question);
     
@@ -93,7 +194,6 @@ IMPORTANT INSTRUCTIONS:
 - Don't add unnecessary details or long explanations
 - Be conversational but brief
 - Don't answer questions that are not related to UM Visayan Campus topics
-- If someone just says "miss mo", respond with "Opo 😢" in a sad tone with crying emoji
 
 ${dbContext}`;
 
@@ -115,13 +215,19 @@ ${dbContext}`;
       }
     }
 
-    // Fallback to quick DB-based response
+    // Fallback to quick DB-based response (robust: prefer professors slice if present)
     const first = dbResults[0];
-    const sample = first && (first.data || []).slice(0, 2);
+    const profSlice = (dbResults || []).find(r => r.table === 'professors');
     let fallback = "I couldn't find specific info in the database right now. Please try rephrasing your question.";
-    if (first && sample && sample.length > 0) {
+
+    if (profSlice && Array.isArray(profSlice.data) && profSlice.data.length > 0) {
+      const sample = profSlice.data.slice(0, 5);
+      const dept = extractDepartmentFromQuestion(question);
+      const names = sample.map(p => p.name).filter(Boolean).join(', ');
+      fallback = dept ? `Some professors in ${dept}: ${names}` : `Some professors: ${names}`;
+    } else if (first && Array.isArray(first.data) && first.data.length > 0) {
+      const sample = first.data.slice(0, 2);
       if (first.table === "rules") fallback = `Here are some rules I found: ${sample.map(r => r.description).filter(Boolean).join(" | ")}`;
-      else if (first.table === "professors") fallback = `Some professors: ${sample.map(p => p.name).filter(Boolean).join(", ")}`;
       else if (first.table === "buildings") fallback = `Buildings on campus: ${sample.map(b => b.name).filter(Boolean).join(", ")}`;
       else if (first.table === "offices") {
         const officeInfo = sample.map(o => {
@@ -172,38 +278,38 @@ router.get('/api/departments', (req, res) => {
 });
 
 router.post('/api/departments', authenticateAdmin, (req, res) => {
-  const { name, head, location } = req.body;
+  const { name, short_name } = req.body;
   
-  if (!name || !head || !location) {
-    return res.status(400).json({ error: 'Name, head, and location are required' });
+  if (!name || !short_name) {
+    return res.status(400).json({ error: 'name and short_name are required' });
   }
 
   db.query(
-    'INSERT INTO departments (name, head, location) VALUES (?, ?, ?)',
-    [name, head, location],
+    'INSERT INTO departments (name, short_name) VALUES (?, ?)',
+    [name, short_name],
     (err, result) => {
       if (err) {
         console.error('Error creating department:', err);
         return res.status(500).json({ error: 'Database error' });
       }
       
-      logAdminActivity(req.admin.id, 'CREATE', `Department: ${name}`, 'departments');
-      res.json({ id: result.insertId, name, head, location });
+      logAdminActivity(req.admin.id, 'CREATE', `Department: ${name} (${short_name})`, 'departments');
+      res.json({ id: result.insertId, name, short_name });
     }
   );
 });
 
 router.put('/api/departments/:id', authenticateAdmin, (req, res) => {
   const { id } = req.params;
-  const { name, head, location } = req.body;
+  const { name, short_name } = req.body;
   
-  if (!name || !head || !location) {
-    return res.status(400).json({ error: 'Name, head, and location are required' });
+  if (!name || !short_name) {
+    return res.status(400).json({ error: 'name and short_name are required' });
   }
 
   db.query(
-    'UPDATE departments SET name = ?, head = ?, location = ? WHERE id = ?',
-    [name, head, location, id],
+    'UPDATE departments SET name = ?, short_name = ? WHERE id = ?',
+    [name, short_name, id],
     (err, result) => {
       if (err) {
         console.error('Error updating department:', err);
@@ -214,8 +320,8 @@ router.put('/api/departments/:id', authenticateAdmin, (req, res) => {
         return res.status(404).json({ error: 'Department not found' });
       }
       
-      logAdminActivity(req.admin.id, 'UPDATE', `Department: ${name}`, 'departments');
-      res.json({ id, name, head, location });
+      logAdminActivity(req.admin.id, 'UPDATE', `Department: ${name} (${short_name})`, 'departments');
+      res.json({ id, name, short_name });
     }
   );
 });
@@ -251,9 +357,18 @@ router.delete('/api/departments/:id', authenticateAdmin, (req, res) => {
 // Rooms API routes
 router.get('/api/rooms', (req, res) => {
   db.query(`
-    SELECT r.*, b.name as building_name 
-    FROM rooms r 
+    SELECT 
+      r.id,
+      r.name,
+      r.building_id,
+      r.floor,
+      r.status,
+      r.type,
+      r.created_at,
+      b.name AS building_name
+    FROM rooms r
     LEFT JOIN buildings b ON r.building_id = b.id
+    ORDER BY r.name
   `, (err, results) => {
     if (err) {
       console.error('Error fetching rooms:', err);
@@ -281,8 +396,8 @@ router.post('/api/rooms', authenticateAdmin, (req, res) => {
   }
 
   db.query(
-    'INSERT INTO rooms (name, building_id, floor, status, type) VALUES (?, ?, ?, ?, ?)',
-    [name, building_id, floor, status ?? 'Vacant', type ?? 'Lecture'],
+    'INSERT INTO rooms (name, building_id, floor, status, type, admin_id) VALUES (?, ?, ?, ?, ?, ?)',
+    [name, building_id, floor, status ?? 'Vacant', type ?? 'Lecture', req.admin?.id || null],
     (err, result) => {
       if (err) {
         console.error('Error creating room:', err);
@@ -290,7 +405,7 @@ router.post('/api/rooms', authenticateAdmin, (req, res) => {
       }
       
       logAdminActivity(req.admin.id, 'CREATE', `Room: ${name}`, 'rooms');
-      res.json({ id: result.insertId, name, building_id, floor, status: status ?? 'Vacant', type: type ?? 'Lecture' });
+      res.json({ id: result.insertId, name, building_id, floor, status: status ?? 'Vacant', type: type ?? 'Lecture', admin_id: req.admin?.id || null });
     }
   );
 });
@@ -343,9 +458,16 @@ router.delete('/api/rooms/:id', authenticateAdmin, (req, res) => {
 // Offices API routes
 router.get('/api/offices', (req, res) => {
   db.query(`
-    SELECT o.*, b.name as building_name 
-    FROM offices o 
+    SELECT 
+      o.id,
+      o.name,
+      o.building_id,
+      o.floor,
+      o.created_at,
+      b.name AS building_name
+    FROM offices o
     LEFT JOIN buildings b ON o.building_id = b.id
+    ORDER BY o.name
   `, (err, results) => {
     if (err) {
       console.error('Error fetching offices:', err);
@@ -363,8 +485,8 @@ router.post('/api/offices', authenticateAdmin, (req, res) => {
   }
 
   db.query(
-    'INSERT INTO offices (name, building_id, floor) VALUES (?, ?, ?)',
-    [name, building_id, floor],
+    'INSERT INTO offices (name, building_id, floor, admin_id) VALUES (?, ?, ?, ?)',
+    [name, building_id, floor, req.admin?.id || null],
     (err, result) => {
       if (err) {
         console.error('Error creating office:', err);
@@ -372,7 +494,7 @@ router.post('/api/offices', authenticateAdmin, (req, res) => {
       }
       
       logAdminActivity(req.admin.id, 'CREATE', `Office: ${name}`, 'offices');
-      res.json({ id: result.insertId, name, building_id, floor });
+      res.json({ id: result.insertId, name, building_id, floor, admin_id: req.admin?.id || null });
     }
   );
 });
@@ -437,12 +559,12 @@ router.post('/api/buildings', authenticateAdmin, (req, res) => {
   const { name } = req.body;
   
   if (!name) {
-    return res.status(400).json({ error: 'Name is required' });
+    return res.status(400).json({ error: 'name is required' });
   }
 
   db.query(
-    'INSERT INTO buildings (name) VALUES (?)',
-    [name],
+    'INSERT INTO buildings (name, admin_id) VALUES (?, ?)',
+    [name, req.admin?.id || null],
     (err, result) => {
       if (err) {
         console.error('Error creating building:', err);
@@ -450,7 +572,7 @@ router.post('/api/buildings', authenticateAdmin, (req, res) => {
       }
       
       logAdminActivity(req.admin.id, 'CREATE', `Building: ${name}`, 'buildings');
-      res.json({ id: result.insertId, name });
+      res.json({ id: result.insertId, name, admin_id: req.admin?.id || null });
     }
   );
 });
@@ -460,7 +582,7 @@ router.put('/api/buildings/:id', authenticateAdmin, (req, res) => {
   const { name } = req.body;
   
   if (!name) {
-    return res.status(400).json({ error: 'Name is required' });
+    return res.status(400).json({ error: 'name is required' });
   }
 
   db.query(
@@ -502,7 +624,14 @@ router.delete('/api/buildings/:id', authenticateAdmin, (req, res) => {
 
 // Professors API routes
 router.get('/api/professors', (req, res) => {
-  db.query('SELECT * FROM professors ORDER BY name', (err, results) => {
+  db.query(`
+    SELECT p.id, p.name, p.position, p.email, p.program,
+           d.short_name AS department,
+           p.created_at
+    FROM professors p
+    LEFT JOIN departments d ON p.department_id = d.id
+    ORDER BY p.name
+  `, (err, results) => {
     if (err) {
       console.error('Error fetching professors:', err);
       return res.status(500).json({ error: 'Database error' });
@@ -521,9 +650,8 @@ router.get('/api/professors/structure', (req, res) => {
   });
 });
 
-router.post('/api/professors/migrate', (req, res) => {
+router.post('/api/professors/migrate', authenticateAdmin, (req, res) => {
   const { professors } = req.body;
-  
   if (!Array.isArray(professors)) {
     return res.status(400).json({ error: 'Professors must be an array' });
   }
@@ -532,76 +660,77 @@ router.post('/api/professors/migrate', (req, res) => {
   let errors = [];
 
   professors.forEach((prof, index) => {
-    const { name, position, email, department, program } = prof;
-    
-    db.query(
-      'INSERT INTO professors (name, position, email, department, program) VALUES (?, ?, ?, ?, ?)',
-      [name, position, email, department, program],
-      (err, result) => {
-        completed++;
-        if (err) {
-          errors.push({ index, error: err.message });
-        }
-        
-        if (completed === professors.length) {
-          if (errors.length > 0) {
-            res.status(500).json({ error: 'Some professors failed to migrate', details: errors });
-          } else {
-            res.json({ message: 'All professors migrated successfully' });
+    const { name, position, email, department } = prof; // department short_name
+    db.query('SELECT id FROM departments WHERE short_name = ? LIMIT 1', [department], (findErr, rows) => {
+      if (findErr) {
+        completed++; errors.push({ index, error: findErr.message });
+        return;
+      }
+      const departmentId = rows && rows[0] ? rows[0].id : null;
+      db.query(
+        'INSERT INTO professors (name, position, email, department_id, admin_id) VALUES (?, ?, ?, ?, ?)',
+        [name, position, email, departmentId, req.admin?.id || null],
+        (insErr) => {
+          completed++;
+          if (insErr) errors.push({ index, error: insErr.message });
+          if (completed === professors.length) {
+            if (errors.length > 0) return res.status(500).json({ error: 'Some professors failed to migrate', details: errors });
+            return res.json({ message: 'All professors migrated successfully' });
           }
         }
+      );
+    });
+  });
+});
+
+router.post('/api/professors', authenticateAdmin, (req, res) => {
+  const { name, position, email, program, department } = req.body; // department short_name
+  if (!name || !position || !email || !department) {
+    return res.status(400).json({ error: 'name, position, email, department are required' });
+  }
+  db.query('SELECT id FROM departments WHERE short_name = ? LIMIT 1', [department], (findErr, rows) => {
+    if (findErr) return res.status(500).json({ error: 'Database error' });
+    const departmentId = rows && rows[0] ? rows[0].id : null;
+    db.query(
+      'INSERT INTO professors (name, position, email, program, department_id, admin_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, position, email, program ?? null, departmentId, req.admin?.id || null],
+      (err, result) => {
+        if (err) {
+          console.error('Error creating professor:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        logAdminActivity(req.admin.id, 'CREATE', `Professor: ${name}`, 'professors');
+        res.json({ id: result.insertId, name, position, email, program: program ?? '', department });
       }
     );
   });
 });
 
-router.post('/api/professors', authenticateAdmin, (req, res) => {
-  const { name, position, email, department, program } = req.body;
-  
-  if (!name || !position || !email || !department || !program) {
-    return res.status(400).json({ error: 'All fields are required' });
-  }
-
-  db.query(
-    'INSERT INTO professors (name, position, email, department, program) VALUES (?, ?, ?, ?, ?)',
-    [name, position, email, department, program],
-    (err, result) => {
-      if (err) {
-        console.error('Error creating professor:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      logAdminActivity(req.admin.id, 'CREATE', `Professor: ${name}`, 'professors');
-      res.json({ id: result.insertId, name, position, email, department, program });
-    }
-  );
-});
-
 router.put('/api/professors/:id', authenticateAdmin, (req, res) => {
   const { id } = req.params;
-  const { name, position, email, department, program } = req.body;
-  
-  if (!name || !position || !email || !department || !program) {
-    return res.status(400).json({ error: 'All fields are required' });
+  const { name, position, email, program, department } = req.body; // department short_name
+  if (!name || !position || !email || !department) {
+    return res.status(400).json({ error: 'name, position, email, department are required' });
   }
-
-  db.query(
-    'UPDATE professors SET name = ?, position = ?, email = ?, department = ?, program = ? WHERE id = ?',
-    [name, position, email, department, program, id],
-    (err, result) => {
-      if (err) {
-        console.error('Error updating professor:', err);
-        return res.status(500).json({ error: 'Database error' });
+  db.query('SELECT id FROM departments WHERE short_name = ? LIMIT 1', [department], (findErr, rows) => {
+    if (findErr) return res.status(500).json({ error: 'Database error' });
+    const departmentId = rows && rows[0] ? rows[0].id : null;
+    db.query(
+      'UPDATE professors SET name = ?, position = ?, email = ?, program = ?, department_id = ? WHERE id = ?',
+      [name, position, email, program ?? null, departmentId, id],
+      (err, result) => {
+        if (err) {
+          console.error('Error updating professor:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ error: 'Professor not found' });
+        }
+        logAdminActivity(req.admin.id, 'UPDATE', `Professor: ${name}`, 'professors');
+        res.json({ id, name, position, email, program: program ?? '', department });
       }
-      
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'Professor not found' });
-      }
-      
-      logAdminActivity(req.admin.id, 'UPDATE', `Professor: ${name}`, 'professors');
-      res.json({ id, name, position, email, department, program });
-    }
-  );
+    );
+  });
 });
 
 router.delete('/api/professors/:id', authenticateAdmin, (req, res) => {
@@ -781,7 +910,7 @@ router.delete('/api/settings/:id', authenticateAdmin, (req, res) => {
 // Logs API routes
 router.get('/api/logs', authenticateAdmin, (req, res) => {
   db.query(`
-    SELECT l.*, a.username 
+    SELECT l.*, a.username AS admin_username 
     FROM logs l 
     LEFT JOIN admins a ON l.admin_id = a.id 
     ORDER BY l.created_at DESC 

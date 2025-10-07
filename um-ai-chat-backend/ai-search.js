@@ -10,6 +10,7 @@ async function searchDatabase(question) {
     const isRules = isRulesQuestion(question);
     const isProfessors = isProfessorsQuestion(question);
     const isBuildings = isBuildingsQuestion(question);
+    const isPrograms = isProgramsQuestion(question);
     const isOffices = isOfficesQuestion(question);
     const isRooms = isRoomsQuestion(question);
     const targetDepartment = extractDepartmentFromQuestion(question);
@@ -67,10 +68,15 @@ async function searchDatabase(question) {
       // Special handling for professors questions
       if (isProfessors && table === 'professors') {
         if (targetDepartment) {
-          // Narrow to professors in the target department (e.g., BSIT)
+          // Filter by program or mapped department short_name/name via join
           db.query(
-            'SELECT *, "professors_query" as match_type FROM professors WHERE department LIKE ? OR program LIKE ?',
-            [`%${targetDepartment}%`, `%${targetDepartment}%`],
+            `SELECT p.*, d.short_name AS department, "professors_query" as match_type
+             FROM professors p
+             LEFT JOIN departments d ON p.department_id = d.id
+             WHERE (
+               p.program LIKE ? OR d.short_name LIKE ? OR d.name LIKE ?
+             )`,
+            [`%${targetDepartment}%`, `%${targetDepartment}%`, `%${targetDepartment}%`],
             (err, results) => {
               if (!err && results.length > 0) {
                 const scoredResults = results.map(result => ({
@@ -94,7 +100,10 @@ async function searchDatabase(question) {
         } else {
           // If no department specified, return all professors (limited)
           db.query(
-            'SELECT *, "professors_query" as match_type FROM professors LIMIT 25',
+            `SELECT p.*, d.short_name AS department, "professors_query" as match_type
+             FROM professors p
+             LEFT JOIN departments d ON p.department_id = d.id
+             LIMIT 25`,
             (err, results) => {
               if (!err && results.length > 0) {
                 const scoredResults = results.map(result => ({
@@ -116,6 +125,36 @@ async function searchDatabase(question) {
             }
           );
         }
+        return;
+      }
+
+      // Special handling for programs questions (list distinct programs from professors)
+      if (isPrograms && table === 'professors') {
+        db.query(
+          `SELECT DISTINCT TRIM(program) AS program, 'programs_query' as match_type
+           FROM professors
+           WHERE program IS NOT NULL AND program <> ''
+           ORDER BY program`,
+          (err, results) => {
+            if (!err && results.length > 0) {
+              const scoredResults = results.map(result => ({
+                ...result,
+                relevance_score: 100
+              }));
+              searchResults.push({
+                table: table,
+                data: scoredResults,
+                priority: tableInfo.priority
+              });
+            }
+
+            completedSearches++;
+            if (completedSearches === tablesToSearch.length) {
+              const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
+              resolve(finalResults);
+            }
+          }
+        );
         return;
       }
 
@@ -366,6 +405,13 @@ function isBuildingsQuestion(question) {
   return buildingKeywords.some(k => q.includes(k));
 }
 
+// Check if question is asking about programs offered
+function isProgramsQuestion(question) {
+  const programKeywords = ['programs', 'courses', 'offerings', 'offered programs', 'available programs'];
+  const q = question.toLowerCase();
+  return programKeywords.some(k => q.includes(k));
+}
+
 // Check if question is asking about offices
 function isOfficesQuestion(question) {
   const officeKeywords = ['office', 'offices', 'sao', 'student affairs', 'registrar', 'cashier', 'clinic', 'library', 'faculty', 'where is', 'location'];
@@ -415,13 +461,13 @@ function extractDepartmentFromQuestion(question) {
 // Helper function to get searchable columns for each table
 function getSearchableColumns(table) {
   const columnMap = {
-    departments: "name, head, location",
-    professors: "name, position, email, department, program",
+    departments: "name, short_name",
+    professors: "name, position, email, program",
     buildings: "name",
-    rooms: "name, location, status, type",
-    offices: "name, location",
+    rooms: "name, floor, status, type",
+    offices: "name, floor",
     rules: "description",
-    settings: "setting_name, setting_value, description",
+    settings: "key_name, value",
   };
 
   return columnMap[table] || "name, description";
@@ -466,5 +512,6 @@ module.exports = {
   extractDepartmentFromQuestion,
   getSearchableColumns,
   calculateRelevance,
-  removeDuplicates
+  removeDuplicates,
+  isProgramsQuestion
 };

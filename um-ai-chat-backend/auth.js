@@ -11,7 +11,7 @@ const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || "10", 10);
 // Helper functions for reset password
 function getUserById(userId) {
     return new Promise((resolve, reject) => {
-        db.query("SELECT id, email, password_hash FROM users WHERE id = ?", [userId], (err, rows) => {
+        db.query("SELECT id, email, password_hashed FROM users WHERE id = ?", [userId], (err, rows) => {
             if (err) reject(err);
             else if (rows.length === 0) reject(new Error("User not found"));
             else resolve(rows[0]);
@@ -21,7 +21,7 @@ function getUserById(userId) {
 
 function updateUserPassword(userId, hashedPassword) {
     return new Promise((resolve, reject) => {
-        db.query("UPDATE users SET password_hash = ? WHERE id = ?", [hashedPassword, userId], (err, result) => {
+        db.query("UPDATE users SET password_hashed = ? WHERE id = ?", [hashedPassword, userId], (err, result) => {
             if (err) reject(err);
             else resolve(result);
         });
@@ -42,7 +42,7 @@ router.post("/login", async (req, res) => {
         }
 
         db.query(
-            "SELECT id, email, password_hash FROM users WHERE email = ?",
+            "SELECT id, email, password_hashed FROM users WHERE email = ?",
             [email],
             async (err, rows) => {
                 if (err) {
@@ -54,7 +54,7 @@ router.post("/login", async (req, res) => {
                 }
 
                 const user = rows[0];
-                const passwordMatch = await bcrypt.compare(password, user.password_hash);
+                const passwordMatch = await bcrypt.compare(password, user.password_hashed);
                 if (!passwordMatch) {
                     return res.status(401).json({ error: "Invalid email or password" });
                 }
@@ -92,7 +92,7 @@ router.post("/register", async (req, res) => {
             const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
             db.query(
-                "INSERT INTO users(email,password_hash) VALUES (?,?)",
+                "INSERT INTO users(email,password_hashed) VALUES (?,?)",
                 [email, hashedPassword],
                 (insertErr, insertResult) => {
                     if (insertErr) return res.status(500).json({ error: "Failed to create user", details: insertErr.message });
@@ -112,7 +112,7 @@ router.post("/reset-password", async (req, res) => {
     const { oldPassword, newPassword,userid } = req.body;
     try{
         const user = await getUserById(userid);
-        const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password_hash);
+        const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password_hashed);
         if(!isOldPasswordValid){
             return res.status(401).json({ error: "Invalid old password" });
         }
