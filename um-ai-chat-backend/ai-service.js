@@ -31,7 +31,7 @@ class AIService {
       throw new Error('AI client not initialized');
     }
 
-    // Helper to enforce timeout on AI call
+    // imeout on AI call
     const withTimeout = (promise, ms) => {
       return Promise.race([
         promise,

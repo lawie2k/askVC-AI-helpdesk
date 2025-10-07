@@ -81,7 +81,7 @@ router.post("/ask", async (req, res) => {
         "\n\nNo specific information found in the database for this question.";
     }
 
-    // Create enhanced system prompt with database context
+
     const systemPrompt = `You are a dynamic and helpful AI assistant for UM Visayan Campus. Be engaging and conversational while keeping responses concise.
 
 IMPORTANT INSTRUCTIONS:

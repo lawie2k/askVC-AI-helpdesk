@@ -3,6 +3,7 @@ import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
 import React, {useState} from "react";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from '@expo/vector-icons';
 
 const API_URL = "http://192.168.1.8:5050";
 
@@ -26,6 +27,7 @@ export default function Login(){
     const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
     const isStrongPassword = (pw: string) => PASSWORD_REGEX.test(pw);
     const [pwError, setPwError] = React.useState("");
+    const [showPassword, setShowPassword] = React.useState(false);
 
     const isFormValid = () => {
         return email.trim() !== '' && password.trim() !== '';
@@ -143,11 +145,12 @@ export default function Login(){
                                onChangeText={(t) => setEmail(t)}
                            />
 
-                           <TextInput
+                          <View>
+                          <TextInput
                                       className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
                                       placeholder="Password"
                                       placeholderTextColor="#9CA3AF"
-                                      secureTextEntry
+                                      secureTextEntry={!showPassword}
                                       autoCapitalize="none"
                                       autoCorrect={false}
                                       autoComplete="password"
@@ -159,6 +162,16 @@ export default function Login(){
                                           setPwError(isStrongPassword(t) ? "" : "Min 8 chars, 1 uppercase, 1 number");
                                       }}
                            />
+                            <TouchableOpacity
+                            className="absolute right-4 mt-[32px] h-5 w-6 items-center justify-center"
+                            onPress={() => setShowPassword(v => !v)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            activeOpacity={1}
+                                >
+                             <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="white" />
+                            </TouchableOpacity>
+                          </View>
+
                            
                            <Pressable
                                onPress={toggleRemember}
