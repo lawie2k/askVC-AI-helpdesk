@@ -71,7 +71,7 @@ export default function ResetPass() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
             
-            const response = await fetch('http://192.168.254.119:5050/auth/reset-password', {
+            const response = await fetch('http://192.168.1.32:5050/auth/reset-password', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -20,6 +20,7 @@
     "babel-preset-expo": "^54.0.3",
     "dayjs": "^1.11.18",
     "expo": "^54.0.10",
+    "expo-dev-client": "~6.0.13",
     "expo-splash-screen": "^31.0.10",
     "expo-status-bar": "~3.0.8",
     "nativewind": "^4.1.23",

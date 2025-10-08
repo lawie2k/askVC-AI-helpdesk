@@ -4,11 +4,12 @@
     "slug": "um-ai-chat",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/ios-light.png",
+    "backgroundColor": "#900C27",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/ios-light.png",
       "resizeMode": "contain",
       "backgroundColor": "#900C27"
     },
@@ -16,25 +17,36 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.um-ai-chat",
       "splash": {
-        "image": "./assets/splash-icon.png",
+        "image": "./assets/ios-light.png",
         "resizeMode": "contain",
         "backgroundColor": "#900C27"
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "foregroundImage": "./assets/ios-light.png",
+        "backgroundColor": "#900C27"
       },
       "edgeToEdgeEnabled": true,
       "splash": {
-        "image": "./assets/splash-icon.png",
+        "image": "./assets/ios-light.png",
+        "imageWidth": 200,
         "resizeMode": "contain",
         "backgroundColor": "#900C27"
-      }
+      },
+      "package": "com.lawie.umaichat"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "fe6efd5b-135c-4203-9110-dabdc8d27dfa"
+      }
+    },
+    "owner": "lawie"
   }
 }

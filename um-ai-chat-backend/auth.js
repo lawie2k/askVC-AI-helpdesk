@@ -188,14 +188,11 @@ router.post("/admin/register", async (req, res) => {
 
 router.post("/admin/logout", async (req, res) => {
     try {
-        // For JWT tokens, logout is typically handled on the frontend by removing the token
-        // This endpoint can be used for logging logout events or future token blacklisting
         const { username } = req.body;
-        
-        // Log the logout event (optional)
+
         console.log(`Admin logout: ${username || 'Unknown'} at ${new Date().toISOString()}`);
         
-        // Return success response
+
         return res.status(200).json({ 
             message: "Logout successful",
             timestamp: new Date().toISOString()
