@@ -24,7 +24,10 @@ function authenticateAdmin(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    req.admin = decoded;
+    const adminId = decoded?.sub || decoded?.id; // support both shapes
+    if (!adminId) return res.status(401).json({ error: 'Invalid token payload' });
+    // Normalize shape so downstream uses req.admin.id
+    req.admin = { id: adminId, username: decoded?.username, ...decoded };
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token' });
@@ -270,8 +273,8 @@ router.post('/api/departments', authenticateAdmin, (req, res) => {
   }
 
   db.query(
-    'INSERT INTO departments (name, short_name) VALUES (?, ?)',
-    [name, short_name],
+    'INSERT INTO departments (name, short_name, admin_id) VALUES (?, ?, ?)',
+    [name, short_name, req.admin?.id || null],
     (err, result) => {
       if (err) {
         console.error('Error creating department:', err);
@@ -279,7 +282,7 @@ router.post('/api/departments', authenticateAdmin, (req, res) => {
       }
       
       logAdminActivity(req.admin.id, 'CREATE', `Department: ${name} (${short_name})`, 'departments');
-      res.json({ id: result.insertId, name, short_name });
+      res.json({ id: result.insertId, name, short_name, admin_id: req.admin?.id || null });
     }
   );
 });
@@ -293,8 +296,8 @@ router.put('/api/departments/:id', authenticateAdmin, (req, res) => {
   }
 
   db.query(
-    'UPDATE departments SET name = ?, short_name = ? WHERE id = ?',
-    [name, short_name, id],
+    'UPDATE departments SET name = ?, short_name = ?, admin_id = ? WHERE id = ?',
+    [name, short_name, req.admin?.id || null, id],
     (err, result) => {
       if (err) {
         console.error('Error updating department:', err);
@@ -408,8 +411,8 @@ router.put('/api/rooms/:id', authenticateAdmin, (req, res) => {
   }
 
   db.query(
-    'UPDATE rooms SET name = ?, building_id = ?, floor = ?, status = COALESCE(?, status), type = COALESCE(?, type) WHERE id = ?',
-    [name, building_id, floor, status ?? null, type ?? null, id],
+    'UPDATE rooms SET name = ?, building_id = ?, floor = ?, status = COALESCE(?, status), type = COALESCE(?, type), admin_id = ? WHERE id = ?',
+    [name, building_id, floor, status ?? null, type ?? null, req.admin?.id || null, id],
     (err, result) => {
       if (err) {
         console.error('Error updating room:', err);
@@ -501,8 +504,8 @@ router.put('/api/offices/:id', authenticateAdmin, (req, res) => {
   }
 
   db.query(
-    'UPDATE offices SET name = ?, building_id = ?, floor = ? WHERE id = ?',
-    [name, building_id, floor, id],
+    'UPDATE offices SET name = ?, building_id = ?, floor = ?, admin_id = ? WHERE id = ?',
+    [name, building_id, floor, req.admin?.id || null, id],
     (err, result) => {
       if (err) {
         console.error('Error updating office:', err);
@@ -583,8 +586,8 @@ router.put('/api/buildings/:id', authenticateAdmin, (req, res) => {
   }
 
   db.query(
-    'UPDATE buildings SET name = ? WHERE id = ?',
-    [name, id],
+    'UPDATE buildings SET name = ?, admin_id = ? WHERE id = ?',
+    [name, req.admin?.id || null, id],
     (err, result) => {
       if (err) {
         console.error('Error updating building:', err);
@@ -716,9 +719,9 @@ router.put('/api/professors/:id', authenticateAdmin, (req, res) => {
   db.query('SELECT id FROM departments WHERE short_name = ? LIMIT 1', [department], (findErr, rows) => {
     if (findErr) return res.status(500).json({ error: 'Database error' });
     const departmentId = rows && rows[0] ? rows[0].id : null;
-    db.query(
-      'UPDATE professors SET name = ?, position = ?, email = ?, program = ?, department_id = ? WHERE id = ?',
-      [name, position, email, program ?? null, departmentId, id],
+  db.query(
+    'UPDATE professors SET name = ?, position = ?, email = ?, program = ?, department_id = ?, admin_id = ? WHERE id = ?',
+    [name, position, email, program ?? null, departmentId, req.admin?.id || null, id],
       (err, result) => {
         if (err) {
           console.error('Error updating professor:', err);
@@ -775,8 +778,8 @@ router.post('/api/rules', authenticateAdmin, (req, res) => {
   }
 
   db.query(
-    'INSERT INTO rules (description) VALUES (?)',
-    [description],
+    'INSERT INTO rules (description, admin_id) VALUES (?, ?)',
+    [description, req.admin?.id || null],
     (err, result) => {
       if (err) {
         console.error('Error creating rule:', err);
@@ -784,7 +787,7 @@ router.post('/api/rules', authenticateAdmin, (req, res) => {
       }
       
       logAdminActivity(req.admin.id, 'CREATE', `Rule: ${description.substring(0, 50)}...`, 'rules');
-      res.json({ id: result.insertId, description });
+      res.json({ id: result.insertId, description, admin_id: req.admin?.id || null });
     }
   );
 });
@@ -798,8 +801,8 @@ router.put('/api/rules/:id', authenticateAdmin, (req, res) => {
   }
 
   db.query(
-    'UPDATE rules SET description = ? WHERE id = ?',
-    [description, id],
+    'UPDATE rules SET description = ?, admin_id = ? WHERE id = ?',
+    [description, req.admin?.id || null, id],
     (err, result) => {
       if (err) {
         console.error('Error updating rule:', err);
@@ -857,8 +860,8 @@ router.post('/api/settings', authenticateAdmin, (req, res) => {
   }
 
   db.query(
-    'INSERT INTO settings (setting_name, setting_value, description) VALUES (?, ?, ?)',
-    [setting_name, setting_value, description],
+    'INSERT INTO settings (setting_name, setting_value, description, admin_id) VALUES (?, ?, ?, ?)',
+    [setting_name, setting_value, description, req.admin?.id || null],
     (err, result) => {
       if (err) {
         console.error('Error creating setting:', err);
@@ -866,7 +869,7 @@ router.post('/api/settings', authenticateAdmin, (req, res) => {
       }
       
       logAdminActivity(req.admin.id, 'CREATE', `Setting: ${setting_name}`, 'settings');
-      res.json({ id: result.insertId, setting_name, setting_value, description });
+      res.json({ id: result.insertId, setting_name, setting_value, description, admin_id: req.admin?.id || null });
     }
   );
 });
@@ -880,8 +883,8 @@ router.put('/api/settings/:id', authenticateAdmin, (req, res) => {
   }
 
   db.query(
-    'UPDATE settings SET setting_name = ?, setting_value = ?, description = ? WHERE id = ?',
-    [setting_name, setting_value, description, id],
+    'UPDATE settings SET setting_name = ?, setting_value = ?, description = ?, admin_id = ? WHERE id = ?',
+    [setting_name, setting_value, description, req.admin?.id || null, id],
     (err, result) => {
       if (err) {
         console.error('Error updating setting:', err);

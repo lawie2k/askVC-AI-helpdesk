@@ -36,7 +36,7 @@ export default function MainDashboard() {
         <>
             <div className="bg-[#292929] min-h-screen text-white">
                 <div className=" flex justify-between  text-[40px] font-bold px-10 py-5">
-                    <div className="flex w-[475px] 2xl:w-[500px] items-center justify-between">
+                    <div className="flex w-[850px] 2xl:w-[850px] items-center justify-between">
                         <h1 className="">ask<span className="text-[#900C27]">VC</span></h1>
                         <h2 className="text-[24px]">User: {adminname}</h2>
                     </div>
