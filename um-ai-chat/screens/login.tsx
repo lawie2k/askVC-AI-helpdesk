@@ -5,7 +5,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = "http://192.168.1.8:5050";
+const API_URL = "http://192.168.254.119:5050";
 
 const isUmEmail = (value: string) => {
 	const trimmed = value.trim();
@@ -97,6 +97,9 @@ export default function Login(){
 
             if (!response.ok) {
                 const msg = (data && data.error) || text || `Login failed (${response.status})`;
+                if (response.status === 404 || /Account does not exist/i.test(msg)) {
+                    throw new Error('Account does not exist');
+                }
                 throw new Error(msg);
             }
 

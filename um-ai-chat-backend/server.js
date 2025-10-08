@@ -4,7 +4,7 @@ const path = require("path");
 
 // Import our modular components
 const authRoutes = require("./auth");
-const apiRoutes = require("./api-routes");
+const endpoints = require("./endpoints");
 
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
@@ -14,9 +14,9 @@ app.use(express.json());
 
 // Mount route modules
 app.use("/auth", authRoutes);
-app.use("/", apiRoutes);
+app.use("/", endpoints);
 
-// TEMP: debug to verify auth router is mounted
+
 app.get("/auth/_debug", (req, res) => {
   try {
     const stack = (authRoutes && authRoutes.stack) || [];

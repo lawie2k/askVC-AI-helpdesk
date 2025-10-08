@@ -7,71 +7,14 @@ const AIService = require("./ai-service");
 const router = express.Router();
 const aiService = new AIService();
 
-// Ensure created_at columns exist for rooms and offices, enforce NOT NULL DEFAULT, and backfill NULLs
-(function ensureCreatedAtColumns() {
-  try {
-    const ensureForTable = (table) => {
-      db.query(`SHOW COLUMNS FROM ${table} LIKE 'created_at'`, (err, results) => {
-        if (err) {
-          console.warn(`Schema check failed for ${table}.created_at:`, err.message);
-          return;
-        }
 
-        // If column is missing, add it
-        if (!results || results.length === 0) {
-          console.log(`Adding missing column ${table}.created_at ...`);
-          db.query(
-            `ALTER TABLE ${table} ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`,
-            (alterErr) => {
-              if (alterErr) {
-                console.warn(`Failed to add ${table}.created_at column:`, alterErr.message);
-              } else {
-                console.log(`Added ${table}.created_at column successfully`);
-              }
-            }
-          );
-        } else {
-          // If column exists but is nullable or missing default, modify it
-          const col = results[0];
-          const isNullable = String(col.Null).toUpperCase() !== 'NO';
-          const hasDefault = col.Default !== null && col.Default !== undefined;
-          const type = String(col.Type).toLowerCase();
-          const needsTypeFix = !(type.includes('timestamp') || type.includes('datetime'));
+// ============================================================================
+// HELPER FUNCTIONS - Authentication and Logging
+// ============================================================================
 
-          if (isNullable || !hasDefault || needsTypeFix) {
-            console.log(`Altering ${table}.created_at to TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ...`);
-            db.query(
-              `ALTER TABLE ${table} MODIFY created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`,
-              (modErr) => {
-                if (modErr) {
-                  console.warn(`Failed to modify ${table}.created_at:`, modErr.message);
-                } else {
-                  console.log(`Modified ${table}.created_at successfully`);
-                }
-              }
-            );
-          }
-        }
-
-        // Backfill NULL values just in case
-        db.query(`UPDATE ${table} SET created_at = NOW() WHERE created_at IS NULL`, (updErr, updRes) => {
-          if (updErr) {
-            console.warn(`Failed to backfill ${table}.created_at:`, updErr.message);
-          } else if (updRes && updRes.affectedRows) {
-            console.log(`Backfilled ${updRes.affectedRows} ${table}.created_at values.`);
-          }
-        });
-      });
-    };
-
-    ensureForTable('rooms');
-    ensureForTable('offices');
-  } catch (e) {
-    console.warn('Schema ensure error (created_at):', String(e));
-  }
-})();
-
-// Middleware to authenticate admin
+// ========================================================================
+// ADMIN AUTHENTICATION - Verifies admin JWT tokens
+// ========================================================================
 function authenticateAdmin(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   
@@ -88,7 +31,9 @@ function authenticateAdmin(req, res, next) {
   }
 }
 
-// Helper function to log admin activities
+// ========================================================================
+// ADMIN ACTIVITY LOGGING - Records all admin actions
+// ========================================================================
 function logAdminActivity(adminId, action, details, tableName = null) {
   const logDetails = tableName ? `${action} on ${tableName}: ${details}` : details;
   
@@ -103,24 +48,35 @@ function logAdminActivity(adminId, action, details, tableName = null) {
   );
 }
 
-// Test route
+// ============================================================================
+// BASIC ENDPOINTS - Health check and root endpoint
+// ============================================================================
+
+// Root endpoint - Server health check
 router.get("/", (req, res) => {
   res.send("UM AI Helpdesk Backend is running 🚀");
 });
 
-// Debug route to test database search
+// ============================================================================
+// DEBUG ENDPOINTS - For testing and development
+// ============================================================================
+
+// Debug database search functionality
 router.post("/debug-search", async (req, res) => {
   const { question } = req.body;
   try {
+    console.log(`🔍 Debug search for: "${question}"`);
     const dbResults = await searchDatabase(question);
     res.json({ question, results: dbResults });
   } catch (error) {
+    console.error('Debug search error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Simple DB debug: verify professors can be read and joined with departments
+// Debug professors database connection
 router.get('/debug/professors-db', (req, res) => {
+  console.log('🔍 Debug: Testing professors database connection...');
   const sql = `
     SELECT p.id, p.name, p.position, p.email,
            p.program,
@@ -133,43 +89,58 @@ router.get('/debug/professors-db', (req, res) => {
     LIMIT 50`;
   db.query(sql, (err, rows) => {
     if (err) {
+      console.error('❌ Professors debug error:', err);
       return res.status(500).json({ ok: false, error: err.message });
     }
+    console.log(`✅ Found ${rows?.length || 0} professors`);
     res.json({ ok: true, count: rows?.length || 0, sample: rows });
   });
 });
 
-// AI-focused debug: run searchDatabase and return only professors slice
+// Debug AI professor search specifically
 router.post('/debug/ai-professors', async (req, res) => {
   try {
     const question = (req.body && req.body.question) || 'who are the professors in BSIT';
+    console.log(`🤖 Debug AI professors for: "${question}"`);
     const results = await searchDatabase(question);
     const prof = (results || []).find(r => r.table === 'professors');
     return res.json({ ok: true, question, professors: prof ? prof.data : [] });
   } catch (e) {
+    console.error('❌ AI professors debug error:', e);
     return res.status(500).json({ ok: false, error: String(e) });
   }
 });
 
-// AI ask route with database search + GitHub AI (with timeout & fallback)
+// ============================================================================
+// AI CHAT ENDPOINT - Main AI functionality for users
+// ============================================================================
+
+// Main AI chat endpoint - combines database search with AI processing
 router.post("/ask", async (req, res) => {
   const { question } = req.body;
+  console.log(`🤖 AI Chat request: "${question}"`);
 
   try {
-    // Special-case: answer only if the question is exactly "miss mo"
+    // ========================================================================
+    // SPECIAL CASES - Handle specific user inputs
+    // ========================================================================
     if (typeof question === 'string' && question.trim().toLowerCase() === 'miss mo') {
       return res.json({ answer: 'Opo 😢' });
     }
 
-    // Extract room number for fallback responses
+    // ========================================================================
+    // DATABASE SEARCH - Find relevant information
+    // ========================================================================
+    console.log('🔍 Searching database for relevant information...');
     const targetRoomNumber = extractRoomNumber(question);
-    
-    // First, search the database for relevant information
     const dbResults = await searchDatabase(question);
 
-    // Prepare database context for AI
+    // ========================================================================
+    // PREPARE AI CONTEXT - Format database results for AI
+    // ========================================================================
     let dbContext = "";
     if (dbResults.length > 0) {
+      console.log(`📊 Found ${dbResults.length} relevant database results`);
       dbContext = "\n\nRelevant information from UM Visayan Campus database:\n";
       dbResults.forEach((result) => {
         dbContext += `\nFrom ${result.table} table:\n`;
@@ -178,11 +149,13 @@ router.post("/ask", async (req, res) => {
         });
       });
     } else {
-      dbContext =
-        "\n\nNo specific information found in the database for this question.";
+      console.log('📊 No specific database information found');
+      dbContext = "\n\nNo specific information found in the database for this question.";
     }
 
-
+    // ========================================================================
+    // AI PROCESSING - Generate intelligent response
+    // ========================================================================
     const systemPrompt = `You are a dynamic and helpful AI assistant for UM Visayan Campus. Be engaging and conversational while keeping responses concise.
 
 IMPORTANT INSTRUCTIONS:
@@ -197,25 +170,25 @@ IMPORTANT INSTRUCTIONS:
 
 ${dbContext}`;
 
-    // Helper to enforce timeout on AI call
-    const withTimeout = (promise, ms) => {
-      return Promise.race([
-        promise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), ms)),
-      ]);
-    };
-
+    // Try AI service first (with timeout protection)
     if (aiService.isAvailable()) {
       try {
+        console.log('🤖 Generating AI response...');
         const answer = await aiService.generateResponse(systemPrompt, question);
+        console.log('✅ AI response generated successfully');
         return res.json({ answer });
       } catch (aiErr) {
-        console.warn('AI service failed, falling back to database response:', aiErr.message);
-        // continue to fallback below
+        console.warn('⚠️ AI service failed, falling back to database response:', aiErr.message);
+        // Continue to fallback below
       }
+    } else {
+      console.log('⚠️ AI service not available, using database fallback');
     }
 
-    // Fallback to quick DB-based response (robust: prefer professors slice if present)
+    // ========================================================================
+    // FALLBACK RESPONSE - Generate response from database results only
+    // ========================================================================
+    console.log('📝 Generating fallback response from database...');
     const first = dbResults[0];
     const profSlice = (dbResults || []).find(r => r.table === 'professors');
     let fallback = "I couldn't find specific info in the database right now. Please try rephrasing your question.";
@@ -227,17 +200,18 @@ ${dbContext}`;
       fallback = dept ? `Some professors in ${dept}: ${names}` : `Some professors: ${names}`;
     } else if (first && Array.isArray(first.data) && first.data.length > 0) {
       const sample = first.data.slice(0, 2);
-      if (first.table === "rules") fallback = `Here are some rules I found: ${sample.map(r => r.description).filter(Boolean).join(" | ")}`;
-      else if (first.table === "buildings") fallback = `Buildings on campus: ${sample.map(b => b.name).filter(Boolean).join(", ")}`;
-      else if (first.table === "offices") {
+      if (first.table === "rules") {
+        fallback = `Here are some rules I found: ${sample.map(r => r.description).filter(Boolean).join(" | ")}`;
+      } else if (first.table === "buildings") {
+        fallback = `Buildings on campus: ${sample.map(b => b.name).filter(Boolean).join(", ")}`;
+      } else if (first.table === "offices") {
         const officeInfo = sample.map(o => {
           const building = o.building_name || 'Unknown Building';
           const floor = o.floor || 'Unknown Floor';
           return `${o.name}: ${building} ${floor}`;
         }).join(" | ");
         fallback = `Office locations: ${officeInfo}`;
-      }
-      else if (first.table === "rooms") {
+      } else if (first.table === "rooms") {
         if (targetRoomNumber) {
           // Specific room query
           const room = sample.find(r => r.name && r.name.includes(targetRoomNumber));
@@ -253,20 +227,31 @@ ${dbContext}`;
           const roomsAvail = sample.map(r => `${r.name || 'Room'}: ${r.status || 'Vacant'}`).join(" | ");
           fallback = `Rooms status: ${roomsAvail}`;
         }
+      } else {
+        fallback = `I found some info in ${first.table}.`;
       }
-      else fallback = `I found some info in ${first.table}.`;
     }
+    
+    console.log('✅ Fallback response generated');
     return res.json({ answer: fallback });
+    
   } catch (error) {
-    console.error("Error:", error);
+    console.error("❌ Error in AI chat endpoint:", error);
     res.status(500).json({
-      answer:
-        "Sorry, I'm having trouble processing your request. Please try again.",
+      answer: "Sorry, I'm having trouble processing your request. Please try again.",
     });
   }
 });
 
-// Departments API routes
+// ============================================================================
+// ADMIN API ROUTES - CRUD operations for admin dashboard
+// ============================================================================
+
+// ========================================================================
+// DEPARTMENTS API - Manage academic departments
+// ========================================================================
+
+// Get all departments
 router.get('/api/departments', (req, res) => {
   db.query('SELECT * FROM departments ORDER BY name', (err, results) => {
     if (err) {
@@ -354,7 +339,11 @@ router.delete('/api/departments/:id', authenticateAdmin, (req, res) => {
   });
 });
 
-// Rooms API routes
+// ========================================================================
+// ROOMS API - Manage campus rooms
+// ========================================================================
+
+// Get all rooms with building information
 router.get('/api/rooms', (req, res) => {
   db.query(`
     SELECT 
@@ -455,7 +444,11 @@ router.delete('/api/rooms/:id', authenticateAdmin, (req, res) => {
   });
 });
 
-// Offices API routes
+// ========================================================================
+// OFFICES API - Manage campus offices
+// ========================================================================
+
+// Get all offices with building information
 router.get('/api/offices', (req, res) => {
   db.query(`
     SELECT 
@@ -544,7 +537,11 @@ router.delete('/api/offices/:id', authenticateAdmin, (req, res) => {
   });
 });
 
-// Buildings API routes
+// ========================================================================
+// BUILDINGS API - Manage campus buildings
+// ========================================================================
+
+// Get all buildings
 router.get('/api/buildings', (req, res) => {
   db.query('SELECT * FROM buildings ORDER BY name', (err, results) => {
     if (err) {
@@ -622,7 +619,11 @@ router.delete('/api/buildings/:id', authenticateAdmin, (req, res) => {
   });
 });
 
-// Professors API routes
+// ========================================================================
+// PROFESSORS API - Manage faculty members
+// ========================================================================
+
+// Get all professors with department information
 router.get('/api/professors', (req, res) => {
   db.query(`
     SELECT p.id, p.name, p.position, p.email, p.program,
@@ -751,7 +752,11 @@ router.delete('/api/professors/:id', authenticateAdmin, (req, res) => {
   });
 });
 
-// Rules API routes
+// ========================================================================
+// RULES API - Manage campus rules and policies
+// ========================================================================
+
+// Get all rules
 router.get('/api/rules', (req, res) => {
   db.query('SELECT * FROM rules ORDER BY id', (err, results) => {
     if (err) {
@@ -829,7 +834,11 @@ router.delete('/api/rules/:id', authenticateAdmin, (req, res) => {
   });
 });
 
-// Settings API routes
+// ========================================================================
+// SETTINGS API - Manage system settings
+// ========================================================================
+
+// Get all settings
 router.get('/api/settings', (req, res) => {
   db.query('SELECT * FROM settings ORDER BY setting_name', (err, results) => {
     if (err) {
@@ -907,7 +916,11 @@ router.delete('/api/settings/:id', authenticateAdmin, (req, res) => {
   });
 });
 
-// Logs API routes
+// ========================================================================
+// LOGS API - View admin activity logs
+// ========================================================================
+
+// Get admin activity logs (Admin only)
 router.get('/api/logs', authenticateAdmin, (req, res) => {
   db.query(`
     SELECT l.*, a.username AS admin_username 
@@ -923,5 +936,9 @@ router.get('/api/logs', authenticateAdmin, (req, res) => {
     res.json(results || []);
   });
 });
+
+// ============================================================================
+// EXPORT ROUTER - Make endpoints available to server.js
+// ============================================================================
 
 module.exports = router;

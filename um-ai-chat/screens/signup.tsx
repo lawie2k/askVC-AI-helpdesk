@@ -7,7 +7,7 @@ import {IconProp} from "@fortawesome/fontawesome-svg-core";
 import {useNavigation} from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = "http://192.168.1.8:5050";
+const API_URL = "http://192.168.254.119:5050";
 
 const isUmEmail = (value: string) => {
     const trimmed = value.trim();

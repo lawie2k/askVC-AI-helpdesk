@@ -1,30 +1,38 @@
 const db = require("./database");
 
-// Function to search database for relevant information
+// ============================================================================
+// MAIN SEARCH FUNCTION - This is the main function that coordinates everything
+// ============================================================================
 async function searchDatabase(question) {
   return new Promise((resolve) => {
     const searchResults = [];
     let completedSearches = 0;
 
-    // Check if this is a rules, professors, buildings, or rooms question
+    // ========================================================================
+    //  ANALYZE THE QUESTION - What is the user asking about?
+    // ========================================================================
     const isRules = isRulesQuestion(question);
     const isProfessors = isProfessorsQuestion(question);
     const isBuildings = isBuildingsQuestion(question);
     const isPrograms = isProgramsQuestion(question);
     const isOffices = isOfficesQuestion(question);
     const isRooms = isRoomsQuestion(question);
+
+    // Extract specific information from the question
     const targetDepartment = extractDepartmentFromQuestion(question);
     const targetRoomNumber = extractRoomNumber(question);
 
-    // Tables to search with priority
+    // ========================================================================
+    //  DEFINE WHICH DATABASE TABLES TO SEARCH
+    // ========================================================================
     const tablesToSearch = [
-      { name: "departments", priority: 1 },
-      { name: "professors", priority: 2 },
-      { name: "buildings", priority: 3 },
-      { name: "rooms", priority: 4 },
-      { name: "offices", priority: 5 },
-      { name: "rules", priority: 6 },
-      { name: "settings", priority: 7 }
+      { name: "departments", priority: 1 },  // Search departments first
+      { name: "professors", priority: 2 },   // Then professors
+      { name: "buildings", priority: 3 },    // Then buildings
+      { name: "rooms", priority: 4 },        // Then rooms
+      { name: "offices", priority: 5 },      // Then offices
+      { name: "rules", priority: 6 },        // Then rules
+      { name: "settings", priority: 7 }      // Finally settings
     ];
 
     if (tablesToSearch.length === 0) {
@@ -32,21 +40,28 @@ async function searchDatabase(question) {
       return;
     }
 
-    // Extract keywords from question for better matching
+    // ========================================================================
+    //  EXTRACT KEYWORDS FOR BETTER SEARCH MATCHING
+    // ========================================================================
     const keywords = extractKeywords(question);
     const searchTerms = [question.toLowerCase(), ...keywords];
 
+    // ========================================================================
+    //  SEARCH EACH DATABASE TABLE BASED ON QUESTION TYPE
+    // ========================================================================
     tablesToSearch.forEach((tableInfo) => {
       const table = tableInfo.name;
       
-      // Special handling for rules questions
+      // ====================================================================
+      // RULES SEARCH - When user asks about campus rules/policies
+      // ====================================================================
       if (isRules && table === 'rules') {
-        // For rules questions, get all rules
+        console.log("🔍 Searching RULES table...");
         db.query('SELECT *, "rules_query" as match_type FROM rules', (err, results) => {
           if (!err && results.length > 0) {
             const scoredResults = results.map(result => ({
               ...result,
-              relevance_score: 100 // High relevance for rules when asking about rules
+              relevance_score: 100 // High relevance for rules questions
             }));
             searchResults.push({
               table: table,
@@ -57,7 +72,6 @@ async function searchDatabase(question) {
 
           completedSearches++;
           if (completedSearches === tablesToSearch.length) {
-            // Sort results by table priority and relevance
             const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
             resolve(finalResults);
           }
@@ -65,10 +79,15 @@ async function searchDatabase(question) {
         return;
       }
 
-      // Special handling for professors questions
+      // ====================================================================
+      // PROFESSORS SEARCH - When user asks about faculty/professors
+      // ====================================================================
       if (isProfessors && table === 'professors') {
+        console.log("👨‍🏫 Searching PROFESSORS table...");
+        
         if (targetDepartment) {
-          // Filter by program or mapped department short_name/name via join
+          // Search professors by specific department (e.g., "BSIT professors")
+          console.log(`   → Filtering by department: ${targetDepartment}`);
           db.query(
             `SELECT p.*, d.short_name AS department, "professors_query" as match_type
              FROM professors p
@@ -79,9 +98,10 @@ async function searchDatabase(question) {
             [`%${targetDepartment}%`, `%${targetDepartment}%`, `%${targetDepartment}%`],
             (err, results) => {
               if (!err && results.length > 0) {
+                console.log(`   ✅ Found ${results.length} professors in ${targetDepartment}`);
                 const scoredResults = results.map(result => ({
                   ...result,
-                  relevance_score: 100
+                  relevance_score: 100 // High relevance for specific department
                 }));
                 searchResults.push({
                   table: table,
@@ -98,7 +118,9 @@ async function searchDatabase(question) {
             }
           );
         } else {
-          // If no department specified, return all professors (limited)
+
+          // Search all professors
+          console.log("   → Getting all professors (limited to 25)");
           db.query(
             `SELECT p.*, d.short_name AS department, "professors_query" as match_type
              FROM professors p
@@ -106,9 +128,10 @@ async function searchDatabase(question) {
              LIMIT 25`,
             (err, results) => {
               if (!err && results.length > 0) {
+                console.log(`   ✅ Found ${results.length} professors total`);
                 const scoredResults = results.map(result => ({
                   ...result,
-                  relevance_score: 80
+                  relevance_score: 80 // Lower relevance for general search
                 }));
                 searchResults.push({
                   table: table,
@@ -128,8 +151,11 @@ async function searchDatabase(question) {
         return;
       }
 
-      // Special handling for programs questions (list distinct programs from professors)
+      // ====================================================================
+      // PROGRAMS SEARCH - When user asks about available programs/courses
+      // ====================================================================
       if (isPrograms && table === 'professors') {
+        console.log("📚 Searching PROGRAMS from professors table...");
         db.query(
           `SELECT DISTINCT TRIM(program) AS program, 'programs_query' as match_type
            FROM professors
@@ -137,9 +163,10 @@ async function searchDatabase(question) {
            ORDER BY program`,
           (err, results) => {
             if (!err && results.length > 0) {
+              console.log(`   ✅ Found ${results.length} programs`);
               const scoredResults = results.map(result => ({
                 ...result,
-                relevance_score: 100
+                relevance_score: 100 // High relevance for programs questions
               }));
               searchResults.push({
                 table: table,
@@ -158,14 +185,17 @@ async function searchDatabase(question) {
         return;
       }
 
-      // Special handling for buildings questions
+      // ====================================================================
+      // BUILDINGS SEARCH - When user asks about campus buildings
+      // ====================================================================
       if (isBuildings && table === 'buildings') {
-        // For buildings questions, get all buildings
+        console.log("🏢 Searching BUILDINGS table...");
         db.query('SELECT *, "buildings_query" as match_type FROM buildings', (err, results) => {
           if (!err && results.length > 0) {
+            console.log(`   ✅ Found ${results.length} buildings`);
             const scoredResults = results.map(result => ({
               ...result,
-              relevance_score: 100 // High relevance for buildings when asking about buildings
+              relevance_score: 100 // High relevance for buildings questions
             }));
             searchResults.push({
               table: table,
@@ -176,7 +206,6 @@ async function searchDatabase(question) {
 
           completedSearches++;
           if (completedSearches === tablesToSearch.length) {
-            // Sort results by table priority and relevance
             const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
             resolve(finalResults);
           }
@@ -184,18 +213,21 @@ async function searchDatabase(question) {
         return;
       }
 
-      // Special handling for offices questions
+      // ====================================================================
+      // OFFICES SEARCH - When user asks about office locations
+      // ====================================================================
       if (isOffices && table === 'offices') {
-        // For offices questions, get all offices with building info
+        console.log("🏢 Searching OFFICES table...");
         db.query(`
           SELECT o.*, b.name as building_name, "office_query" as match_type 
           FROM offices o 
           LEFT JOIN buildings b ON o.building_id = b.id
         `, (err, results) => {
           if (!err && results.length > 0) {
+            console.log(`   ✅ Found ${results.length} offices`);
             const scoredResults = results.map(result => ({
               ...result,
-              relevance_score: 100 // High relevance for offices when asking about offices
+              relevance_score: 100 // High relevance for offices questions
             }));
             searchResults.push({
               table: table,
@@ -213,10 +245,15 @@ async function searchDatabase(question) {
         return;
       }
 
-      // Special handling for rooms questions
+      // ====================================================================
+      // ROOMS SEARCH - When user asks about room locations
+      // ====================================================================
       if (isRooms && table === 'rooms') {
+        console.log("🚪 Searching ROOMS table...");
+        
         if (targetRoomNumber) {
-          // Search for specific room number
+          // Search for specific room number (e.g., "Where is room 301?")
+          console.log(`   → Looking for specific room: ${targetRoomNumber}`);
           db.query(`
             SELECT r.*, b.name as building_name, "room_query" as match_type 
             FROM rooms r 
@@ -224,6 +261,7 @@ async function searchDatabase(question) {
             WHERE r.name LIKE ? OR r.name = ?
           `, [`%${targetRoomNumber}%`, targetRoomNumber], (err, results) => {
             if (!err && results.length > 0) {
+              console.log(`   ✅ Found room ${targetRoomNumber}`);
               const scoredResults = results.map(result => ({
                 ...result,
                 relevance_score: 100 // High relevance for specific room queries
@@ -243,12 +281,14 @@ async function searchDatabase(question) {
           });
         } else {
           // Get all rooms if no specific room number mentioned
+          console.log("   → Getting all rooms");
           db.query(`
             SELECT r.*, b.name as building_name, "room_query" as match_type 
             FROM rooms r 
             LEFT JOIN buildings b ON r.building_id = b.id
           `, (err, results) => {
             if (!err && results.length > 0) {
+              console.log(`   ✅ Found ${results.length} rooms total`);
               const scoredResults = results.map(result => ({
                 ...result,
                 relevance_score: 100
@@ -269,6 +309,11 @@ async function searchDatabase(question) {
         }
         return;
       }
+      
+      // ====================================================================
+      // GENERAL SEARCH - For any other questions not covered above
+      // ====================================================================
+      console.log(`🔍 General search in ${table} table...`);
       
       // Create multiple search queries for better results
       const queries = [
@@ -351,7 +396,13 @@ async function searchDatabase(question) {
   });
 }
 
-// Extract keywords from question for better search
+// ============================================================================
+// HELPER FUNCTIONS - These functions help analyze and process questions
+// ============================================================================
+
+// ========================================================================
+// KEYWORD EXTRACTION - Extract important words from user questions
+// ========================================================================
 function extractKeywords(question) {
   const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'what', 'where', 'when', 'why', 'how', 'who', 'which', 'list', 'show', 'all'];
   
@@ -384,49 +435,57 @@ function extractKeywords(question) {
   return keywords.slice(0, 5); // Take top 5 keywords
 }
 
-// Check if question is asking about rules specifically
+// ========================================================================
+// QUESTION TYPE DETECTION - Determine what the user is asking about
+// ========================================================================
+
+
 function isRulesQuestion(question) {
   const rulesKeywords = ['rules', 'rule', 'regulations', 'policies', 'guidelines', 'code', 'conduct'];
   const questionLower = question.toLowerCase();
   return rulesKeywords.some(keyword => questionLower.includes(keyword));
 }
 
-// Check if question is asking about professors/faculty
+
 function isProfessorsQuestion(question) {
   const profKeywords = ['professor', 'professors', 'profs', 'teacher', 'teachers', 'instructor', 'instructors', 'faculty'];
   const q = question.toLowerCase();
   return profKeywords.some(k => q.includes(k));
 }
 
-// Check if question is asking about buildings
+
 function isBuildingsQuestion(question) {
   const buildingKeywords = ['building', 'buildings', 'structure', 'structures', 'campus building', 'campus buildings'];
   const q = question.toLowerCase();
   return buildingKeywords.some(k => q.includes(k));
 }
 
-// Check if question is asking about programs offered
+
 function isProgramsQuestion(question) {
   const programKeywords = ['programs', 'courses', 'offerings', 'offered programs', 'available programs'];
   const q = question.toLowerCase();
   return programKeywords.some(k => q.includes(k));
 }
 
-// Check if question is asking about offices
+
 function isOfficesQuestion(question) {
   const officeKeywords = ['office', 'offices', 'sao', 'student affairs', 'registrar', 'cashier', 'clinic', 'library', 'faculty', 'where is', 'location'];
   const q = question.toLowerCase();
   return officeKeywords.some(k => q.includes(k));
 }
 
-// Check if question is asking about specific rooms
+
 function isRoomsQuestion(question) {
   const roomKeywords = ['room', 'rooms', 'where is', 'location of', 'find room'];
   const q = question.toLowerCase();
   return roomKeywords.some(k => q.includes(k));
 }
 
-// Extract room number from question (e.g., "room 301" -> "301")
+// ========================================================================
+// DATA EXTRACTION - Extract specific information from questions
+// ========================================================================
+
+// Extract room number
 function extractRoomNumber(question) {
   const roomMatch = question.match(/room\s+(\d+)/i);
   if (roomMatch) {
@@ -442,7 +501,8 @@ function extractRoomNumber(question) {
   return null;
 }
 
-// Try to extract department from question (maps to DB department values)
+// Try to extract department from question
+
 function extractDepartmentFromQuestion(question) {
   const q = question.toLowerCase();
   // Common department aliases
@@ -458,7 +518,11 @@ function extractDepartmentFromQuestion(question) {
   return null;
 }
 
-// Helper function to get searchable columns for each table
+// ========================================================================
+// DATABASE UTILITIES - Helper functions for database operations
+// ========================================================================
+
+
 function getSearchableColumns(table) {
   const columnMap = {
     departments: "name, short_name",
@@ -473,11 +537,11 @@ function getSearchableColumns(table) {
   return columnMap[table] || "name, description";
 }
 
-// Calculate relevance score for search results
+
 function calculateRelevance(result, question, tablePriority, queryIndex) {
   let score = 100 - (tablePriority * 10); // Base score from table priority
   
-  // Boost score based on match type
+
   if (result.match_type === 'exact') score += 30;
   else if (result.match_type === 'keyword') score += 20;
   else if (result.match_type === 'partial') score += 10;
@@ -488,7 +552,7 @@ function calculateRelevance(result, question, tablePriority, queryIndex) {
   return Math.max(0, score);
 }
 
-// Remove duplicate results based on ID
+// prevents showing same data twice
 function removeDuplicates(results) {
   const seen = new Set();
   return results.filter(result => {
@@ -503,15 +567,6 @@ function removeDuplicates(results) {
 
 module.exports = {
   searchDatabase,
-  extractKeywords,
-  isRulesQuestion,
-  isProfessorsQuestion,
-  isBuildingsQuestion,
-  isOfficesQuestion,
   extractRoomNumber,
   extractDepartmentFromQuestion,
-  getSearchableColumns,
-  calculateRelevance,
-  removeDuplicates,
-  isProgramsQuestion
 };
