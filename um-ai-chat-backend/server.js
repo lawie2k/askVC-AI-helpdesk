@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 
-// Import our modular components
+
 const authRoutes = require("./auth");
 const endpoints = require("./endpoints");
 

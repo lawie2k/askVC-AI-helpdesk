@@ -8,10 +8,6 @@ const router = express.Router();
 const aiService = new AIService();
 
 
-// ============================================================================
-// HELPER FUNCTIONS - Authentication and Logging
-// ============================================================================
-
 // ========================================================================
 // ADMIN AUTHENTICATION - Verifies admin JWT tokens
 // ========================================================================
@@ -60,59 +56,7 @@ router.get("/", (req, res) => {
   res.send("UM AI Helpdesk Backend is running 🚀");
 });
 
-// ============================================================================
-// DEBUG ENDPOINTS - For testing and development
-// ============================================================================
 
-// Debug database search functionality
-router.post("/debug-search", async (req, res) => {
-  const { question } = req.body;
-  try {
-    console.log(`🔍 Debug search for: "${question}"`);
-    const dbResults = await searchDatabase(question);
-    res.json({ question, results: dbResults });
-  } catch (error) {
-    console.error('Debug search error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Debug professors database connection
-router.get('/debug/professors-db', (req, res) => {
-  console.log('🔍 Debug: Testing professors database connection...');
-  const sql = `
-    SELECT p.id, p.name, p.position, p.email,
-           p.program,
-           p.department_id,
-           d.short_name AS department_short,
-           d.name AS department_name
-    FROM professors p
-    LEFT JOIN departments d ON p.department_id = d.id
-    ORDER BY p.name
-    LIMIT 50`;
-  db.query(sql, (err, rows) => {
-    if (err) {
-      console.error('❌ Professors debug error:', err);
-      return res.status(500).json({ ok: false, error: err.message });
-    }
-    console.log(`✅ Found ${rows?.length || 0} professors`);
-    res.json({ ok: true, count: rows?.length || 0, sample: rows });
-  });
-});
-
-// Debug AI professor search specifically
-router.post('/debug/ai-professors', async (req, res) => {
-  try {
-    const question = (req.body && req.body.question) || 'who are the professors in BSIT';
-    console.log(`🤖 Debug AI professors for: "${question}"`);
-    const results = await searchDatabase(question);
-    const prof = (results || []).find(r => r.table === 'professors');
-    return res.json({ ok: true, question, professors: prof ? prof.data : [] });
-  } catch (e) {
-    console.error('❌ AI professors debug error:', e);
-    return res.status(500).json({ ok: false, error: String(e) });
-  }
-});
 
 // ============================================================================
 // AI CHAT ENDPOINT - Main AI functionality for users
@@ -124,9 +68,6 @@ router.post("/ask", async (req, res) => {
   console.log(`🤖 AI Chat request: "${question}"`);
 
   try {
-    // ========================================================================
-    // SPECIAL CASES - Handle specific user inputs
-    // ========================================================================
     if (typeof question === 'string' && question.trim().toLowerCase() === 'miss mo') {
       return res.json({ answer: 'Opo 😢' });
     }
