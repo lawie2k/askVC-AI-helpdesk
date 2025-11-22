@@ -7,7 +7,7 @@ import {IconProp} from "@fortawesome/fontawesome-svg-core";
 import {useNavigation} from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = "http://172.20.10.12:5050";
+const API_URL = "http://192.168.1.6:5050";
 
 const isUmEmail = (value: string) => {
     const trimmed = value.trim();
@@ -21,11 +21,13 @@ export default function Signup() {
     const navigation = useNavigation();
     const [email, setEmail] = React.useState("");
     const [password, setPassword] = React.useState("");
+    const [confirmPassword, setConfirmPassword] = React.useState("");
     const [loading, setLoading] = React.useState(false);
     const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
     const isStrongPassword = (pw: string) => PASSWORD_REGEX.test(pw);
     const [pwError, setPwError] = React.useState("");
     const [showPassword, setShowPassword] = React.useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
     
     const isFormValid = () => {
         return email.trim() !== '' && password.trim() !== '';
@@ -46,6 +48,13 @@ export default function Signup() {
                 );
                 setLoading(false);
                 return;
+            }
+            else if (password !== confirmPassword) {
+                setPwError("Passwords do not match");
+                Alert.alert(
+                    "Passwords do not match",
+                    "Please enter the same password in both fields."
+                );
             }
             const response = await fetch(`${API_URL}/auth/register`, {
                 method: "POST",
@@ -112,16 +121,42 @@ export default function Signup() {
                                        setPassword(t);
                                        setPwError(isStrongPassword(t) ? "" : "Min 8 chars, 1 uppercase, 1 number");
                         }}
-                        /> 
-                        <TouchableOpacity
-                        className="absolute right-4 mt-[32px] h-5 w-6 items-center justify-center"
-                        onPress={() => setShowPassword(v => !v)}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        activeOpacity={1}
-                            >
-                         <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="white" />
-                        </TouchableOpacity>
+                        />
+                           <TouchableOpacity
+                               className="absolute right-4 mt-[32px] h-5 w-6 items-center justify-center"
+                               onPress={() => setShowPassword(v => !v)}
+                               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                               activeOpacity={1}
+                           >
+                               <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="white" />
+                           </TouchableOpacity>
                        </View>
+
+                        <View>
+                            <TextInput className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 pr-10 text-white"
+                                       placeholder="Confirm Password"
+                                       placeholderTextColor="#9CA3AF"
+                                       autoCapitalize="none"
+                                       autoCorrect={false}
+                                       secureTextEntry={!showConfirmPassword}
+                                       autoComplete="password"
+                                       textContentType="newPassword"
+                                       returnKeyType="done"
+                                       value={confirmPassword}
+                                       onChangeText={setConfirmPassword}
+                            />
+                            <TouchableOpacity
+                                className="absolute right-4 mt-[32px] h-5 w-6 items-center justify-center"
+                                onPress={() => setShowConfirmPassword(v => !v)}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                activeOpacity={1}
+                            >
+                                <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="white" />
+                            </TouchableOpacity>
+                        </View>
+
+
+
                      
                         {pwError ? <Text style={{ color: "red" }}>{pwError}</Text> : null}
                         <TouchableOpacity className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${
