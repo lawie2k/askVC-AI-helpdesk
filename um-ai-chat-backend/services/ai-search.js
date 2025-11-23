@@ -1,4 +1,4 @@
-const db = require("./database");
+const db = require("../config/database");
 
 // ============================================================================
 // MAIN SEARCH FUNCTION - This is the main function that coordinates everything

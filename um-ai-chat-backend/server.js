@@ -3,8 +3,8 @@ const cors = require("cors");
 const path = require("path");
 
 
-const authRoutes = require("./auth");
-const endpoints = require("./endpoints");
+const authRoutes = require("./routes/auth");
+const endpoints = require("./routes/endpoints");
 
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
