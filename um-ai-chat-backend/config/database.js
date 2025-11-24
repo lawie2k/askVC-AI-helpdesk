@@ -1,28 +1,19 @@
-const mysql = require("mysql2");
+const prisma = require("./prismaClient");
 
-const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT || 3306,
-  waitForConnections: true,
-  connectionLimit: 20,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
-});
+function query(sql, params, callback) {
+  let finalParams = params;
+  let finalCallback = callback;
 
-// Test the connection
-db.getConnection((err, connection) => {
-  if (err) {
-    console.error("❌ MySQL connection pool failed:", err.message);
-  } else {
-    console.log("✅ MySQL connection pool created successfully!");
-    connection.release();
+  if (typeof params === "function") {
+    finalCallback = params;
+    finalParams = [];
   }
-});
 
-module.exports = db;
+  prisma.$queryRawUnsafe(sql, ...(finalParams || []))
+    .then((rows) => finalCallback(null, rows))
+    .catch((err) => finalCallback(err));
+}
 
-
+module.exports = {
+  query,
+};

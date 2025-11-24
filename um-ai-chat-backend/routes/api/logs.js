@@ -1,24 +1,26 @@
 const express = require("express");
-const db = require("../../config/database");
-const { authenticateAdmin } = require("../middleware/adminAuth");
+const prisma = require("../../config/prismaClient");
 
 const router = express.Router();
 
-// Get admin activity logs (Admin only)
-router.get('/', authenticateAdmin, (req, res) => {
-  db.query(`
-    SELECT l.*, a.username AS admin_username 
-    FROM logs l 
-    LEFT JOIN admins a ON l.admin_id = a.id 
-    ORDER BY l.created_at DESC 
-    LIMIT 100
-  `, (err, results) => {
-    if (err) {
-      console.error('Error fetching logs:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    res.json(results || []);
-  });
+
+router.get('/', async (_req, res) => {
+  try {
+    const logs = await prisma.logs.findMany({
+      select: {
+        id: true,
+        action: true,
+        details: true,
+        created_at: true,
+      },
+      orderBy: { created_at: 'desc' },
+      take: 100,
+    });
+    res.json(logs);
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 module.exports = router;

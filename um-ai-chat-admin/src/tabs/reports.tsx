@@ -85,10 +85,9 @@ XLSX.writeFile(workbook,`${fileBase}_${timestamp}.xlsx`);
             { field: 'created_at', headerName: 'Created At', width: 180 },
         ],
         logs: [
-            { field: 'username', headerName: 'Admin', width: 160 },
-            { field: 'action', headerName: 'Action', width: 160 },
-            { field: 'details', headerName: 'Details', width: 480 },
-            { field: 'created_at', headerName: 'Timestamp', width: 200 },
+            { field: 'action', headerName: 'Action', width: 200 },
+            { field: 'details', headerName: 'Details', width: 520 },
+            { field: 'created_at', headerName: 'Timestamp', width: 220 },
         ],
     };
 

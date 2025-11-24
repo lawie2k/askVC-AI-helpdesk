@@ -1,30 +1,29 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const db = require("../config/database");
+const prisma = require("../config/prismaClient");
 require("dotenv").config();
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-not-for-prod';
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || "10", 10);
 
-// Helper functions for reset password
-function getUserById(userId) {
-    return new Promise((resolve, reject) => {
-        db.query("SELECT id, email, password_hashed FROM users WHERE id = ?", [userId], (err, rows) => {
-            if (err) reject(err);
-            else if (rows.length === 0) reject(new Error("User not found"));
-            else resolve(rows[0]);
-        });
+
+async function getUserById(userId) {
+    const user = await prisma.users.findUnique({
+        where: { id: Number(userId) },
+        select: { id: true, email: true, password_hashed: true },
     });
+    if (!user) {
+        throw new Error("User not found");
+    }
+    return user;
 }
 
 function updateUserPassword(userId, hashedPassword) {
-    return new Promise((resolve, reject) => {
-        db.query("UPDATE users SET password_hashed = ? WHERE id = ?", [hashedPassword, userId], (err, result) => {
-            if (err) reject(err);
-            else resolve(result);
-        });
+    return prisma.users.update({
+        where: { id: Number(userId) },
+        data: { password_hashed: hashedPassword },
     });
 }
 
@@ -41,32 +40,25 @@ router.post("/login", async (req, res) => {
             return res.status(400).json({ error: "Email and password are required" });
         }
 
-        db.query(
-            "SELECT id, email, password_hashed FROM users WHERE email = ?",
-            [email],
-            async (err, rows) => {
-                if (err) {
-                    return res.status(500).json({ error: "DATABASE ERROR", details: err.message });
-                }
+        const user = await prisma.users.findUnique({
+            where: { email },
+        });
 
-                if (!rows || rows.length === 0) {
-                    return res.status(401).json({ error: "Invalid email or password" });
-                }
+        if (!user) {
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
 
-                const user = rows[0];
-                const passwordMatch = await bcrypt.compare(password, user.password_hashed);
-                if (!passwordMatch) {
-                    return res.status(401).json({ error: "Invalid email or password" });
-                }
+        const passwordMatch = await bcrypt.compare(password, user.password_hashed);
+        if (!passwordMatch) {
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
 
-                if (!JWT_SECRET) {
-                    return res.status(500).json({ error: "Server misconfigured: missing JWT_SECRET" });
-                }
+        if (!JWT_SECRET) {
+            return res.status(500).json({ error: "Server misconfigured: missing JWT_SECRET" });
+        }
 
-                const token = jwt.sign({ sub: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
-                return res.status(200).json({ token, user: { id: user.id, email: user.email } });
-            }
-        );
+        const token = jwt.sign({ sub: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+        return res.status(200).json({ token, user: { id: user.id, email: user.email } });
     } catch (e) {
         return res.status(500).json({ error: "Unexpected error" });
     }
@@ -81,28 +73,23 @@ router.post("/register", async (req, res) => {
             return res.status(400).json({ error: "Email and password are required" });
         }
 
-        db.query("SELECT id FROM users WHERE email=?",[email], async (err,rows)=>{
-            if(err){
-                return res.status(500).json({ error: "DATABASE ERROR", details: err.message });
-            }
-            if(rows.length>0){
-                return res.status(409).json({ error: "User already exists" });
-            }
+        const existing = await prisma.users.findUnique({
+            where: { email },
+        });
 
-            const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+        if (existing) {
+            return res.status(409).json({ error: "User already exists" });
+        }
 
-            db.query(
-                "INSERT INTO users(email,password_hashed) VALUES (?,?)",
-                [email, hashedPassword],
-                (insertErr, insertResult) => {
-                    if (insertErr) return res.status(500).json({ error: "Failed to create user", details: insertErr.message });
+        const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+        const user = await prisma.users.create({
+            data: {
+                email,
+                password_hashed: hashedPassword,
+            },
+        });
 
-               const userid = insertResult.insertId;
-
-               return res.status(201).json({ userid, email });
-                })
-        })
-
+        return res.status(201).json({ userid: user.id, email: user.email });
     }catch(e){
         return res.status(500).json({ error: "Unexpected error" });
     }
@@ -133,24 +120,20 @@ router.post("/admin/login", async (req, res) => {
             return res.status(400).json({ error: "Username and password are required" });
         }
 
-        db.query(
-            "SELECT id, username, password_hashed FROM admins WHERE username = ?",
-            [username],
-            async(err, rows) => {
-                if (err) {
-                    return res.status(500).json({ error: "DATABASE ERROR", details: err.message });
-                }
-                if (!rows || rows.length === 0) {
-                    return res.status(401).json({ error: "Invalid username or password" });
-                }
-                const admin = rows[0];
-                const passwordMatch = await bcrypt.compare(password, admin.password_hashed);
-                if (!passwordMatch) {
-                    return res.status(401).json({ error: "Invalid username or password" });
-                }
-                const token = jwt.sign({ sub: admin.id, username: admin.username }, JWT_SECRET, { expiresIn: "7d" });
-                return res.status(200).json({ token, admin: { id: admin.id, username: admin.username } });
-            })
+        const admin = await prisma.admins.findUnique({
+            where: { username },
+        });
+
+        if (!admin) {
+            return res.status(401).json({ error: "Invalid username or password" });
+        }
+
+        const passwordMatch = await bcrypt.compare(password, admin.password_hashed);
+        if (!passwordMatch) {
+            return res.status(401).json({ error: "Invalid username or password" });
+        }
+        const token = jwt.sign({ sub: admin.id, username: admin.username }, JWT_SECRET, { expiresIn: "7d" });
+        return res.status(200).json({ token, admin: { id: admin.id, username: admin.username } });
     }catch(e){
         return res.status(500).json({ error: "Unexpected error" });
     }
@@ -162,25 +145,24 @@ router.post("/admin/register", async (req, res) => {
         if (!username || !password) {
             return res.status(400).json({ error: "Username and password are required" });
         }
-        db.query("SELECT id FROM admins WHERE username = ?", [username], async (err, rows) => {
-            if (err) {
-                return res.status(500).json({ error: "DATABASE ERROR", details: err.message });
-            }
-            if (rows.length > 0) {
-                return res.status(409).json({ error: "Admin already exists" });
-            }
-            const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-            db.query(
-                "INSERT INTO admins(username, password_hashed) VALUES (?, ?)",
-                [username, hashedPassword],
-                (insertErr, insertResult) => {
-                    if (insertErr) return res.status(500).json({ error: "Failed to create admin", details: insertErr.message });
+        const existing = await prisma.admins.findUnique({
+            where: { username },
+        });
 
-                    const adminId = insertResult.insertId;
-                    return res.status(201).json({ adminId, username });
-                })
-        })
+        if (existing) {
+            return res.status(409).json({ error: "Admin already exists" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+        const admin = await prisma.admins.create({
+            data: {
+                username,
+                password_hashed: hashedPassword,
+            },
+        });
+        return res.status(201).json({ adminId: admin.id, username: admin.username });
     }catch(e){
         return res.status(500).json({ error: "Unexpected error" });
     }

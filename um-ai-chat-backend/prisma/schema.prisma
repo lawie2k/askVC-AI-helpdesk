@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model admins {
+  id              Int           @id @default(autoincrement())
+  username        String        @unique(map: "username") @db.VarChar(100)
+  password_hashed String        @db.VarChar(255)
+  created_at      DateTime?     @default(now()) @db.DateTime(0)
+  buildings       buildings[]
+  departments     departments[]
+  logs            logs[]
+  offices         offices[]
+  professors      professors[]
+  rooms           rooms[]
+  rules           rules[]
+  settings        settings[]
+}
+
+model buildings {
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(100)
+  created_at DateTime? @default(now()) @db.DateTime(0)
+  updated_at DateTime? @default(now()) @db.DateTime(0)
+  admin_id   Int?
+  admins     admins?   @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "buildings_ibfk_1")
+  offices    offices[]
+  rooms      rooms[]
+
+  @@index([admin_id], map: "admin_id")
+}
+
+model departments {
+  id         Int          @id @default(autoincrement())
+  name       String       @db.VarChar(100)
+  short_name String?      @db.VarChar(50)
+  admin_id   Int?
+  created_at DateTime     @default(now()) @db.DateTime(0)
+  admins     admins?      @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "departments_ibfk_1")
+  professors professors[]
+
+  @@index([admin_id], map: "admin_id")
+}
+
+model logs {
+  id         Int       @id @default(autoincrement())
+  admin_id   Int?
+  action     String    @db.VarChar(255)
+  details    String?   @db.Text
+  created_at DateTime? @default(now()) @db.DateTime(0)
+  admins     admins?   @relation(fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "logs_ibfk_1")
+
+  @@index([admin_id], map: "admin_id")
+}
+
+model offices {
+  id          Int        @id @default(autoincrement())
+  name        String     @db.VarChar(100)
+  building_id Int?
+  floor       String     @db.VarChar(50)
+  admin_id    Int?
+  created_at  DateTime   @default(now()) @db.DateTime(0)
+  buildings   buildings? @relation(fields: [building_id], references: [id], onUpdate: NoAction, map: "offices_ibfk_1")
+  admins      admins?    @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "offices_ibfk_2")
+
+  @@index([admin_id], map: "admin_id")
+  @@index([building_id], map: "building_id")
+}
+
+model professors {
+  id            Int          @id @default(autoincrement())
+  name          String       @db.VarChar(100)
+  position      String?      @db.VarChar(100)
+  email         String?      @db.VarChar(255)
+  program       String?      @db.VarChar(50)
+  department_id Int?
+  admin_id      Int?
+  created_at    DateTime     @default(now()) @db.DateTime(0)
+  departments   departments? @relation(fields: [department_id], references: [id], onUpdate: NoAction, map: "professors_ibfk_1")
+  admins        admins?      @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "professors_ibfk_2")
+
+  @@index([admin_id], map: "admin_id")
+  @@index([department_id], map: "department_id")
+}
+
+model rooms {
+  id          Int        @id @default(autoincrement())
+  name        String     @db.VarChar(100)
+  building_id Int?
+  floor       String     @db.VarChar(50)
+  admin_id    Int?
+  status      String     @default("Vacant") @db.VarChar(20)
+  type        String     @default("Lecture") @db.VarChar(30)
+  created_at  DateTime   @default(now()) @db.DateTime(0)
+  buildings   buildings? @relation(fields: [building_id], references: [id], onUpdate: NoAction, map: "rooms_ibfk_1")
+  admins      admins?    @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "rooms_ibfk_2")
+
+  @@index([admin_id], map: "admin_id")
+  @@index([building_id], map: "building_id")
+}
+
+model rules {
+  id          Int      @id @default(autoincrement())
+  description String   @db.Text
+  admin_id    Int?
+  created_at  DateTime @default(now()) @db.DateTime(0)
+  admins      admins?  @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "rules_ibfk_1")
+
+  @@index([admin_id], map: "admin_id")
+}
+
+model settings {
+  id         Int      @id @default(autoincrement())
+  key_name   String   @unique(map: "key_name") @db.VarChar(100)
+  value      String   @db.Text
+  admin_id   Int?
+  created_at DateTime @default(now()) @db.DateTime(0)
+  admins     admins?  @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "settings_ibfk_1")
+
+  @@index([admin_id], map: "admin_id")
+}
+
+model users {
+  id              Int       @id @default(autoincrement())
+  email           String    @unique(map: "email") @db.VarChar(255)
+  password_hashed String    @db.VarChar(255)
+  created_at      DateTime? @default(now()) @db.DateTime(0)
+}

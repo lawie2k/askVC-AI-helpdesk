@@ -4,6 +4,7 @@ import MainChat from "./screens/mainchat";
 import Signup from "./screens/signup";
 import Profile from "./screens/Profile";
 import ResetPass from "./screens/resetPass";
+import ResetPassLogin from "./screens/resetPassLogin"
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
@@ -20,8 +21,6 @@ export default function App() {
     React.useEffect(() => {
         (async () => {
             try {
-                // TODO: load fonts/assets or init storage here
-                // await Font.loadAsync(...);
             } finally {
                 setReady(true);
                 await SplashScreen.hideAsync();
@@ -41,6 +40,7 @@ export default function App() {
                         <Stack.Screen name="MainChat" component={MainChat as any} />
                         <Stack.Screen name="Profile" component={Profile as any} />
                         <Stack.Screen name="ResetPass" component={ResetPass as any} />
+                        <Stack.Screen name="ResetPassLogin" component={ResetPassLogin as any} />
                     </Stack.Navigator>
                 </NavigationContainer>
             </SafeAreaProvider>

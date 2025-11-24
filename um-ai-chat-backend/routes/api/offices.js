@@ -1,54 +1,62 @@
 const express = require("express");
-const db = require("../../config/database");
+const prisma = require("../../config/prismaClient");
 const { authenticateAdmin, logAdminActivity } = require("../middleware/adminAuth");
 
 const router = express.Router();
 
-// Get all offices with building information
-router.get('/', (req, res) => {
-  db.query(`
-    SELECT 
-      o.id,
-      o.name,
-      o.building_id,
-      o.floor,
-      o.created_at,
-      b.name AS building_name
-    FROM offices o
-    LEFT JOIN buildings b ON o.building_id = b.id
-    ORDER BY o.name
-  `, (err, results) => {
-    if (err) {
-      console.error('Error fetching offices:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    res.json(results || []);
-  });
+
+router.get('/', async (_req, res) => {
+  try {
+    const offices = await prisma.offices.findMany({
+      include: {
+        buildings: {
+          select: { name: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const shaped = offices.map((office) => {
+      const { buildings, ...rest } = office;
+      return {
+        ...rest,
+        building_name: buildings?.name || null,
+      };
+    });
+
+    res.json(shaped);
+  } catch (err) {
+    console.error('Error fetching offices:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
-router.post('/', authenticateAdmin, (req, res) => {
+router.post('/', authenticateAdmin, async (req, res) => {
   const { name, building_id, floor } = req.body;
   
   if (!name || !building_id || !floor) {
     return res.status(400).json({ error: 'Name, building, and floor are required' });
   }
 
-  db.query(
-    'INSERT INTO offices (name, building_id, floor, admin_id) VALUES (?, ?, ?, ?)',
-    [name, building_id, floor, req.admin?.id || null],
-    (err, result) => {
-      if (err) {
-        console.error('Error creating office:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      logAdminActivity(req.admin.id, 'CREATE', `Office: ${name}`, 'offices');
-      res.json({ id: result.insertId, name, building_id, floor, admin_id: req.admin?.id || null });
-    }
-  );
+  try {
+    const office = await prisma.offices.create({
+      data: {
+        name,
+        building_id: Number(building_id),
+        floor,
+        admin_id: req.admin?.id || null,
+      },
+    });
+
+    logAdminActivity(req.admin.id, 'CREATE', `Office: ${name}`, 'offices');
+    res.json(office);
+  } catch (err) {
+    console.error('Error creating office:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
-router.put('/:id', authenticateAdmin, (req, res) => {
+router.put('/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   const { name, building_id, floor } = req.body;
   
@@ -56,41 +64,44 @@ router.put('/:id', authenticateAdmin, (req, res) => {
     return res.status(400).json({ error: 'Name, building, and floor are required' });
   }
 
-  db.query(
-    'UPDATE offices SET name = ?, building_id = ?, floor = ?, admin_id = ? WHERE id = ?',
-    [name, building_id, floor, req.admin?.id || null, id],
-    (err, result) => {
-      if (err) {
-        console.error('Error updating office:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'Office not found' });
-      }
-      
-      logAdminActivity(req.admin.id, 'UPDATE', `Office: ${name}`, 'offices');
-      res.json({ id, name, building_id, floor });
-    }
-  );
-});
+  try {
+    const office = await prisma.offices.update({
+      where: { id: Number(id) },
+      data: {
+        name,
+        building_id: Number(building_id),
+        floor,
+        admin_id: req.admin?.id || null,
+      },
+    });
 
-router.delete('/:id', authenticateAdmin, (req, res) => {
-  const { id } = req.params;
-  
-  db.query('DELETE FROM offices WHERE id = ?', [id], (err, result) => {
-    if (err) {
-      console.error('Error deleting office:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (result.affectedRows === 0) {
+    logAdminActivity(req.admin.id, 'UPDATE', `Office: ${name}`, 'offices');
+    res.json(office);
+  } catch (err) {
+    if (err.code === 'P2025') {
       return res.status(404).json({ error: 'Office not found' });
     }
-    
+    console.error('Error updating office:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+router.delete('/:id', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    await prisma.offices.delete({
+      where: { id: Number(id) },
+    });
     logAdminActivity(req.admin.id, 'DELETE', `Office ID: ${id}`, 'offices');
     res.json({ message: 'Office deleted successfully' });
-  });
+  } catch (err) {
+    if (err.code === 'P2025') {
+      return res.status(404).json({ error: 'Office not found' });
+    }
+    console.error('Error deleting office:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 module.exports = router;

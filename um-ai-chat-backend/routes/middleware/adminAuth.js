@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const db = require("../../config/database");
+const prisma = require("../../config/prismaClient");
 
 // ========================================================================
 // ADMIN AUTHENTICATION - Verifies admin JWT tokens
@@ -26,18 +26,19 @@ function authenticateAdmin(req, res, next) {
 // ========================================================================
 // ADMIN ACTIVITY LOGGING - Records all admin actions
 // ========================================================================
-function logAdminActivity(adminId, action, details, tableName = null) {
-  const logDetails = tableName ? `${action} on ${tableName}: ${details}` : details;
-  
-  db.query(
-    'INSERT INTO logs (admin_id, action, details, created_at) VALUES (?, ?, ?, NOW())',
-    [adminId, action, logDetails],
-    (err) => {
-      if (err) {
-        console.error('Failed to log admin activity:', err);
-      }
-    }
-  );
+async function logAdminActivity(adminId, action, details, tableName = null) {
+  try {
+    const logDetails = tableName ? `${action} on ${tableName}: ${details}` : details;
+    await prisma.logs.create({
+      data: {
+        admin_id: adminId || null,
+        action,
+        details: logDetails,
+      },
+    });
+  } catch (err) {
+    console.error('Failed to log admin activity:', err);
+  }
 }
 
 module.exports = { authenticateAdmin, logAdminActivity };

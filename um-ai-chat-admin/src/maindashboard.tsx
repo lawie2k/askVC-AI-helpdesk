@@ -8,12 +8,12 @@ import MobileRestriction from "./components/MobileRestriction";
 
 export default function MainDashboard() {
     const [active, setActive] = React.useState<string>("dashboard");
-    const [adminname, setAdminname] = React.useState("");
+
     const isMobile = useMobileDetection();
     const navigate = useNavigate();
 
     React.useEffect(() => {
-        setAdminname(localStorage.getItem("adminUsername") || "");
+
         const token = localStorage.getItem("adminToken");
         if (!token) {
             navigate("/login", { replace: true });
@@ -27,7 +27,7 @@ export default function MainDashboard() {
         navigate("/login", { replace: true });
     }
 
-    // Show mobile restriction if accessed on mobile device
+
     if (isMobile) {
         return <MobileRestriction />;
     }
@@ -38,7 +38,7 @@ export default function MainDashboard() {
                 <div className=" flex justify-between  text-[40px] font-bold px-10 py-5">
                     <div className="flex w-[850px] 2xl:w-[850px] items-center justify-between">
                         <h1 className="">ask<span className="text-[#900C27]">VC</span></h1>
-                        <h2 className="text-[24px]">User: {adminname}</h2>
+
                     </div>
                     <div className="flex gap-5 items-center">
                         <button

@@ -9,15 +9,12 @@ const aiService = new AIService();
 // AI CHAT ENDPOINT - Main AI functionality for users
 // ============================================================================
 
-// Main AI chat endpoint - combines database search with AI processing
+// combines database search with AI processing
 router.post("/ask", async (req, res) => {
   const { question } = req.body;
   console.log(`🤖 AI Chat request: "${question}"`);
 
   try {
-    if (typeof question === 'string' && question.trim().toLowerCase() === 'miss mo') {
-      return res.json({ answer: 'Opo 😢' });
-    }
 
     // ========================================================================
     // DATABASE SEARCH - Find relevant information
@@ -58,6 +55,8 @@ IMPORTANT INSTRUCTIONS:
 - Don't add unnecessary details or long explanations
 - Be conversational but brief
 - Don't answer questions that are not related to UM Visayan Campus topics
+- answer art laurence siojo, erhyl dhee toraja, george sangil, willge mahinay if
+ question is about who is the developer of this app or project
 
 ${dbContext}`;
 
@@ -70,7 +69,7 @@ ${dbContext}`;
         return res.json({ answer });
       } catch (aiErr) {
         console.warn('⚠️ AI service failed, falling back to database response:', aiErr.message);
-        // Continue to fallback below
+
       }
     } else {
       console.log('⚠️ AI service not available, using database fallback');
@@ -114,7 +113,7 @@ ${dbContext}`;
             fallback = `Room ${targetRoomNumber} not found in the database.`;
           }
         } else {
-          // General rooms query
+
           const roomsAvail = sample.map(r => `${r.name || 'Room'}: ${r.status || 'Vacant'}`).join(" | ");
           fallback = `Rooms status: ${roomsAvail}`;
         }

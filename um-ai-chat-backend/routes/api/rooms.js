@@ -1,66 +1,74 @@
 const express = require("express");
-const db = require("../../config/database");
+const prisma = require("../../config/prismaClient");
 const { authenticateAdmin, logAdminActivity } = require("../middleware/adminAuth");
 
 const router = express.Router();
 
-// Get all rooms with building information
-router.get('/', (req, res) => {
-  db.query(`
-    SELECT 
-      r.id,
-      r.name,
-      r.building_id,
-      r.floor,
-      r.status,
-      r.type,
-      r.created_at,
-      b.name AS building_name
-    FROM rooms r
-    LEFT JOIN buildings b ON r.building_id = b.id
-    ORDER BY r.name
-  `, (err, results) => {
-    if (err) {
-      console.error('Error fetching rooms:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    res.json(results || []);
-  });
+
+router.get('/', async (_req, res) => {
+  try {
+    const rooms = await prisma.rooms.findMany({
+      include: {
+        buildings: {
+          select: { name: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const shaped = rooms.map((room) => {
+      const { buildings, ...rest } = room;
+      return {
+        ...rest,
+        building_name: buildings?.name || null,
+      };
+    });
+
+    res.json(shaped);
+  } catch (err) {
+    console.error('Error fetching rooms:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
-router.get('/structure', (req, res) => {
-  db.query('DESCRIBE rooms', (err, results) => {
-    if (err) {
-      console.error('Error fetching room structure:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    res.json(results);
-  });
+router.get('/structure', async (_req, res) => {
+  try {
+    const structure = await prisma.$queryRawUnsafe('DESCRIBE rooms');
+    res.json(structure);
+  } catch (err) {
+    console.error('Error fetching room structure:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
-router.post('/', authenticateAdmin, (req, res) => {
+router.post('/', authenticateAdmin, async (req, res) => {
   const { name, building_id, floor, status, type } = req.body;
   
   if (!name || !building_id || !floor) {
     return res.status(400).json({ error: 'Name, building, and floor are required' });
   }
 
-  db.query(
-    'INSERT INTO rooms (name, building_id, floor, status, type, admin_id) VALUES (?, ?, ?, ?, ?, ?)',
-    [name, building_id, floor, status ?? 'Vacant', type ?? 'Lecture', req.admin?.id || null],
-    (err, result) => {
-      if (err) {
-        console.error('Error creating room:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      logAdminActivity(req.admin.id, 'CREATE', `Room: ${name}`, 'rooms');
-      res.json({ id: result.insertId, name, building_id, floor, status: status ?? 'Vacant', type: type ?? 'Lecture', admin_id: req.admin?.id || null });
-    }
-  );
+  try {
+    const room = await prisma.rooms.create({
+      data: {
+        name,
+        building_id: Number(building_id),
+        floor,
+        status: status ?? 'Vacant',
+        type: type ?? 'Lecture',
+        admin_id: req.admin?.id || null,
+      },
+    });
+
+    logAdminActivity(req.admin.id, 'CREATE', `Room: ${name}`, 'rooms');
+    res.json(room);
+  } catch (err) {
+    console.error('Error creating room:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
-router.put('/:id', authenticateAdmin, (req, res) => {
+router.put('/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   const { name, building_id, floor, status, type } = req.body;
   
@@ -68,41 +76,46 @@ router.put('/:id', authenticateAdmin, (req, res) => {
     return res.status(400).json({ error: 'Name, building, and floor are required' });
   }
 
-  db.query(
-    'UPDATE rooms SET name = ?, building_id = ?, floor = ?, status = COALESCE(?, status), type = COALESCE(?, type), admin_id = ? WHERE id = ?',
-    [name, building_id, floor, status ?? null, type ?? null, req.admin?.id || null, id],
-    (err, result) => {
-      if (err) {
-        console.error('Error updating room:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'Room not found' });
-      }
-      
-      logAdminActivity(req.admin.id, 'UPDATE', `Room: ${name}`, 'rooms');
-      res.json({ id, name, building_id, floor, status: status ?? 'Vacant', type: type ?? 'Lecture' });
-    }
-  );
-});
+  try {
+    const updated = await prisma.rooms.update({
+      where: { id: Number(id) },
+      data: {
+        name,
+        building_id: Number(building_id),
+        floor,
+        status: status ?? undefined,
+        type: type ?? undefined,
+        admin_id: req.admin?.id || null,
+      },
+    });
 
-router.delete('/:id', authenticateAdmin, (req, res) => {
-  const { id } = req.params;
-  
-  db.query('DELETE FROM rooms WHERE id = ?', [id], (err, result) => {
-    if (err) {
-      console.error('Error deleting room:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (result.affectedRows === 0) {
+    logAdminActivity(req.admin.id, 'UPDATE', `Room: ${name}`, 'rooms');
+    res.json(updated);
+  } catch (err) {
+    if (err.code === 'P2025') {
       return res.status(404).json({ error: 'Room not found' });
     }
-    
+    console.error('Error updating room:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+router.delete('/:id', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    await prisma.rooms.delete({
+      where: { id: Number(id) },
+    });
     logAdminActivity(req.admin.id, 'DELETE', `Room ID: ${id}`, 'rooms');
     res.json({ message: 'Room deleted successfully' });
-  });
+  } catch (err) {
+    if (err.code === 'P2025') {
+      return res.status(404).json({ error: 'Room not found' });
+    }
+    console.error('Error deleting room:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 module.exports = router;

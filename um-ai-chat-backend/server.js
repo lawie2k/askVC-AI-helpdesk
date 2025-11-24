@@ -2,17 +2,16 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const authRoutes = require("./routes/auth");
 const endpoints = require("./routes/endpoints");
-
-require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Mount route modules
+
 app.use("/auth", authRoutes);
 app.use("/", endpoints);
 

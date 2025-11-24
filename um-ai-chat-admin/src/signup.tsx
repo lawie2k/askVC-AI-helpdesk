@@ -14,8 +14,6 @@ export default function signup() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
-    const isValidUmEmail = (email: string) => /^[A-Za-z0-9._%+-]+@umindanao\.edu\.ph$/i.test(email);
-
     const handleSignUp= async (e: FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -23,8 +21,8 @@ export default function signup() {
         setSuccess("");
 
         try{
-            if (!isValidUmEmail(username)) {
-                throw new Error("Please use a valid UMindanao email (@umindanao.edu.ph)");
+            if (!username || username.trim().length === 0) {
+                throw new Error("Username is required");
             }
             const response = await adminAuthAPI.register(username, password);
             setSuccess("Admin account created successfully! Redirecting to login...");
@@ -61,10 +59,10 @@ export default function signup() {
                         <div className="flex flex-col items-center">
                             <h2 className="text-[40px] font-extrabold mt-10">Register</h2>
                             <form onSubmit={handleSignUp} className="mt-12 w-full flex flex-col items-center">
-                                <label className="text-[20px] font-extrabold w-[310px] text-left">UMindanao Email</label>
+                                <label className="text-[20px] font-extrabold w-[310px] text-left">Username</label>
                                 <input
                                     className="w-[310px] h-[50px] mt-2 bg-[#292929] text-white px-3"
-                                    type="email"
+                                    type="text"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     required

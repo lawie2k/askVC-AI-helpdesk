@@ -29,7 +29,7 @@ export default function ResetPass() {
     };
  
     const resetPassword = useCallback(async () => {
-        // First: Do all validation checks
+
         if (!currentPassword.trim()) {
             setError('Please enter your current password');
             return;
@@ -71,7 +71,7 @@ export default function ResetPass() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
             
-            const response = await fetch('http://192.168.1.6:5050/auth/reset-password', {
+            const response = await fetch('http://192.168.1.28:5050/auth/reset-password', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

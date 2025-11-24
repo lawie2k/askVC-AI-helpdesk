@@ -5,7 +5,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = "http://192.168.1.6:5050";
+const API_URL = "http://192.168.1.28:5050";
 
 const isUmEmail = (value: string) => {
 	const trimmed = value.trim();
@@ -44,7 +44,7 @@ export default function Login(){
                 }
                 setRememberMe(shouldRemember);
             } catch (e) {
-                // noop
+
             }
         })();
     }, []);
@@ -60,14 +60,14 @@ export default function Login(){
                 await AsyncStorage.setItem("remembered_email", email);
             }
         } catch (e) {
-            // noop
+
         }
     };
 
     async function handleLogin() {
         try {
             setLoginPressed(true);
-            setError(''); // Clear any previous errors
+            setError('');
             
             if (!email || !password) {
                 setError("Email and password are required");
@@ -92,7 +92,7 @@ export default function Login(){
             try {
                 data = text ? JSON.parse(text) : null;
             } catch {
-                // leave data null; fall through to error handling if needed
+
             }
 
             if (!response.ok) {
@@ -208,6 +208,11 @@ export default function Login(){
                                    {loginPressed ? "Logging in..." : "Login"}
                                </Text>
                            </TouchableOpacity>
+
+                           <Text className="text-center mt-4 text-white"
+                           onPress={() => navigation.navigate("ResetPassLogin" as never)}>
+                               <Text className="text-[#900C27] font-extrabold text-[16px]">Forgot Password?</Text>
+                           </Text>
                        </View>
 
                         <View className="flex-row justify-center items-center mt-[300px]">

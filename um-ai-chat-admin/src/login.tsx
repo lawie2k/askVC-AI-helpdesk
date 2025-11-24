@@ -13,19 +13,17 @@ export default function login() {
     const [error, setError] = useState("");
     const isMobile = useMobileDetection();
 
-    const isValidUmEmail = (email: string) => /^[A-Za-z0-9._%+-]+@umindanao\.edu\.ph$/i.test(email);
-
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError("");
         
         try {
-            if (!isValidUmEmail(username)) {
-                throw new Error("Please use a valid UMindanao email (@umindanao.edu.ph)");
+            if (!username || username.trim().length === 0) {
+                throw new Error("Username is required");
             }
             const response = await adminAuthAPI.login(username, password);
-            // Accept common response shapes
+
             const token = response?.token || response?.data?.token || response?.result?.token;
             if (!token) {
                 const msg = response?.error || response?.message || "Invalid credentials";
@@ -42,14 +40,19 @@ export default function login() {
             }
             navigate("/dashboard", { replace: true });
         } catch (error: any) {
-            setError(error.message || "Login failed");
+            const message = error?.message || "Login failed";
+            if (message.includes("401")) {
+                setError("Wrong username or password");
+            } else {
+                setError(message);
+            }
             console.error("Login error:", error);
         } finally {
             setLoading(false);
         }
     };
 
-    // Show mobile restriction if accessed on mobile device
+
     if (isMobile) {
         return <MobileRestriction />;
     }
@@ -65,10 +68,10 @@ export default function login() {
           <div className="bg-[#3C3C3C] w-[550px] min-h-[650px] flex flex-col items-center">
             <h2 className="text-[40px] font-extrabold mt-10">Admin</h2>
             <form onSubmit={handleLogin} className="mt-12 w-full flex flex-col items-center">
-              <label className="text-[20px] font-extrabold w-[310px] text-left">UMindanao Email</label>
+              <label className="text-[20px] font-extrabold w-[310px] text-left">Username</label>
               <input
                 className="w-[310px] h-[50px] mt-2 bg-[#292929] text-white px-3"
-                type="email"
+                type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -104,9 +107,6 @@ export default function login() {
                 {loading ? "Logging in..." : "Login"}
               </button>
             </form>
-                <h2 className="mt-24 font-bold">add new <button className="text-[#900C27]"
-                    onClick={()=>navigate("/signup")}>Admin</button>
-                </h2>
           </div>
         </main>
       </div>
