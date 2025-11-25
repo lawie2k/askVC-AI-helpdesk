@@ -82,8 +82,9 @@ export default function professor(){
   ];
   const addProfessor = async () => {
     try {
-      const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
-      const required = ['name', 'position', 'email', 'department'];
+      const hasAllRequired = (values: Record<string, any>, required: string[]) =>
+        required.every((k) => String(values[k] ?? '').trim() !== '');
+      const required = ['name', 'position', 'email', 'department', 'program'];
       if (!hasAllRequired(newProfessor as any, required)) {
         alert('Please fill out all required fields.');
         return;
@@ -154,8 +155,9 @@ export default function professor(){
 
   const saveEdit = async () => {
     try {
-      const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
-      const required = ['name', 'position', 'email', 'department'];
+      const hasAllRequired = (values: Record<string, any>, required: string[]) =>
+        required.every((k) => String(values[k] ?? '').trim() !== '');
+      const required = ['name', 'position', 'email', 'department', 'program'];
       if (!hasAllRequired(editForm as any, required)) {
         alert('Please fill out all required fields.');
         return;

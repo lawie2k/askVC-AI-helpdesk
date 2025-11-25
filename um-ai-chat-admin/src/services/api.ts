@@ -121,6 +121,51 @@ export const rulesAPI = {
   }),
 };
 
+export const visionMissionAPI = {
+  getAll: () => apiCall('/api/vision-mission'),
+  create: (data: any) => apiCall('/api/vision-mission', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: number, data: any) => apiCall(`/api/vision-mission/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: number) => apiCall(`/api/vision-mission/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+export const campusInfoAPI = {
+  getAll: () => apiCall('/api/campus-info'),
+  create: (data: any) => apiCall('/api/campus-info', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: number, data: any) => apiCall(`/api/campus-info/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: number) => apiCall(`/api/campus-info/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+export const announcementsAPI = {
+  getAll: () => apiCall('/api/announcements'),
+  create: (data: any) => apiCall('/api/announcements', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: number, data: any) => apiCall(`/api/announcements/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: number) => apiCall(`/api/announcements/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
 // Logs API functions
 export const logsAPI = {
   getAll: () => apiCall('/api/logs'),

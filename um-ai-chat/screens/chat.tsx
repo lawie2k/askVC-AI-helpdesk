@@ -23,6 +23,7 @@ export function Chat({messages, setMessages}: {
     });
 
     const [isThinking, setIsThinking] = React.useState(false);
+    const [isNetworkError, setIsNetworkError] = React.useState(false);
 
     const renderEmailHighlightedText = (text: string) => {
         const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig;
@@ -54,8 +55,11 @@ export function Chat({messages, setMessages}: {
 
     const onSend = React.useCallback(async (messages: IMessage[] = []) => {
         setIsThinking(true);
+        setIsNetworkError(false);
         setMessages((prev) => GiftedChat.append(prev, messages));
         const userText = messages[0].text;
+        let handledNetworkError = false;
+        
         try {
             const response = await fetch(`${BASE_URL}/ask`, {
                 method: "POST",
@@ -78,24 +82,62 @@ export function Chat({messages, setMessages}: {
                 throw new Error("Missing 'answer' in response");
             }
 
+            // Check if backend returned network error
+            const isBackendNetworkError = answerText.toLowerCase() === "network error";
+            if (isBackendNetworkError) {
+                setIsNetworkError(true);
+                handledNetworkError = true;
+                // Keep thinking state for a moment to show "too slow connection"
+                setTimeout(() => {
+                    setIsThinking(false);
+                }, 1000);
+            }
+
+            const displayText = isBackendNetworkError 
+                ? "no internet connection" 
+                : answerText;
+
             const aiMessage: IMessage = {
                 _id: Date.now(),
-                text: answerText,
+                text: displayText,
                 createdAt: new Date(),
                 user: {_id: 2, name: "UM AI"},
             };
             setMessages((prev) => GiftedChat.append(prev, [aiMessage]));
         } catch (e) {
             console.error("AI fetch failed:", e);
+            
+            // Check if it's a network error
+            const isNetworkErr = 
+                e instanceof TypeError || 
+                (e as Error)?.message?.includes('Network request failed') ||
+                (e as Error)?.message?.includes('Failed to fetch') ||
+                (e as Error)?.message?.includes('network') ||
+                (e as Error)?.name === 'TypeError';
+            
+            if (isNetworkErr) {
+                setIsNetworkError(true);
+                handledNetworkError = true;
+                // Keep thinking state for a moment to show "too slow connection"
+                setTimeout(() => {
+                    setIsThinking(false);
+                }, 1000);
+            }
+            
+            const errorText = isNetworkErr ? "no internet connection" : "Error fetching AI response";
+            
             const errorMessage: IMessage = {
                 _id: Date.now(),
-                text: "Error fetching AI response",
+                text: errorText,
                 createdAt: new Date(),
-                user: {_id: 2},
+                user: {_id: 2, name: "UM AI"},
             };
             setMessages((prev) => GiftedChat.append(prev, [errorMessage]));
         } finally {
-            setIsThinking(false);
+            // Only set thinking to false if it wasn't already handled
+            if (!handledNetworkError) {
+                setIsThinking(false);
+            }
         }
     }, [setMessages]);
 
@@ -253,7 +295,9 @@ export function Chat({messages, setMessages}: {
                     isThinking ? (
                         <View className="px-2 py-1 pb-3 items-start">
                             <View className="bg-[#292929] rounded-[18px] py-2 px-3 max-w-[250px] h-[30px]">
-                                <Text className="text-white">UM AI is thinking…</Text>
+                                <Text className="text-white">
+                                    {isNetworkError ? "too slow connection" : "UM AI is thinking…"}
+                                </Text>
                             </View>
                         </View>
                     ) : null

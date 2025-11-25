@@ -31,8 +31,10 @@ async function searchDatabase(question) {
       { name: "buildings", priority: 3 },    // Then buildings
       { name: "rooms", priority: 4 },        // Then rooms
       { name: "offices", priority: 5 },      // Then offices
-      { name: "rules", priority: 6 },        // Then rules
-      { name: "settings", priority: 7 }      // Finally settings
+      { name: "rules", priority: 6 },        // Campus rules
+      { name: "vision_mission", priority: 7 }, // Vision & mission
+      { name: "campus_info", priority: 8 },  // Services & other info
+      { name: "settings", priority: 9 }      // Finally settings
     ];
 
     if (tablesToSearch.length === 0) {
@@ -62,6 +64,54 @@ async function searchDatabase(question) {
             const scoredResults = results.map(result => ({
               ...result,
               relevance_score: 100
+            }));
+            searchResults.push({
+              table: table,
+              data: scoredResults,
+              priority: tableInfo.priority
+            });
+          }
+
+          completedSearches++;
+          if (completedSearches === tablesToSearch.length) {
+            const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
+            resolve(finalResults);
+          }
+        });
+        return;
+      }
+
+      if (table === 'vision_mission') {
+        console.log("📜 Fetching VISION & MISSION entries...");
+        db.query('SELECT *, "vision_mission_query" as match_type FROM vision_mission', (err, results) => {
+          if (!err && results.length > 0) {
+            const scoredResults = results.map(result => ({
+              ...result,
+              relevance_score: 95
+            }));
+            searchResults.push({
+              table: table,
+              data: scoredResults,
+              priority: tableInfo.priority
+            });
+          }
+
+          completedSearches++;
+          if (completedSearches === tablesToSearch.length) {
+            const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
+            resolve(finalResults);
+          }
+        });
+        return;
+      }
+
+      if (table === 'campus_info') {
+        console.log("ℹ️ Fetching CAMPUS INFO entries...");
+        db.query('SELECT *, "campus_info_query" as match_type FROM campus_info', (err, results) => {
+          if (!err && results.length > 0) {
+            const scoredResults = results.map(result => ({
+              ...result,
+              relevance_score: 90
             }));
             searchResults.push({
               table: table,
@@ -531,6 +581,8 @@ function getSearchableColumns(table) {
     rooms: "name, floor, status, type",
     offices: "name, floor",
     rules: "description",
+    vision_mission: "description",
+    campus_info: "description",
     settings: "key_name, value",
   };
 

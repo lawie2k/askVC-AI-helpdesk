@@ -15,7 +15,7 @@ function authenticateAdmin(req, res, next) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
     const adminId = decoded?.sub || decoded?.id; // support both shapes
     if (!adminId) return res.status(401).json({ error: 'Invalid token payload' });
-    // Normalize shape so downstream uses req.admin.id
+
     req.admin = { id: adminId, username: decoded?.username, ...decoded };
     next();
   } catch (error) {

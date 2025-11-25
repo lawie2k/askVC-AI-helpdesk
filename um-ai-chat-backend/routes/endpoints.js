@@ -27,6 +27,9 @@ const buildingsRoutes = require("./api/buildings");
 const professorsRoutes = require("./api/professors");
 const rulesRoutes = require("./api/rules");
 const settingsRoutes = require("./api/settings");
+const visionMissionRoutes = require("./api/visionMission");
+const campusInfoRoutes = require("./api/campusInfo");
+const announcementsRoutes = require("./api/announcements");
 const logsRoutes = require("./api/logs");
 
 // Mount API routes
@@ -36,6 +39,9 @@ router.use("/api/offices", officesRoutes);
 router.use("/api/buildings", buildingsRoutes);
 router.use("/api/professors", professorsRoutes);
 router.use("/api/rules", rulesRoutes);
+router.use("/api/vision-mission", visionMissionRoutes);
+router.use("/api/campus-info", campusInfoRoutes);
+router.use("/api/announcements", announcementsRoutes);
 router.use("/api/settings", settingsRoutes);
 router.use("/api/logs", logsRoutes);
 

@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./login";
 import MainDashboard from "./maindashboard";
 import Dashboard from "./tabs/dashboard";
-import Rules from "./tabs/rules";
+import Rules from "./tabs/info-rules";
 import Professor from "./tabs/professor";
 import Rooms from "./tabs/rooms";
 import Buildings from "./tabs/buildings";
@@ -11,6 +11,7 @@ import Offices from "./tabs/offices"
 import Departments from "./tabs/departments";
 import Reports from "./tabs/reports";
 import Logs from "./tabs/logs";
+import Announcement from "./tabs/announcement";
 import Signup from "./signup";
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
                     <Route path="Departments" element={<Departments/>}/>
                     <Route path="Reports" element={<Reports/>}/>
                     <Route path="Logs" element={<Logs/>}/>
+                    <Route path="Announcement" element={<Announcement/>}/>
 
                 </Route>
             </Routes>
