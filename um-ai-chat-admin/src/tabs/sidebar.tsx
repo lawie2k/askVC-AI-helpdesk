@@ -41,21 +41,21 @@ export default function Sidebar() {
                 </div>
                 <div className="text-white pt-5">
                     <NavLink
-                        to="/Professor"
-                        className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "professor" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
-                        onClick={() => setActive("professor")}>
-                        <FontAwesomeIcon icon={faUserTie} />
-                        <span className="ml-2 truncate">Professor</span>
-                    </NavLink>
-
-                </div>
-                <div className="text-white pt-5">
-                    <NavLink
                         to="/Rooms"
                         className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "rooms" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
                         onClick={() => setActive("rooms")}>
                         <FontAwesomeIcon icon={faBuilding} />
                         <span className="ml-2 truncate">Rooms</span>
+                    </NavLink>
+
+                </div>
+                <div className="text-white pt-5">
+                    <NavLink
+                        to="/Employee"
+                        className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "employee" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
+                        onClick={() => setActive("employee")}>
+                        <FontAwesomeIcon icon={faUserTie} />
+                        <span className="ml-2 truncate">Employees</span>
                     </NavLink>
 
                 </div>

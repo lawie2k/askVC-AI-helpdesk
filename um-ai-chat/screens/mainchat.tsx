@@ -5,14 +5,26 @@ import React, {useState} from "react";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {Chat} from "./chat";
 import {IMessage} from "react-native-gifted-chat";
-import {CommonActions, useNavigation} from "@react-navigation/native";
+import {CommonActions, useNavigation, useRoute} from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function MainChat() {
     const navigation = useNavigation();
+    const route = useRoute();
     const [sideBar, setSideBar] = useState(false);
     const [messages, setMessages] = React.useState<IMessage[]>([]);
     const [chatKey, setChatKey] = React.useState(0);
+
+    // Load messages from navigation params if provided (only when explicitly set)
+    React.useEffect(() => {
+        const params = route.params as any;
+        if (params?.loadMessages && Array.isArray(params.loadMessages)) {
+            setMessages(params.loadMessages);
+            setChatKey(prev => prev + 1);
+            // Clear params after loading to prevent reload on re-render
+            navigation.setParams({ loadMessages: undefined } as any);
+        }
+    }, [route.params]);
 
     async function logout() {
         await AsyncStorage.multiRemove(['token', 'auth_user', 'remember_me', 'remembered_email']);
@@ -22,7 +34,6 @@ export default function MainChat() {
                 routes: [{ name: 'Login' }],
             })
         )
-
     }
     return (
         <SafeAreaView className="flex-1 bg-[#292929]">
@@ -65,11 +76,26 @@ export default function MainChat() {
                                 onPress={() => {
                                     setMessages([]);
                                     setChatKey(prev => prev + 1);
+                                    setHasLoadedFromParams(false);
+                                    // Clear navigation params to prevent reloading
+                                    navigation.setParams({ loadMessages: undefined } as any);
                                     setSideBar(false);
                                 }}
                             >
                                 <Text className="text-gray-300 text-2xl font-black">
                                     New chat
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                className="py-2"
+                                onPress={() => {
+                                    setSideBar(false);
+                                    navigation.navigate("ChatHistory" as never);
+                                }}
+                            >
+                                <Text className="text-gray-300 text-2xl font-black">
+                                    Chat History
                                 </Text>
                             </TouchableOpacity>
 

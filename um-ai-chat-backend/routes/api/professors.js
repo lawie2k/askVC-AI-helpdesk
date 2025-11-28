@@ -83,7 +83,7 @@ router.post('/migrate', authenticateAdmin, async (req, res) => {
 });
 
 router.post('/', authenticateAdmin, async (req, res) => {
-  const { name, position, email, program, department } = req.body; // department short_name
+  const { name, nickname, position, email, program, department } = req.body; // department short_name
   if (!name || !position || !email || !department) {
     return res.status(400).json({ error: 'name, position, email, department are required' });
   }
@@ -93,6 +93,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
     const professor = await prisma.professors.create({
       data: {
         name,
+        nickname: nickname ?? null,
         position,
         email,
         program: program ?? null,
@@ -114,7 +115,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
 
 router.put('/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
-  const { name, position, email, program, department } = req.body; // department short_name
+  const { name, nickname, position, email, program, department } = req.body; // department short_name
   if (!name || !position || !email || !department) {
     return res.status(400).json({ error: 'name, position, email, department are required' });
   }
@@ -125,6 +126,7 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
       where: { id: Number(id) },
       data: {
         name,
+        nickname: nickname ?? null,
         position,
         email,
         program: program ?? null,

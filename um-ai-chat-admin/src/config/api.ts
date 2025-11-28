@@ -1,4 +1,4 @@
 // Use environment variable or fallback to default IP
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.1.28:5050";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.1.6:5050";
 
 export default API_BASE_URL;

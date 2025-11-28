@@ -10,6 +10,11 @@ import {
   Time,
   Message,
 } from "react-native-gifted-chat";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+interface ChatMessage extends IMessage {
+    retryText?: string;
+}
 
 export function Chat({messages, setMessages}: {
     messages: IMessage[],
@@ -17,13 +22,12 @@ export function Chat({messages, setMessages}: {
 }) {
 
     const BASE_URL = Platform.select({
-        ios: "http://192.168.1.28:5050",
-        android: "http://192.168.1.28:5050",
-        default: "http://192.168.1.28:5050",
+        ios: "http://192.168.1.6:5050",
+        android: "http://192.168.1.6:5050",
+        default: "http://192.168.1.6:5050",
     });
 
     const [isThinking, setIsThinking] = React.useState(false);
-    const [isNetworkError, setIsNetworkError] = React.useState(false);
 
     const renderEmailHighlightedText = (text: string) => {
         const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig;
@@ -53,17 +57,23 @@ export function Chat({messages, setMessages}: {
         return <Text className="text-white">{parts}</Text>;
     };
 
-    const onSend = React.useCallback(async (messages: IMessage[] = []) => {
+    const handleAsk = React.useCallback(async (userText: string, retryMessageId?: string | number) => {
         setIsThinking(true);
-        setIsNetworkError(false);
-        setMessages((prev) => GiftedChat.append(prev, messages));
-        const userText = messages[0].text;
-        let handledNetworkError = false;
+
+        if (retryMessageId) {
+            setMessages((prev) => prev.filter((msg) => msg._id !== retryMessageId));
+        }
         
         try {
+            const token = await AsyncStorage.getItem("token");
+            const headers: Record<string, string> = {"Content-Type": "application/json"};
+            if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+            }
+
             const response = await fetch(`${BASE_URL}/ask`, {
                 method: "POST",
-                headers: {"Content-Type": "application/json"},
+                headers,
                 body: JSON.stringify({question: userText}),
             });
 
@@ -82,64 +92,42 @@ export function Chat({messages, setMessages}: {
                 throw new Error("Missing 'answer' in response");
             }
 
-            // Check if backend returned network error
-            const isBackendNetworkError = answerText.toLowerCase() === "network error";
-            if (isBackendNetworkError) {
-                setIsNetworkError(true);
-                handledNetworkError = true;
-                // Keep thinking state for a moment to show "too slow connection"
-                setTimeout(() => {
-                    setIsThinking(false);
-                }, 1000);
-            }
-
-            const displayText = isBackendNetworkError 
-                ? "no internet connection" 
-                : answerText;
-
             const aiMessage: IMessage = {
                 _id: Date.now(),
-                text: displayText,
+                text: answerText,
                 createdAt: new Date(),
                 user: {_id: 2, name: "UM AI"},
             };
             setMessages((prev) => GiftedChat.append(prev, [aiMessage]));
-        } catch (e) {
+
+        } catch (e: any) {
             console.error("AI fetch failed:", e);
-            
-            // Check if it's a network error
-            const isNetworkErr = 
-                e instanceof TypeError || 
-                (e as Error)?.message?.includes('Network request failed') ||
-                (e as Error)?.message?.includes('Failed to fetch') ||
-                (e as Error)?.message?.includes('network') ||
-                (e as Error)?.name === 'TypeError';
-            
-            if (isNetworkErr) {
-                setIsNetworkError(true);
-                handledNetworkError = true;
-                // Keep thinking state for a moment to show "too slow connection"
-                setTimeout(() => {
-                    setIsThinking(false);
-                }, 1000);
+            let errorText = "Error fetching AI response";
+            if (e?.name === "AbortError" || (e?.message || "").includes("Network request failed")) {
+                errorText = "No internet connection";
             }
-            
-            const errorText = isNetworkErr ? "no internet connection" : "Error fetching AI response";
-            
-            const errorMessage: IMessage = {
+            const errorMessage: ChatMessage = {
                 _id: Date.now(),
                 text: errorText,
                 createdAt: new Date(),
-                user: {_id: 2, name: "UM AI"},
+                user: {_id: 2},
+                retryText: userText,
             };
             setMessages((prev) => GiftedChat.append(prev, [errorMessage]));
         } finally {
-            // Only set thinking to false if it wasn't already handled
-            if (!handledNetworkError) {
-                setIsThinking(false);
-            }
+            setIsThinking(false);
         }
-    }, [setMessages]);
+    }, [BASE_URL, setMessages]);
+
+    const onSend = React.useCallback((messages: IMessage[] = []) => {
+        setMessages((prev) => GiftedChat.append(prev, messages));
+        const userText = messages[0].text;
+        handleAsk(userText);
+    }, [handleAsk, setMessages]);
+
+    const handleRetry = React.useCallback((retryText: string, messageId: string | number) => {
+        handleAsk(retryText, messageId);
+    }, [handleAsk]);
 
     return (
         <View className="flex-1">
@@ -247,7 +235,7 @@ export function Chat({messages, setMessages}: {
                 }}
                 renderBubble={(props) => {
                     const { key, ...restProps } = props as any;
-                    return (
+                    const bubble = (
                         <Bubble
                             key={key}
                             {...restProps}
@@ -265,15 +253,14 @@ export function Chat({messages, setMessages}: {
                                     backgroundColor: "#292929",
                                     marginLeft: -50,
                                     maxWidth: 250,
-                                        paddingHorizontal: 12,
-                                        paddingVertical: 8,
-                                        textSize: 12,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 8,
+                                    textSize: 12,
                                 },
                             }}
                             textStyle={{
                                 left: {
                                     color: "white"
-                        
                                 },
                             }}
                             containerStyle={{
@@ -286,6 +273,23 @@ export function Chat({messages, setMessages}: {
                             }}
                         />
                     );
+
+                    const currentMessage = restProps.currentMessage as ChatMessage;
+                    if (currentMessage?.retryText) {
+                        return (
+                            <View className="flex-row items-center">
+                                {bubble}
+                                <TouchableOpacity
+                                    className="ml-1 bg-[#C70039] px-2 py-1.5 rounded-full"
+                                    onPress={() => handleRetry(currentMessage.retryText!, currentMessage._id)}
+                                >
+                                    <Text className="text-white text-[10px] font-bold">Retry</Text>
+                                </TouchableOpacity>
+                            </View>
+                        );
+                    }
+
+                    return bubble;
                 }}
                 renderMessage={(props) => {
                     const { key, ...messageProps } = props as any;
@@ -295,9 +299,7 @@ export function Chat({messages, setMessages}: {
                     isThinking ? (
                         <View className="px-2 py-1 pb-3 items-start">
                             <View className="bg-[#292929] rounded-[18px] py-2 px-3 max-w-[250px] h-[30px]">
-                                <Text className="text-white">
-                                    {isNetworkError ? "too slow connection" : "UM AI is thinking…"}
-                                </Text>
+                                <Text className="text-white">UM AI is thinking…</Text>
                             </View>
                         </View>
                     ) : null

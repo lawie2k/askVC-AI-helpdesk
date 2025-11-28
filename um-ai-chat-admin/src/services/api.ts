@@ -41,22 +41,6 @@ export const departmentAPI = {
   }),
 };
 
-// Room API functions
-export const roomAPI = {
-  getAll: () => apiCall('/api/rooms'),
-  create: (data: any) => apiCall('/api/rooms', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
-  update: (id: number, data: any) => apiCall(`/api/rooms/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  }),
-  delete: (id: number) => apiCall(`/api/rooms/${id}`, {
-    method: 'DELETE',
-  }),
-};
-
 // Building API functions
 export const buildingAPI = {
   getAll: () => apiCall('/api/buildings'),
@@ -69,6 +53,22 @@ export const buildingAPI = {
     body: JSON.stringify(data),
   }),
   delete: (id: number) => apiCall(`/api/buildings/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+// Room API functions (without availability)
+export const roomAPI = {
+  getAll: () => apiCall('/api/rooms'),
+  create: (data: any) => apiCall('/api/rooms', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: number, data: any) => apiCall(`/api/rooms/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: number) => apiCall(`/api/rooms/${id}`, {
     method: 'DELETE',
   }),
 };
@@ -162,6 +162,21 @@ export const announcementsAPI = {
     body: JSON.stringify(data),
   }),
   delete: (id: number) => apiCall(`/api/announcements/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+export const nonTeachingAPI = {
+  getAll: () => apiCall('/api/non-teaching-staff'),
+  create: (data: any) => apiCall('/api/non-teaching-staff', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: number, data: any) => apiCall(`/api/non-teaching-staff/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: number) => apiCall(`/api/non-teaching-staff/${id}`, {
     method: 'DELETE',
   }),
 };

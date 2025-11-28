@@ -21,6 +21,7 @@ model admins {
   rules           rules[]
   vision_mission  vision_mission[]
   campus_info     campus_info[]
+  non_teaching_staff non_teaching_staff[]
   announcements   announcements[]
   settings        settings[]
 }
@@ -78,6 +79,7 @@ model offices {
 model professors {
   id            Int          @id @default(autoincrement())
   name          String       @db.VarChar(100)
+  nickname      String?      @db.VarChar(100)
   position      String?      @db.VarChar(100)
   email         String?      @db.VarChar(255)
   program       String?      @db.VarChar(50)
@@ -97,7 +99,7 @@ model rooms {
   building_id Int?
   floor       String     @db.VarChar(50)
   admin_id    Int?
-  status      String     @default("Vacant") @db.VarChar(20)
+  status      String?    @db.VarChar(30)
   type        String     @default("Lecture") @db.VarChar(30)
   created_at  DateTime   @default(now()) @db.DateTime(0)
   buildings   buildings? @relation(fields: [building_id], references: [id], onUpdate: NoAction, map: "rooms_ibfk_1")
@@ -148,6 +150,17 @@ model announcements {
   @@index([admin_id], map: "admin_id")
 }
 
+model non_teaching_staff {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  role        String   @db.VarChar(50)
+  admin_id    Int?
+  created_at  DateTime @default(now()) @db.DateTime(0)
+  admins      admins?  @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "non_teaching_staff_ibfk_1")
+
+  @@index([admin_id], map: "admin_id")
+}
+
 model settings {
   id         Int      @id @default(autoincrement())
   key_name   String   @unique(map: "key_name") @db.VarChar(100)
@@ -164,4 +177,30 @@ model users {
   email           String    @unique(map: "email") @db.VarChar(255)
   password_hashed String    @db.VarChar(255)
   created_at      DateTime? @default(now()) @db.DateTime(0)
+  password_reset_tokens password_reset_tokens[]
+  historyChats    historyChats[]
+}
+
+model password_reset_tokens {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  code_hash  String   @db.VarChar(255)
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now()) @db.DateTime(0)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "password_resets_user_fk")
+
+  @@index([user_id], map: "password_resets_user_idx")
+}
+
+model historyChats {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  question   String   @db.Text
+  answer     String   @db.Text
+  created_at DateTime @default(now()) @db.DateTime(0)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "history_chats_user_fk")
+
+  @@index([user_id], map: "history_chats_user_idx")
+  @@index([created_at], map: "history_chats_created_idx")
 }

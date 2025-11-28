@@ -4,7 +4,8 @@ import MainChat from "./screens/mainchat";
 import Signup from "./screens/signup";
 import Profile from "./screens/Profile";
 import ResetPass from "./screens/resetPass";
-import ResetPassLogin from "./screens/resetPassLogin"
+import ResetPassLogin from "./screens/resetPassLogin";
+import ChatHistory from "./screens/ChatHistory";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
@@ -41,6 +42,7 @@ export default function App() {
                         <Stack.Screen name="Profile" component={Profile as any} />
                         <Stack.Screen name="ResetPass" component={ResetPass as any} />
                         <Stack.Screen name="ResetPassLogin" component={ResetPassLogin as any} />
+                        <Stack.Screen name="ChatHistory" component={ChatHistory as any} />
                     </Stack.Navigator>
                 </NavigationContainer>
             </SafeAreaProvider>

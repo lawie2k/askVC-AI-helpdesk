@@ -98,7 +98,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                 <th
                   key={column.field}
                   className="px-4 py-3 text-left cursor-pointer hover:bg-gray-700 select-none"
-                  style={{ width: column.width }}
+                  style={column.width ? { minWidth: column.width } : undefined}
                   onClick={() => handleSort(column.field)}
                 >
                   <div className="flex items-center">

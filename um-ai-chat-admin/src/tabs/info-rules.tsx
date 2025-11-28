@@ -36,6 +36,7 @@ export default function RulesAndInfo () {
   });
   const [editingRule, setEditingRule] = useState<any>(null);
   const [editText, setEditText] = useState('');
+  const [activeTab, setActiveTab] = useState<string>(CATEGORY_SECTIONS[0].value);
 
   useEffect(() => {
     loadAll();
@@ -162,37 +163,51 @@ export default function RulesAndInfo () {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {CATEGORY_SECTIONS.map((section) => {
-            const sectionEntries = entries[section.value] || [];
-            const isEditingInSection = editingRule?.category === section.value;
+        <div className="flex space-x-4 border-b border-white/10 pb-2">
+          {CATEGORY_SECTIONS.map((section) => (
+            <button
+              key={section.value}
+              className={`px-4 py-2 rounded-t-lg font-semibold ${
+                activeTab === section.value
+                  ? 'bg-[#900C27] text-white'
+                  : 'bg-transparent text-gray-300 hover:text-white'
+              }`}
+              onClick={() => setActiveTab(section.value)}
+            >
+              {section.label}
+            </button>
+          ))}
+        </div>
+
+        {(() => {
+          const activeSection = CATEGORY_SECTIONS.find((section) => section.value === activeTab);
+          if (!activeSection) return null;
+          const sectionEntries = entries[activeTab] || [];
+          const isEditingInSection = editingRule?.category === activeTab;
 
             return (
-              <div
-                key={section.value}
-                className="bg-[#292929] border border-white/10 rounded-2xl p-4 flex flex-col h-[680px]"
-              >
+            <div className="bg-[#292929] border border-white rounded-2xl p-4 flex flex-col h-[615px]">
                 <div className="mb-3">
-                  <h2 className="text-white text-lg font-semibold">{section.label}</h2>
-                  <p className="text-gray-300 text-sm">{section.helper}</p>
+                <h2 className="text-white text-lg font-semibold">{activeSection.label}</h2>
+                <p className="text-gray-300 text-sm">{activeSection.helper}</p>
                 </div>
 
-                <div className="space-y-2 mb-4">
+              <div className="mb-4">
                   <textarea
                     className="w-full h-24 rounded-lg px-3 py-2 text-black focus:ring-2 focus:ring-blue-500"
-                    placeholder={`Add new ${section.label.toLowerCase()}`}
-                    value={newEntries[section.value]}
+                  placeholder={`Add new ${activeSection.label.toLowerCase()}`}
+                  value={newEntries[activeTab]}
                     onChange={(e) =>
-                      setNewEntries((prev) => ({ ...prev, [section.value]: e.target.value }))
+                    setNewEntries((prev) => ({ ...prev, [activeTab]: e.target.value }))
                     }
                     disabled={!!editingRule}
                   />
                   <button
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg disabled:opacity-60"
-                    onClick={() => handleAdd(section.value)}
+                  className="mt-2 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg disabled:opacity-60"
+                  onClick={() => handleAdd(activeTab)}
                     disabled={!!editingRule}
                   >
-                    Add to {section.label}
+                  Add to {activeSection.label}
                   </button>
                 </div>
 
@@ -263,8 +278,7 @@ export default function RulesAndInfo () {
                 )}
               </div>
             );
-          })}
-        </div>
+        })()}
       </div>
     </div>
   );

@@ -4,8 +4,8 @@ import Login from "./login";
 import MainDashboard from "./maindashboard";
 import Dashboard from "./tabs/dashboard";
 import Rules from "./tabs/info-rules";
-import Professor from "./tabs/professor";
 import Rooms from "./tabs/rooms";
+import Employee from "./tabs/employee";
 import Buildings from "./tabs/buildings";
 import Offices from "./tabs/offices"
 import Departments from "./tabs/departments";
@@ -25,9 +25,9 @@ export default function App() {
                 <Route path="/" element={<MainDashboard />}>
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="Rules" element={<Rules/>}/>
-                    <Route path="Professor" element={<Professor/>}/>
-                    <Route path="Rooms" element={<Rooms/>}/>
+                    <Route path="Employee" element={<Employee/>}/>
                     <Route path="Buildings" element={<Buildings/>}/>
+                    <Route path="Rooms" element={<Rooms/>}/>
                     <Route path="Offices" element={<Offices/>}/>
                     <Route path="Departments" element={<Departments/>}/>
                     <Route path="Reports" element={<Reports/>}/>

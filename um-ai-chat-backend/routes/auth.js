@@ -2,11 +2,14 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/prismaClient");
+const { sendPasswordResetEmail } = require("../services/email-service");
+const crypto = require("crypto");
 require("dotenv").config();
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-not-for-prod';
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || "10", 10);
+const RESET_CODE_TTL_MINUTES = parseInt(process.env.RESET_CODE_TTL_MINUTES || "10", 10);
 
 
 async function getUserById(userId) {
@@ -95,8 +98,19 @@ router.post("/register", async (req, res) => {
     }
 })
 
+function generateResetCode() {
+    return crypto.randomInt(100000, 999999).toString();
+}
+
+async function invalidateExistingTokens(userId) {
+    await prisma.password_reset_tokens.updateMany({
+        where: { user_id: Number(userId), used: false },
+        data: { used: true },
+    });
+}
+
 router.post("/reset-password", async (req, res) => {
-    const { oldPassword, newPassword,userid } = req.body;
+    const { oldPassword, newPassword, userid } = req.body;
     try{
         const user = await getUserById(userid);
         const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password_hashed);
@@ -112,6 +126,95 @@ router.post("/reset-password", async (req, res) => {
         return res.status(500).json({ error: "Unexpected error" });
     }
 })
+
+router.post("/request-password-reset", async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+    }
+
+    try {
+        const user = await prisma.users.findUnique({ where: { email } });
+        if (!user) {
+            // Do not reveal if user exists
+            return res.status(200).json({ message: "If the email exists, a reset code has been sent." });
+        }
+
+        await invalidateExistingTokens(user.id);
+        const code = generateResetCode();
+        const codeHash = await bcrypt.hash(code, BCRYPT_ROUNDS);
+        const expiresAt = new Date(Date.now() + RESET_CODE_TTL_MINUTES * 60 * 1000);
+
+        await prisma.password_reset_tokens.create({
+            data: {
+                user_id: user.id,
+                code_hash: codeHash,
+                expires_at: expiresAt,
+            },
+        });
+
+        await sendPasswordResetEmail(email, code);
+
+        return res.status(200).json({
+            message: "If the email exists, a reset code has been sent.",
+            expiresInMinutes: RESET_CODE_TTL_MINUTES,
+        });
+    } catch (e) {
+        console.error("Error requesting password reset:", e);
+        return res.status(500).json({ error: "Unable to process password reset request" });
+    }
+});
+
+router.post("/verify-password-reset", async (req, res) => {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+        return res.status(400).json({ error: "Email, code, and newPassword are required" });
+    }
+
+    try {
+        const user = await prisma.users.findUnique({ where: { email } });
+        if (!user) {
+            return res.status(400).json({ error: "Invalid or expired code" });
+        }
+
+        const tokenRecord = await prisma.password_reset_tokens.findFirst({
+            where: {
+                user_id: user.id,
+                used: false,
+                expires_at: { gt: new Date() },
+            },
+            orderBy: { created_at: "desc" },
+        });
+
+        if (!tokenRecord) {
+            return res.status(400).json({ error: "Invalid or expired code" });
+        }
+
+        const isCodeValid = await bcrypt.compare(code, tokenRecord.code_hash);
+        if (!isCodeValid) {
+            return res.status(400).json({ error: "Invalid or expired code" });
+        }
+
+        const hashedNewPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+        await prisma.$transaction([
+            prisma.users.update({
+                where: { id: user.id },
+                data: { password_hashed: hashedNewPassword },
+            }),
+            prisma.password_reset_tokens.update({
+                where: { id: tokenRecord.id },
+                data: { used: true },
+            }),
+        ]);
+
+        return res.status(200).json({ message: "Password updated successfully" });
+    } catch (e) {
+        console.error("Error verifying password reset:", e);
+        return res.status(500).json({ error: "Unable to reset password" });
+    }
+});
 
 router.post("/admin/login", async (req, res) => {
     try{

@@ -43,20 +43,6 @@ export default function Dashboard() {
         { field: 'floor', headerName: 'Floor' },
         { field: 'type', headerName: 'Type' },
         { field: 'created_at', headerName: 'Created At', cellRenderer: (params: any) => { const v = params.value; if (!v) return ''; try { return new Date(v).toLocaleString(); } catch { return String(v); } } },
-        {field: 'status', headerName: 'Status', width: 180, cellRenderer: (params: any) => (
-                <div
-                    className={
-                        `px-3 py-1 w-[90px] text-center rounded font-semibold ` +
-                        (params.value === 'Occupied'
-                            ? 'bg-red-600 hover:bg-red-700'
-                            : params.value === 'Reserved'
-                                ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
-                                : 'bg-green-600 hover:bg-green-700')
-                    }
-                >
-                    {params.value || 'Vacant'}
-                </div>
-            )},
     ];
     const officeColumns = [
         { field: 'name', headerName: 'Office Name' },
@@ -91,22 +77,22 @@ export default function Dashboard() {
             </div>
           )}
           <div className="w-full max-w-[1170px] h-[660px] mt-6 xl:mx-10 px-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
-          <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto">
-    {loading ? (
-      <div className="w-full flex justify-center items-center">
-        <div className="text-white">Loading...</div>
-      </div>
-    ) : (
-      <DataGrid 
-        data={rooms} 
-        columns={roomColumns}
-        height="325px"
-        className="text-white text-[14px] bg-[#292929]"
-        showSearch={false}
-        pageSize={8}
-      />
-    )}
-</div>
+              <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto ">
+                  {loading ? (
+                    <div className="flex justify-center items-center">
+                      <div className="text-white">Loading...</div>
+                    </div>
+                  ) : (
+                    <DataGrid 
+                      data={rooms} 
+                      columns={roomColumns}
+                      height="325px"
+                      className="text-white text-[14px] bg-[#292929]"
+                      showSearch={false}
+                      pageSize={8}
+                    />
+                  )}
+              </div>
               <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg overflow-y-auto ">
                   {loading ? (
                     <div className="flex justify-center items-center">

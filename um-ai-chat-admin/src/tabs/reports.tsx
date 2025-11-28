@@ -1,7 +1,19 @@
 import React, {useEffect, useState} from "react";
 import DataGrid from "../components/DataGrid";
 import * as XLSX from "xlsx";
-import {buildingAPI, departmentAPI, officeAPI, professorAPI, roomAPI, rulesAPI, logsAPI} from "../services/api";
+import {
+  roomAPI,
+  buildingAPI,
+  departmentAPI,
+  officeAPI,
+  professorAPI,
+  rulesAPI,
+  logsAPI,
+  campusInfoAPI,
+  visionMissionAPI,
+  announcementsAPI,
+  nonTeachingAPI
+} from "../services/api";
 
 export default function Reports() {
     const [dataset, setDataset] = useState<string>("rooms");
@@ -20,8 +32,12 @@ export default function Reports() {
             else if (kind === 'offices') data = await officeAPI.getAll();
             else if (kind === 'buildings') data = await buildingAPI.getAll();
             else if (kind === 'professors') data = await professorAPI.getAll();
+            else if (kind === 'nonTeaching') data = await nonTeachingAPI.getAll();
             else if (kind === 'departments') data = await departmentAPI.getAll();
             else if (kind === 'rules') data = await rulesAPI.getAll();
+            else if (kind === 'visionMission') data = await visionMissionAPI.getAll();
+            else if (kind === 'campusInfo') data = await campusInfoAPI.getAll();
+            else if (kind === 'announcements') data = await announcementsAPI.getAll();
             else if (kind === 'logs') data = await logsAPI.getAll();
             setRows(Array.isArray(data) ? data : []);
         } catch (error) {
@@ -53,8 +69,7 @@ XLSX.writeFile(workbook,`${fileBase}_${timestamp}.xlsx`);
             { field: 'name', headerName: 'Room Name', width: 200 },
             { field: 'building_name', headerName: 'Building', width: 200 },
             { field: 'floor', headerName: 'Floor', width: 120 },
-            { field: 'type', headerName: 'Type', width: 120 },
-            { field: 'status', headerName: 'Status', width: 140 },
+            { field: 'type', headerName: 'Type', width: 140 },
             { field: 'created_at', headerName: 'Created At', width: 180 },
         ],
         offices: [
@@ -68,11 +83,17 @@ XLSX.writeFile(workbook,`${fileBase}_${timestamp}.xlsx`);
             { field: 'created_at', headerName: 'Created At', width: 180 },
         ],
         professors: [
+            { field: 'name', headerName: 'Name', width: 200 },
+            { field: 'nickname', headerName: 'Nickname', width: 160 },
+            { field: 'position', headerName: 'Position', width: 160 },
+            { field: 'email', headerName: 'Email', width: 200 },
+            { field: 'department', headerName: 'Department', width: 140 },
+            { field: 'program', headerName: 'Program', width: 140 },
+            { field: 'created_at', headerName: 'Created At', width: 160 },
+        ],
+        nonTeaching: [
             { field: 'name', headerName: 'Name', width: 220 },
-            { field: 'position', headerName: 'Position', width: 180 },
-            { field: 'email', headerName: 'Email', width: 240 },
-            { field: 'department', headerName: 'Department', width: 150 },
-            { field: 'program', headerName: 'Program', width: 150 },
+            { field: 'role', headerName: 'Role', width: 180 },
             { field: 'created_at', headerName: 'Created At', width: 180 },
         ],
         departments: [
@@ -82,6 +103,19 @@ XLSX.writeFile(workbook,`${fileBase}_${timestamp}.xlsx`);
         ],
         rules: [
             { field: 'description', headerName: 'Description', width: 600 },
+            { field: 'created_at', headerName: 'Created At', width: 180 },
+        ],
+        visionMission: [
+            { field: 'description', headerName: 'Vision / Mission', width: 600 },
+            { field: 'created_at', headerName: 'Created At', width: 180 },
+        ],
+        campusInfo: [
+            { field: 'description', headerName: 'Campus Info', width: 600 },
+            { field: 'created_at', headerName: 'Created At', width: 180 },
+        ],
+        announcements: [
+            { field: 'title', headerName: 'Title', width: 260 },
+            { field: 'description', headerName: 'Description', width: 520 },
             { field: 'created_at', headerName: 'Created At', width: 180 },
         ],
         logs: [
@@ -112,8 +146,12 @@ XLSX.writeFile(workbook,`${fileBase}_${timestamp}.xlsx`);
                             <option value="offices">Offices</option>
                             <option value="buildings">Buildings</option>
                             <option value="professors">Professors</option>
+                            <option value="nonTeaching">Non-Teaching Employees</option>
                             <option value="departments">Departments</option>
                             <option value="rules">Rules</option>
+                            <option value="visionMission">Vision & Mission</option>
+                            <option value="campusInfo">Campus Info</option>
+                            <option value="announcements">Announcements</option>
                         <option value="logs">Logs</option>
                         </select>
                     </div>

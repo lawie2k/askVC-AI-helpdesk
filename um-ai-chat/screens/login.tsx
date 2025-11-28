@@ -5,7 +5,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = "http://192.168.1.28:5050";
+const API_URL = "http://192.168.1.6:5050";
 
 const isUmEmail = (value: string) => {
 	const trimmed = value.trim();

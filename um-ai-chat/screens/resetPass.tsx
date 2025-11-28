@@ -1,40 +1,80 @@
-import React, {useState, useCallback} from 'react';
-import {View, Text, StyleSheet, TextInput, Pressable, TouchableOpacity} from 'react-native';
+import React, {useState, useCallback, useEffect} from 'react';
+import {View, Text, TextInput, Pressable, TouchableOpacity, Platform} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
 import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
 import {faArrowLeft} from "@fortawesome/free-solid-svg-icons";
 import {IconProp} from "@fortawesome/fontawesome-svg-core";
 import {useNavigation} from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ResetPass() {
     const navigation = useNavigation();
-    const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
+    const API_URL = Platform.select({
+        ios: "http://192.168.1.6:5050",
+        android: "http://192.168.1.6:5050",
+        default: "http://192.168.1.6:5050",
+    });
+
+    const [email, setEmail] = useState('');
+    const [code, setCode] = useState('');
     const [showNewPassword, setShowNewPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
-    const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [codeSent, setCodeSent] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
+
     const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
     const isStrongPassword = (pw: string) => PASSWORD_REGEX.test(pw);
-    
-    const isFormValid = () => {
-        return currentPassword.trim() !== '' && 
-               newPassword.trim() !== '' && 
-               confirmPassword.trim() !== '';
-    };
- 
-    const resetPassword = useCallback(async () => {
 
-        if (!currentPassword.trim()) {
-            setError('Please enter your current password');
+    useEffect(() => {
+        if (resendCooldown <= 0) return;
+        const interval = setInterval(() => {
+            setResendCooldown(prev => (prev > 0 ? prev - 1 : 0));
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [resendCooldown]);
+
+    const requestCode = useCallback(async () => {
+        if (!email.trim()) {
+            setError('Please enter your email');
             return;
         }
-        
+
+        setLoading(true);
+        setError('');
+        setSuccess('');
+        try {
+            const response = await fetch(`${API_URL}/auth/request-password-reset`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email.trim().toLowerCase() }),
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                setError(data.error || 'Unable to send reset code');
+                return;
+            }
+
+            setCodeSent(true);
+            setSuccess('Verification code sent. Please check your email.');
+            setResendCooldown(60);
+        } catch (e: any) {
+            setError('Unable to send reset code. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    }, [email, API_URL]);
+
+    const submitNewPassword = useCallback(async () => {
+        if (!code.trim() || code.trim().length < 4) {
+            setError('Please enter the verification code sent to your email');
+            return;
+        }
         if (!newPassword.trim()) {
             setError('Please enter a new password');
             return;
@@ -43,67 +83,46 @@ export default function ResetPass() {
             setError('Password must have min 8 chars, 1 uppercase, 1 number');
             return;
         }
-        
         if (!confirmPassword.trim()) {
             setError('Please confirm your new password');
             return;
         }
-        
         if (newPassword !== confirmPassword) {
             setError("New password and confirm password do not match");
             return;
         }
-        
+
         setLoading(true);
         setError('');
+        setSuccess('');
 
         try {
-            // Get the logged-in user's ID
-            const storedUser = await AsyncStorage.getItem("auth_user");
-            if (!storedUser) {
-                setError('Please log in first');
-                return;
-            }
-            
-            const user = JSON.parse(storedUser);
-            const userId = user.id;
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-            
-            const response = await fetch('http://192.168.1.28:5050/auth/reset-password', {
+            const response = await fetch(`${API_URL}/auth/verify-password-reset`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    oldPassword: currentPassword,
-                    newPassword: newPassword,
-                    userid: userId
+                    email: email.trim().toLowerCase(),
+                    code: code.trim(),
+                    newPassword,
                 }),
-                signal: controller.signal
             });
-            
-            clearTimeout(timeoutId);
 
             const data = await response.json();
+            if (!response.ok) {
+                setError(data.error || 'Unable to reset password');
+                return;
+            }
 
-            if(response.ok){
-                setSuccess('Password reset successfully');
-                navigation.navigate('MainChat' as never);
-            }else{
-                setError(data.error || 'Failed to reset password');
-            }
-        }catch(e: any){
-            if (e.name === 'AbortError') {
-                setError('Request timed out. Please check your connection.');
-            } else {
-                setError('An error occurred: ' + (e.message || 'Unknown error'));
-            }
-        }finally{
+            setSuccess('Password updated! You can now log in with your new password.');
+            setTimeout(() => {
+                navigation.navigate('Login' as never);
+            }, 1500);
+        } catch (e: any) {
+            setError('Unable to reset password. Please try again.');
+        } finally {
             setLoading(false);
         }
-    }, [currentPassword, newPassword, confirmPassword, navigation]);
+    }, [API_URL, code, confirmPassword, email, navigation, newPassword, isStrongPassword]);
 
   return (
     <SafeAreaProvider>
@@ -120,27 +139,34 @@ export default function ResetPass() {
             <View className="flex items-center pb-6">
                     <Text className="text-white text-[28px] py-4 font-bold">Reset Password</Text>
                 <View>
-                <TextInput className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-16 px-5 text-white"
-                           placeholder="Old Password"
-                           placeholderTextColor="#9CA3AF"
-                           secureTextEntry={!showCurrentPassword}
-                           autoCapitalize="none"
-                           autoCorrect={false}
-                           autoComplete="password"
-                           textContentType="password"
-                           returnKeyType="done"
-                           value={currentPassword}
-                           onChangeText={setCurrentPassword}
+                <TextInput
+                    className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-16 px-5 text-white"
+                    placeholder="Email"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="email"
+                    textContentType="emailAddress"
+                    returnKeyType="done"
+                    value={email}
+                    editable={!codeSent}
+                    onChangeText={setEmail}
                 />
-                 <TouchableOpacity
-                        className="absolute right-4 mt-[70px] h-5 w-6 items-center justify-center"
-                        onPress={() => setShowCurrentPassword(v => !v)}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        activeOpacity={1}
-                            >
-                         <Ionicons name={showCurrentPassword ? 'eye-off' : 'eye'} size={20} color="white" />
-                        </TouchableOpacity>
                 </View>
+                {codeSent ? (
+                    <>
+                        <View className="mt-5">
+                            <TextInput
+                                className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full px-5 text-white tracking-[4px]"
+                                placeholder="Verification Code"
+                                placeholderTextColor="#9CA3AF"
+                                keyboardType="number-pad"
+                                value={code}
+                                onChangeText={setCode}
+                                maxLength={6}
+                            />
+                        </View>
               <View>
               <TextInput className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
                            placeholder="New Password"
@@ -185,6 +211,8 @@ export default function ResetPass() {
                          <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="white" />
                         </TouchableOpacity>
               </View>
+                    </>
+                ) : null}
 
                 {error ? (
                     <Text className="text-red-500 text-center mt-4 px-4">
@@ -198,18 +226,38 @@ export default function ResetPass() {
                     </Text>
                 ) : null}
 
-                <Pressable className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${
-                    loading 
-                        ? 'bg-gray-500' 
-                        : 'bg-[#900C27]'
-                }`}
-                           onPress={resetPassword}
-                           disabled={loading}
-                >
-                    <Text className="flex text-center py-4 text-white text-[16px] font-extrabold">
-                        {loading ? 'Resetting...' : 'Reset Password'}
-                    </Text>
-                </Pressable>
+                {codeSent ? (
+                    <>
+                        <Pressable
+                            className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${loading ? 'bg-gray-500' : 'bg-[#900C27]'}`}
+                            onPress={submitNewPassword}
+                            disabled={loading}
+                        >
+                            <Text className="flex text-center py-4 text-white text-[16px] font-extrabold">
+                                {loading ? 'Resetting...' : 'Reset Password'}
+                            </Text>
+                        </Pressable>
+                        <TouchableOpacity
+                            className="mt-4"
+                            disabled={resendCooldown > 0 || loading}
+                            onPress={requestCode}
+                        >
+                            <Text className={`text-center ${resendCooldown > 0 ? 'text-gray-400' : 'text-white'} underline`}>
+                                {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Code'}
+                            </Text>
+                        </TouchableOpacity>
+                    </>
+                ) : (
+                    <Pressable
+                        className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${loading ? 'bg-gray-500' : 'bg-[#900C27]'}`}
+                        onPress={requestCode}
+                        disabled={loading}
+                    >
+                        <Text className="flex text-center py-4 text-white text-[16px] font-extrabold">
+                            {loading ? 'Sending...' : 'Send Code'}
+                        </Text>
+                    </Pressable>
+                )}
                 
             </View>
         </SafeAreaView>

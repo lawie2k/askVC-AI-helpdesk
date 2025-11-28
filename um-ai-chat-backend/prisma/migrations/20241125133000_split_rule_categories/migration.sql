@@ -40,3 +40,5 @@ DELETE FROM `rules` WHERE `category` IN ('vision_mission', 'campus_info');
 ALTER TABLE `rules`
 DROP COLUMN `category`;
 
+
+

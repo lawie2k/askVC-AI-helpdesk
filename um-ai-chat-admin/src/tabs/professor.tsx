@@ -2,45 +2,7 @@ import { useState, useEffect } from "react";
 import DataGrid from "../components/DataGrid";
 import { professorAPI, departmentAPI } from "../services/api";
 
-export default function professor(){
-  const [professors, setProfessors] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [newProfessor, setNewProfessor] = useState({
-    name: "",
-    position: "",
-    email: "",
-    department: "",
-    program: ""
-  });
-  const [editingProfessor, setEditingProfessor] = useState<any>(null);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    position: "",
-    email: "",
-    department: "",
-    program: ""
-  });
-  useEffect(() => {
-    loadProfessors();
-    loadDepartments();
-  }, []);
-  const loadProfessors = async () => {
-    try {
-      setLoading(true);
-      const professors = await professorAPI.getAll();
-      const normalized = (professors || []).map((p: any) => ({
-        ...p,
-        program: typeof p.program === 'undefined' || p.program === null ? '' : p.program
-      }));
-      console.log('Professors loaded:', normalized);
-      setProfessors(normalized);
-    } catch (error) {
-      console.error('Error loading professors:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+export { default } from "./employee";
 
   const loadDepartments = async () => {
     try {
