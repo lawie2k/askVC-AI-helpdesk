@@ -83,7 +83,6 @@ model offices {
 model professors {
   id            Int          @id @default(autoincrement())
   name          String       @db.VarChar(100)
-  nickname      String?      @db.VarChar(100)
   position      String?      @db.VarChar(100)
   email         String?      @db.VarChar(255)
   program       String?      @db.VarChar(50)

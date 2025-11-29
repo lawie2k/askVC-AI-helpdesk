@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import DataGrid from "../components/DataGrid";
 import { professorAPI, departmentAPI, nonTeachingAPI } from "../services/api";
 
-const NON_TEACHING_ROLES = ["Cashier", "Librarian", "OSA Employee", "OSA Head"];
+const NON_TEACHING_ROLES = ["Cashier", "Librarian", "Librarian Head", "OSA Head"];
 
 export default function Employee() {
   const [professors, setProfessors] = useState<any[]>([]);
@@ -14,7 +14,6 @@ export default function Employee() {
 
   const [newProfessor, setNewProfessor] = useState({
     name: "",
-    nickname: "",
     position: "",
     email: "",
     department: "",
@@ -23,7 +22,6 @@ export default function Employee() {
   const [editingProfessor, setEditingProfessor] = useState<any>(null);
   const [editProfessorForm, setEditProfessorForm] = useState({
     name: "",
-    nickname: "",
     position: "",
     email: "",
     department: "",
@@ -49,14 +47,18 @@ export default function Employee() {
   const loadProfessors = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Loading professors...');
       const response = await professorAPI.getAll();
+      console.log('📦 Professors API response:', response);
       const normalized = (response || []).map((p: any) => ({
         ...p,
         program: typeof p.program === 'undefined' || p.program === null ? '' : p.program
       }));
+      console.log('✅ Setting professors:', normalized.length, normalized);
       setProfessors(normalized);
     } catch (error) {
-      console.error('Error loading professors:', error);
+      console.error('❌ Error loading professors:', error);
+      alert('Failed to load professors. Check console for details.');
     } finally {
       setLoading(false);
     }
@@ -85,7 +87,6 @@ export default function Employee() {
 
   const professorColumns = [
     { field: 'name', headerName: 'Name', width: 70 },
-    { field: 'nickname', headerName: 'Nickname', width: 70 },
     { field: 'position', headerName: 'Position', width: 70 },
     {
       field: 'email',
@@ -162,7 +163,7 @@ export default function Employee() {
   ];
 
   const addProfessor = async () => {
-    const required = ['name', 'position', 'email', 'department', 'program'];
+    const required = ['name', 'position', 'department', 'program'];
     const hasAll = required.every((k) => String((newProfessor as any)[k] ?? '').trim() !== '');
     if (!hasAll) {
       alert('Please fill out all required fields.');
@@ -170,18 +171,21 @@ export default function Employee() {
     }
     try {
       setLoading(true);
-      await professorAPI.create(newProfessor);
+      console.log('➕ Adding professor:', newProfessor);
+      const result = await professorAPI.create(newProfessor);
+      console.log('✅ Professor added:', result);
       await loadProfessors();
       setNewProfessor({
         name: "",
-        nickname: "",
         position: "",
         email: "",
         department: "",
         program: ""
       });
-    } catch (error) {
-      console.error('Error adding professor:', error);
+      alert('Professor added successfully!');
+    } catch (error: any) {
+      console.error('❌ Error adding professor:', error);
+      alert(`Failed to add professor: ${error?.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -189,7 +193,7 @@ export default function Employee() {
 
   const saveProfessorEdit = async () => {
     if (!editingProfessor) return;
-    const required = ['name', 'position', 'email', 'department', 'program'];
+    const required = ['name', 'position', 'department', 'program'];
     const hasAll = required.every((k) => String((editProfessorForm as any)[k] ?? '').trim() !== '');
     if (!hasAll) {
       alert('Please fill out all required fields.');
@@ -280,7 +284,6 @@ export default function Employee() {
     setEditingProfessor(prof);
     setEditProfessorForm({
       name: prof.name,
-      nickname: prof.nickname || "",
       position: prof.position,
       email: prof.email,
       department: prof.department,
@@ -292,7 +295,6 @@ export default function Employee() {
     setEditingProfessor(null);
     setEditProfessorForm({
       name: "",
-      nickname: "",
       position: "",
       email: "",
       department: "",
@@ -358,20 +360,6 @@ export default function Employee() {
                   />
                 </div>
                 <div className="flex flex-col">
-                  <label className="text-white text-sm mb-1">Nickname</label>
-                  <input
-                    type="text"
-                    className="w-[200px] px-3 py-2 text-black rounded capitalize"
-                    placeholder="Enter nickname"
-                    value={editingProfessor ? editProfessorForm.nickname : newProfessor.nickname}
-                    onChange={(e) =>
-                      editingProfessor
-                        ? setEditProfessorForm({ ...editProfessorForm, nickname: e.target.value })
-                        : setNewProfessor({ ...newProfessor, nickname: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="flex flex-col">
                   <label className="text-white text-sm mb-1">Position</label>
                   <select
                     value={editingProfessor ? editProfessorForm.position : newProfessor.position}
@@ -383,16 +371,12 @@ export default function Employee() {
                     className="w-[200px] h-[40px] px-3 py-2 text-black rounded"
                   >
                     <option value="">-- Choose Position --</option>
-                    <option value="Instructor I">Instructor I</option>
-                    <option value="Instructor II">Instructor II</option>
-                    <option value="Assistant Professor I">Assistant Professor I</option>
-                    <option value="Assistant Professor II">Assistant Professor II</option>
-                    <option value="Associate Professor I">Associate Professor I</option>
-                    <option value="Professor I">Professor I</option>
+                    <option value="Professor">Professor</option>
+                    <option value="Department Head">Department Head</option>
                   </select>
                 </div>
                 <div className="flex flex-col">
-                  <label className="text-white text-sm mb-1">Email</label>
+                  <label className="text-white text-sm mb-1">Email (optional)</label>
                   <input
                     type="email"
                     className="w-[200px] px-3 py-2 text-black rounded"
@@ -468,7 +452,7 @@ export default function Employee() {
               </div>
             </div>
 
-            <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-hidden">
+            <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-y-auto">
               {loading ? (
                 <div className="flex justify-center items-center h-full">
                   <div className="text-white text-xl">Loading...</div>
@@ -551,7 +535,7 @@ export default function Employee() {
               </div>
             </div>
 
-            <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-hidden">
+            <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-y-auto">
               {ntLoading ? (
                 <div className="flex justify-center items-center h-full">
                   <div className="text-white text-xl">Loading...</div>

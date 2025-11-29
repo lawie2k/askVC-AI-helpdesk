@@ -88,7 +88,6 @@ XLSX.writeFile(workbook,`${fileBase}_${timestamp}.xlsx`);
         ],
         professors: [
             { field: 'name', headerName: 'Name', width: 200 },
-            { field: 'nickname', headerName: 'Nickname', width: 160 },
             { field: 'position', headerName: 'Position', width: 160 },
             { field: 'email', headerName: 'Email', width: 200 },
             { field: 'department', headerName: 'Department', width: 140 },
@@ -167,7 +166,7 @@ XLSX.writeFile(workbook,`${fileBase}_${timestamp}.xlsx`);
                             Export to Excel
                         </button>
                     </div>
-                    <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-hidden">
+                    <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-y-auto">
                         {loading ? (
                             <div className="flex justify-center items-center h-full">
                                 <div className="text-white text-xl">Loading...</div>

@@ -98,6 +98,7 @@ export default function RulesAndInfo () {
   const handleStartEdit = (entry: any) => {
     setEditingRule(entry);
     setEditText(entry.description);
+    setNewEntries((prev) => ({ ...prev, [entry.category]: entry.description }));
   };
 
   const handleUpdate = async () => {
@@ -118,6 +119,7 @@ export default function RulesAndInfo () {
       await loadAll();
       setEditingRule(null);
       setEditText('');
+      setNewEntries((prev) => ({ ...prev, [editingRule.category]: '' }));
     } catch (error) {
       console.error('Error updating entry:', error);
     } finally {
@@ -148,6 +150,7 @@ export default function RulesAndInfo () {
   const handleCancelEdit = () => {
     setEditingRule(null);
     setEditText('');
+    setNewEntries((prev) => ({ ...prev, [activeTab]: '' }));
   };
 
   return (
@@ -157,12 +160,6 @@ export default function RulesAndInfo () {
       </div>
 
       <div className="w-full max-w-[1180px] mt-6 px-4 space-y-6">
-        {loading && (
-          <div className="w-full rounded-lg bg-[#292929] py-3 px-4 text-white text-center">
-            Loading content…
-          </div>
-        )}
-
         <div className="flex space-x-4 border-b border-white/10 pb-2">
           {CATEGORY_SECTIONS.map((section) => (
             <button
@@ -187,6 +184,12 @@ export default function RulesAndInfo () {
 
             return (
             <div className="bg-[#292929] border border-white rounded-2xl p-4 flex flex-col h-[615px]">
+                {loading ? (
+                  <div className="flex justify-center items-center h-full">
+                    <div className="text-white text-xl">Loading...</div>
+                  </div>
+                ) : (
+                  <>
                 <div className="mb-3">
                 <h2 className="text-white text-lg font-semibold">{activeSection.label}</h2>
                 <p className="text-gray-300 text-sm">{activeSection.helper}</p>
@@ -195,20 +198,39 @@ export default function RulesAndInfo () {
               <div className="mb-4">
                   <textarea
                     className="w-full h-24 rounded-lg px-3 py-2 text-black focus:ring-2 focus:ring-blue-500"
-                  placeholder={`Add new ${activeSection.label.toLowerCase()}`}
-                  value={newEntries[activeTab]}
-                    onChange={(e) =>
-                    setNewEntries((prev) => ({ ...prev, [activeTab]: e.target.value }))
-                    }
-                    disabled={!!editingRule}
+                  placeholder={editingRule?.category === activeTab ? `Editing entry...` : `Add new ${activeSection.label.toLowerCase()}`}
+                  value={editingRule?.category === activeTab ? editText : newEntries[activeTab]}
+                    onChange={(e) => {
+                      if (editingRule?.category === activeTab) {
+                        setEditText(e.target.value);
+                      } else {
+                        setNewEntries((prev) => ({ ...prev, [activeTab]: e.target.value }));
+                      }
+                    }}
                   />
-                  <button
-                  className="mt-2 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg disabled:opacity-60"
-                  onClick={() => handleAdd(activeTab)}
-                    disabled={!!editingRule}
-                  >
-                  Add to {activeSection.label}
-                  </button>
+                  {editingRule?.category === activeTab ? (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg"
+                        onClick={handleUpdate}
+                      >
+                        Save Changes
+                      </button>
+                      <button
+                        className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 rounded-lg"
+                        onClick={handleCancelEdit}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className="mt-2 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg"
+                      onClick={() => handleAdd(activeTab)}
+                    >
+                      Add to {activeSection.label}
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex-1 space-y-3 overflow-y-auto pr-1">
@@ -218,55 +240,31 @@ export default function RulesAndInfo () {
 
                   {sectionEntries.map((entry) => (
                     <div key={entry.id} className="bg-[#3C3C3C] rounded-xl px-3 py-3 text-white">
-                      {editingRule?.id === entry.id ? (
-                        <div className="space-y-2">
-                          <textarea
-                            className="w-full h-28 rounded-lg px-2 py-2 text-black focus:ring-2 focus:ring-blue-500"
-                            value={editText}
-                            onChange={(e) => setEditText(e.target.value)}
-                          />
-                          <div className="flex gap-2">
-                            <button
-                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 font-semibold"
-                              onClick={handleUpdate}
-                            >
-                              Save
-                            </button>
-                            <button
-                              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white rounded-lg py-2 font-semibold"
-                              onClick={handleCancelEdit}
-                            >
-                              Cancel
-                            </button>
-                          </div>
+                      <p className="text-sm leading-relaxed whitespace-pre-line">{entry.description}</p>
+                      <div className="mt-3 flex items-center justify-between text-xs text-gray-300">
+                        <span>
+                          Added on{" "}
+                          {entry.created_at
+                            ? new Date(entry.created_at).toLocaleDateString()
+                            : "N/A"}
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-full text-white"
+                            onClick={() => handleStartEdit(entry)}
+                            disabled={!!editingRule && editingRule.id !== entry.id}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded-full text-white"
+                            onClick={() => handleDelete(entry)}
+                            disabled={!!editingRule}
+                          >
+                            Delete
+                          </button>
                         </div>
-                      ) : (
-                        <>
-                          <p className="text-sm leading-relaxed whitespace-pre-line">{entry.description}</p>
-                          <div className="mt-3 flex items-center justify-between text-xs text-gray-300">
-                            <span>
-                              Added on{" "}
-                              {entry.created_at
-                                ? new Date(entry.created_at).toLocaleDateString()
-                                : "N/A"}
-                            </span>
-                            <div className="flex gap-2">
-                              <button
-                                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-full text-white"
-                                onClick={() => handleStartEdit(entry)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded-full text-white"
-                                onClick={() => handleDelete(entry)}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        </>
-                      )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -275,6 +273,8 @@ export default function RulesAndInfo () {
                   <p className="text-yellow-300 text-xs mt-2">
                     Editing entry in this section. Finish or cancel to add new items.
                   </p>
+                )}
+                  </>
                 )}
               </div>
             );

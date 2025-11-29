@@ -40,17 +40,47 @@ export default function Dashboard() {
         try{
             setLoading(true);
             setError(null);
-            const [rooms, logs, professors, topQuestions] = await Promise.all([
-                roomAPI.getAll(),
-                logsAPI.getAll(),
-                professorAPI.getAll(),
-                statsAPI.getTopQuestions()
+            
+            // Load each data source independently to prevent one failure from breaking others
+            const loadRooms = roomAPI.getAll().catch(err => { console.error('Failed to load rooms:', err); return []; });
+            const loadLogs = logsAPI.getAll().catch(err => { console.error('Failed to load logs:', err); return []; });
+            const loadProfessors = professorAPI.getAll()
+                .then(data => {
+                    console.log('✅ Professors loaded successfully:', { count: Array.isArray(data) ? data.length : 0, data });
+                    return Array.isArray(data) ? data : [];
+                })
+                .catch(err => { 
+                    console.error('❌ Failed to load professors:', err); 
+                    setError(`Failed to load professors: ${err?.message || 'Unknown error'}`);
+                    return []; 
+                });
+            const loadTopQuestions = statsAPI.getTopQuestions().catch(err => { 
+                console.error('Failed to load top questions:', err); 
+                return []; 
+            });
+            
+            const [roomsData, logsData, professorsData, topQuestionsData] = await Promise.all([
+                loadRooms,
+                loadLogs,
+                loadProfessors,
+                loadTopQuestions
             ]);
-            console.log('Dashboard data loaded:', { rooms, logs, professors, topQuestions });
-            setRooms(rooms);
-            setLogs(logs);
-            setProfessors(professors);
-            setTopQuestions(topQuestions || []);
+            
+            const finalProfessors = Array.isArray(professorsData) ? professorsData : [];
+            console.log('📊 Dashboard data loaded:', { 
+                roomsCount: Array.isArray(roomsData) ? roomsData.length : 0, 
+                logsCount: Array.isArray(logsData) ? logsData.length : 0, 
+                professorsCount: finalProfessors.length, 
+                topQuestionsCount: Array.isArray(topQuestionsData) ? topQuestionsData.length : 0,
+                professorsSample: finalProfessors.slice(0, 3),
+                allProfessors: finalProfessors
+            });
+            
+            console.log('🎯 Setting professors state with:', finalProfessors.length, 'professors');
+            setRooms(Array.isArray(roomsData) ? roomsData : []);
+            setLogs(Array.isArray(logsData) ? logsData : []);
+            setProfessors(finalProfessors);
+            setTopQuestions(Array.isArray(topQuestionsData) ? topQuestionsData : []);
         }catch(error){
             console.error('Error loading dashboard data:', error);
             setError('Failed to load dashboard data. Please check your connection and try again.');
@@ -129,24 +159,52 @@ export default function Dashboard() {
     }, [logs]);
 
     const professorsByProgram = useMemo(() => {
+        console.log('Processing professors for chart:', { professors, count: professors?.length });
+        
+        if (!professors || professors.length === 0) {
+            console.log('No professors found, returning empty chart');
+            return {
+                labels: ["No professors"],
+                datasets: [{
+                    label: "Professors",
+                    data: [0],
+                    backgroundColor: ["#6B7280"],
+                    borderWidth: 0,
+                }],
+            };
+        }
+        
         const counts: Record<string, number> = {};
         professors.forEach((prof: any) => {
-            const key = prof?.program?.trim() || "Unassigned";
+            const programValue = prof?.program;
+            const key = (programValue && String(programValue).trim()) ? String(programValue).trim() : "Unassigned";
             counts[key] = (counts[key] || 0) + 1;
         });
         const labels = Object.keys(counts);
         const palette = ["#FBBF24", "#A78BFA", "#FB7185", "#4ADE80", "#22D3EE", "#F472B6", "#C084FC"];
-        return {
-            labels,
+        
+        const chartData = {
+            labels: labels.length > 0 ? labels : ["Unassigned"],
             datasets: [
                 {
                     label: "Professors",
-                    data: labels.map((label) => counts[label]),
-                    backgroundColor: labels.map((_, idx) => palette[idx % palette.length]),
+                    data: labels.length > 0 ? labels.map((label) => counts[label]) : [professors.length],
+                    backgroundColor: labels.length > 0 
+                        ? labels.map((_, idx) => palette[idx % palette.length])
+                        : ["#6B7280"],
                     borderWidth: 0,
                 },
             ],
         };
+        
+        console.log('Professors by program chart data:', { 
+            professorsCount: professors.length, 
+            counts, 
+            labels,
+            chartData
+        });
+        
+        return chartData;
     }, [professors]);
 
     const baseAxisOptions = {
@@ -276,16 +334,16 @@ export default function Dashboard() {
                       roomsByType.labels.length > 0,
                       <div className="h-[240px]">
                           <Bar data={roomsByType} options={barOptions} />
-                      </div>
-                  )}
-              </div>
+      </div>
+    )}
+</div>
               <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg p-4">
                   <h2 className="text-white font-semibold text-lg mb-2">Admin activity (last 7 days)</h2>
                   {renderChartOrEmpty(
                       logsByDay.labels.length > 0,
                       <div className="h-[240px]">
                           <Line data={logsByDay} options={lineOptions} />
-                      </div>
+                    </div>
                   )}
               </div>
               <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg p-4">
@@ -294,13 +352,24 @@ export default function Dashboard() {
                       questionsChartData.labels.length > 0,
                       <div className="h-[240px]">
                           <Bar data={questionsChartData} options={questionsBarOptions} />
-                      </div>
+                    </div>
                   )}
               </div>
               <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg p-4">
-                  <h2 className="text-white font-semibold text-lg mb-2">Professors by program</h2>
-                  {renderChartOrEmpty(
-                      professorsByProgram.labels.length > 0,
+                  <h2 className="text-white font-semibold text-lg mb-2">
+                      Professors by program ({professors.length} total)
+                  </h2>
+                  {loading ? (
+                      <div className="flex justify-center items-center h-[240px] text-white">Loading...</div>
+                  ) : professors.length === 0 ? (
+                      <div className="flex justify-center items-center h-[240px] text-gray-300 text-sm opacity-80">
+                          No professors data available. Check console for errors.
+                      </div>
+                  ) : professorsByProgram.labels.length === 0 || (professorsByProgram.labels.length === 1 && professorsByProgram.labels[0] === "No professors") ? (
+                      <div className="flex justify-center items-center h-[240px] text-gray-300 text-sm opacity-80">
+                          No program data to display
+                    </div>
+                  ) : (
                       <div className="h-[240px] flex items-center justify-center">
                           <Doughnut data={professorsByProgram} options={doughnutOptions} />
                       </div>

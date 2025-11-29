@@ -75,10 +75,10 @@ const DataGrid: React.FC<DataGridProps> = ({
   };
 
   return (
-    <div className={`w-full ${className}`} style={{ height }}>
+    <div className={`w-full flex flex-col ${className}`} style={{ height }}>
       {/* Conditional Filter */}
       {showSearch && (
-        <div className="mb-4">
+        <div className="mb-4 flex-shrink-0">
           <input
             type="text"
             placeholder="Search..."
@@ -90,7 +90,7 @@ const DataGrid: React.FC<DataGridProps> = ({
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0">
         <table className="w-full text-white">
           <thead>
             <tr className="bg-gray-800">
@@ -129,7 +129,7 @@ const DataGrid: React.FC<DataGridProps> = ({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-between items-center mt-4">
+        <div className="flex justify-between items-center mt-4 flex-shrink-0">
           <div className="text-sm text-gray-400">
             Showing {startIndex + 1} to {Math.min(startIndex + pageSize, processedData.length)} of {processedData.length} entries
           </div>

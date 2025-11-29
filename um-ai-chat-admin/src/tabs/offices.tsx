@@ -68,7 +68,16 @@ export default function offices() {
         });
     }, [offices, filterOfficesById]);
 
-    const renderTimeCell = (params: any) => (params?.value ? params.value : '—');
+    const formatTime12Hour = (time24: string) => {
+        if (!time24) return '—';
+        const [hours, minutes] = time24.split(':');
+        const hour = parseInt(hours, 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        return `${hour12}:${minutes} ${ampm}`;
+    };
+
+    const renderTimeCell = (params: any) => (params?.value ? formatTime12Hour(params.value) : '—');
 
     const officeColumns = [
         {field: 'name', headerName: 'Office Name', width: 100},
@@ -349,7 +358,7 @@ export default function offices() {
             </div>
           </div>
 
-          <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-hidden">
+          <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-y-auto">
             {loading ? (
               <div className="flex justify-center items-center h-full">
                 <div className="text-white text-xl">Loading...</div>
