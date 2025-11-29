@@ -20,11 +20,7 @@ export default function ChatHistory() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const BASE_URL = Platform.select({
-    ios: "http://172.20.10.12:5050",
-    android: "http://172.20.10.12:5050",
-    default: "http://172.20.10.12:5050",
-  });
+  const BASE_URL = "https://askvc-ai-helpdesk.onrender.com";
 
   useEffect(() => {
     loadChatHistory();

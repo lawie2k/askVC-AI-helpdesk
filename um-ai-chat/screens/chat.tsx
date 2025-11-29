@@ -21,11 +21,7 @@ export function Chat({messages, setMessages}: {
     setMessages: React.Dispatch<React.SetStateAction<IMessage[]>>
 }) {
 
-    const BASE_URL = Platform.select({
-        ios: "http://192.168.1.6:5050",
-        android: "http://192.168.1.6:5050",
-        default: "http://192.168.1.6:5050",
-    });
+    const BASE_URL = "https://askvc-ai-helpdesk.onrender.com";
 
     const [isThinking, setIsThinking] = React.useState(false);
 

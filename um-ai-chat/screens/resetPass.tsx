@@ -10,11 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ResetPass() {
     const navigation = useNavigation();
-    const API_URL = Platform.select({
-        ios: "http://192.168.1.6:5050",
-        android: "http://192.168.1.6:5050",
-        default: "http://192.168.1.6:5050",
-    });
+    const API_URL = "https://askvc-ai-helpdesk.onrender.com";
 
     const [userId, setUserId] = useState<number | null>(null);
     const [oldPassword, setOldPassword] = useState('');

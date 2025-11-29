@@ -10,11 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function ResetPassLogin() {
     const navigation = useNavigation();
-    const API_URL = Platform.select({
-        ios: "http://192.168.1.7:5050",
-        android: "http://192.168.1.7:5050",
-        default: "http://192.168.1.7:5050",
-    });
+    const API_URL = "https://askvc-ai-helpdesk.onrender.com";
 
     const [email, setEmail] = useState('');
     const [code, setCode] = useState('');
