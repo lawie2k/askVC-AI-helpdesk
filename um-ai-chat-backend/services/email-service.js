@@ -31,13 +31,24 @@ async function sendPasswordResetEmail(to, code) {
     </div>
   `;
 
-  await resend.emails.send({
-    from,
-    to,
-    subject,
-    text,
-    html,
-  });
+  try {
+    console.log("[Resend] Sending password reset email", {
+      to,
+      from,
+      subject,
+    });
+    const result = await resend.emails.send({
+      from,
+      to,
+      subject,
+      text,
+      html,
+    });
+    console.log("[Resend] Email sent result:", result);
+  } catch (err) {
+    console.error("[Resend] Failed to send password reset email:", err);
+    throw err;
+  }
 }
 
 module.exports = {

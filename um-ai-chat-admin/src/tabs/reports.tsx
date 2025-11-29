@@ -75,7 +75,11 @@ XLSX.writeFile(workbook,`${fileBase}_${timestamp}.xlsx`);
         offices: [
             { field: 'name', headerName: 'Office Name', width: 220 },
             { field: 'building_name', headerName: 'Building', width: 220 },
-            { field: 'floor', headerName: 'Floor', width: 120 },
+            { field: 'floor', headerName: 'Floor', width: 100 },
+            { field: 'open_time', headerName: 'Opens', width: 100 },
+            { field: 'close_time', headerName: 'Closes', width: 100 },
+            { field: 'lunch_start', headerName: 'Lunch Start', width: 110 },
+            { field: 'lunch_end', headerName: 'Lunch End', width: 110 },
             { field: 'created_at', headerName: 'Created At', width: 180 },
         ],
         buildings: [
@@ -133,50 +137,52 @@ XLSX.writeFile(workbook,`${fileBase}_${timestamp}.xlsx`);
             <div className="flex justify-center justify-self-center text-xl xl:text-2xl 2xl:text-[32px] font-bold w-[180px] xl:w-[220px] 2xl:w-[250px] h-[42px] xl:h-[46px] 2xl:h-[50px] mx-auto ">
                 <h1 className="truncate">Reports</h1>
             </div>
-            <div className="w-full max-w-[1170px] h-auto mt-6 xl:mx-10 px-4 flex flex-col">
-                <div className="flex items-center justify-between">
-                    <div className="flex gap-5 items-center ">
-                        <label className="text-white">Dataset</label>
-                        <select
-                            className="px-3 py-2 rounded bg-white text-black border border-gray-500"
-                            value={dataset}
-                            onChange={(e) => setDataset(e.target.value)}
-                        >
-                            <option value="rooms">Rooms</option>
-                            <option value="offices">Offices</option>
-                            <option value="buildings">Buildings</option>
-                            <option value="professors">Professors</option>
-                            <option value="nonTeaching">Non-Teaching Employees</option>
-                            <option value="departments">Departments</option>
-                            <option value="rules">Rules</option>
-                            <option value="visionMission">Vision & Mission</option>
-                            <option value="campusInfo">Campus Info</option>
-                            <option value="announcements">Announcements</option>
-                        <option value="logs">Logs</option>
-                        </select>
-                    </div>
-                    <button
-                        className="px-3 py-2 rounded bg-green-600 hover:bg-green-700 text-white"
-                        onClick={() => exportToExcel(rows, activeColumns, dataset)}
-                    >
-                        Export to Excel
-                    </button>
-                </div>
-                <div className="w-full h-[615px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg overflow-y-auto">
-                    {loading ? (
-                        <div className="flex justify-center items-center h-full">
-                            <div className="text-white text-xl">Loading...</div>
+            <div className="w-full max-w-[1170px] h-auto mt-6 xl:mx-10 px-4">
+                <div className="bg-[#292929] border border-white rounded-2xl p-4 flex flex-col h-[615px]">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex gap-5 items-center ">
+                            <label className="text-white">Dataset</label>
+                            <select
+                                className="px-3 py-2 rounded bg-white text-black border border-gray-500"
+                                value={dataset}
+                                onChange={(e) => setDataset(e.target.value)}
+                            >
+                                <option value="rooms">Rooms</option>
+                                <option value="offices">Offices</option>
+                                <option value="buildings">Buildings</option>
+                                <option value="professors">Professors</option>
+                                <option value="nonTeaching">Non-Teaching Employees</option>
+                                <option value="departments">Departments</option>
+                                <option value="rules">Rules</option>
+                                <option value="visionMission">Vision & Mission</option>
+                                <option value="campusInfo">Campus Info</option>
+                                <option value="announcements">Announcements</option>
+                                <option value="logs">Logs</option>
+                            </select>
                         </div>
-                    ) : (
-                        <DataGrid 
-                            data={rows}
-                            columns={activeColumns}
-                            height="615px"
-                            className="text-white text-[14px] bg-[#292929]"
-                            showSearch={false}
-                            pageSize={18}
-                        />
-                    )}
+                        <button
+                            className="px-3 py-2 rounded bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => exportToExcel(rows, activeColumns, dataset)}
+                        >
+                            Export to Excel
+                        </button>
+                    </div>
+                    <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-hidden">
+                        {loading ? (
+                            <div className="flex justify-center items-center h-full">
+                                <div className="text-white text-xl">Loading...</div>
+                            </div>
+                        ) : (
+                            <DataGrid 
+                                data={rows}
+                                columns={activeColumns}
+                                height="520px"
+                                className="text-white text-[14px] bg-[#292929]"
+                                showSearch={false}
+                                pageSize={18}
+                            />
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

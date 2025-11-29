@@ -67,6 +67,10 @@ model offices {
   name        String     @db.VarChar(100)
   building_id Int?
   floor       String     @db.VarChar(50)
+  open_time   String?    @db.VarChar(10)
+  close_time  String?    @db.VarChar(10)
+  lunch_start String?    @db.VarChar(10)
+  lunch_end   String?    @db.VarChar(10)
   admin_id    Int?
   created_at  DateTime   @default(now()) @db.DateTime(0)
   buildings   buildings? @relation(fields: [building_id], references: [id], onUpdate: NoAction, map: "offices_ibfk_1")

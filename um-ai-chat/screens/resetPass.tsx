@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useEffect} from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {View, Text, TextInput, Pressable, TouchableOpacity, Platform} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
 import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
@@ -6,6 +6,7 @@ import {faArrowLeft} from "@fortawesome/free-solid-svg-icons";
 import {IconProp} from "@fortawesome/fontawesome-svg-core";
 import {useNavigation} from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ResetPass() {
     const navigation = useNavigation();
@@ -15,76 +16,55 @@ export default function ResetPass() {
         default: "http://192.168.1.6:5050",
     });
 
-    const [email, setEmail] = useState('');
-    const [code, setCode] = useState('');
+    const [userId, setUserId] = useState<number | null>(null);
+    const [oldPassword, setOldPassword] = useState('');
     const [showNewPassword, setShowNewPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+    const [showOldPassword, setShowOldPassword] = React.useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    const [codeSent, setCodeSent] = useState(false);
-    const [resendCooldown, setResendCooldown] = useState(0);
 
     const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
     const isStrongPassword = (pw: string) => PASSWORD_REGEX.test(pw);
 
     useEffect(() => {
-        if (resendCooldown <= 0) return;
-        const interval = setInterval(() => {
-            setResendCooldown(prev => (prev > 0 ? prev - 1 : 0));
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [resendCooldown]);
+        (async () => {
+            try {
+                const stored = await AsyncStorage.getItem("auth_user");
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (parsed && typeof parsed.id === "number") {
+                        setUserId(parsed.id);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load auth_user for reset password:", e);
+            }
+        })();
+    }, []);
 
-    const requestCode = useCallback(async () => {
-        if (!email.trim()) {
-            setError('Please enter your email');
+    const handleChangePassword = useCallback(async () => {
+        if (!userId) {
+            setError("User information not found. Please log in again.");
             return;
         }
-
-        setLoading(true);
-        setError('');
-        setSuccess('');
-        try {
-            const response = await fetch(`${API_URL}/auth/request-password-reset`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email.trim().toLowerCase() }),
-            });
-            const data = await response.json();
-
-            if (!response.ok) {
-                setError(data.error || 'Unable to send reset code');
-                return;
-            }
-
-            setCodeSent(true);
-            setSuccess('Verification code sent. Please check your email.');
-            setResendCooldown(60);
-        } catch (e: any) {
-            setError('Unable to send reset code. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    }, [email, API_URL]);
-
-    const submitNewPassword = useCallback(async () => {
-        if (!code.trim() || code.trim().length < 4) {
-            setError('Please enter the verification code sent to your email');
+        if (!oldPassword.trim()) {
+            setError("Please enter your current password");
             return;
         }
         if (!newPassword.trim()) {
-            setError('Please enter a new password');
+            setError("Please enter a new password");
             return;
         }
         if (!isStrongPassword(newPassword)) {
-            setError('Password must have min 8 chars, 1 uppercase, 1 number');
+            setError("Password must have min 8 chars, 1 uppercase, 1 number");
             return;
         }
         if (!confirmPassword.trim()) {
-            setError('Please confirm your new password');
+            setError("Please confirm your new password");
             return;
         }
         if (newPassword !== confirmPassword) {
@@ -93,36 +73,40 @@ export default function ResetPass() {
         }
 
         setLoading(true);
-        setError('');
-        setSuccess('');
+        setError("");
+        setSuccess("");
 
         try {
-            const response = await fetch(`${API_URL}/auth/verify-password-reset`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const response = await fetch(`${API_URL}/auth/reset-password`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    email: email.trim().toLowerCase(),
-                    code: code.trim(),
-                    newPassword,
+                    oldPassword: oldPassword,
+                    newPassword: newPassword,
+                    userid: userId,
                 }),
             });
 
-            const data = await response.json();
+            const data = await response.json().catch(() => null);
             if (!response.ok) {
-                setError(data.error || 'Unable to reset password');
+                setError((data && data.error) || "Unable to reset password");
                 return;
             }
 
-            setSuccess('Password updated! You can now log in with your new password.');
+            setSuccess("Password updated successfully.");
+            setOldPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
             setTimeout(() => {
-                navigation.navigate('Login' as never);
-            }, 1500);
+                navigation.goBack();
+            }, 1200);
         } catch (e: any) {
-            setError('Unable to reset password. Please try again.');
+            console.error("Profile reset password failed:", e);
+            setError("Unable to reset password. Please try again.");
         } finally {
             setLoading(false);
         }
-    }, [API_URL, code, confirmPassword, email, navigation, newPassword, isStrongPassword]);
+    }, [API_URL, confirmPassword, isStrongPassword, navigation, newPassword, oldPassword, userId]);
 
   return (
     <SafeAreaProvider>
@@ -138,81 +122,79 @@ export default function ResetPass() {
             </View>
             <View className="flex items-center pb-6">
                     <Text className="text-white text-[28px] py-4 font-bold">Reset Password</Text>
-                <View>
-                <TextInput
-                    className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-16 px-5 text-white"
-                    placeholder="Email"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="email"
-                    textContentType="emailAddress"
-                    returnKeyType="done"
-                    value={email}
-                    editable={!codeSent}
-                    onChangeText={setEmail}
-                />
+                <View className="mt-10">
+                    <View>
+                        <TextInput
+                            className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full px-5 text-white"
+                            placeholder="Current Password"
+                            placeholderTextColor="#9CA3AF"
+                            secureTextEntry={!showOldPassword}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            autoComplete="password"
+                            textContentType="password"
+                            returnKeyType="done"
+                            value={oldPassword}
+                            onChangeText={setOldPassword}
+                        />
+                        <TouchableOpacity
+                            className="absolute right-4 mt-[14px] h-5 w-6 items-center justify-center"
+                            onPress={() => setShowOldPassword(v => !v)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            activeOpacity={1}
+                        >
+                            <Ionicons name={showOldPassword ? 'eye-off' : 'eye'} size={20} color="white" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View>
+                        <TextInput
+                            className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
+                            placeholder="New Password"
+                            placeholderTextColor="#9CA3AF"
+                            secureTextEntry={!showNewPassword}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            autoComplete="password"
+                            textContentType="password"
+                            returnKeyType="done"
+                            value={newPassword}
+                            onChangeText={setNewPassword}
+                        />
+                        <TouchableOpacity
+                            className="absolute right-4 mt-[32px] h-5 w-6 items-center justify-center"
+                            onPress={() => setShowNewPassword(v => !v)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            activeOpacity={1}
+                        >
+                            <Ionicons name={showNewPassword ? 'eye-off' : 'eye'} size={20} color="white" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View>
+                        <TextInput
+                            className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
+                            placeholder="Confirm New Password"
+                            placeholderTextColor="#9CA3AF"
+                            secureTextEntry={!showConfirmPassword}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            autoComplete="password"
+                            textContentType="password"
+                            returnKeyType="done"
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                        />
+                        <TouchableOpacity
+                            className="absolute right-4 mt-[32px] h-5 w-6 items-center justify-center"
+                            onPress={() => setShowConfirmPassword(v => !v)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            activeOpacity={1}
+                        >
+                            <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="white" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
-                {codeSent ? (
-                    <>
-                        <View className="mt-5">
-                            <TextInput
-                                className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full px-5 text-white tracking-[4px]"
-                                placeholder="Verification Code"
-                                placeholderTextColor="#9CA3AF"
-                                keyboardType="number-pad"
-                                value={code}
-                                onChangeText={setCode}
-                                maxLength={6}
-                            />
-                        </View>
-              <View>
-              <TextInput className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
-                           placeholder="New Password"
-                           placeholderTextColor="#9CA3AF"
-                           secureTextEntry={!showNewPassword}
-                           autoCapitalize="none"
-                           autoCorrect={false}
-                           autoComplete="password"
-                           textContentType="password"
-                           returnKeyType="done"
-                           value={newPassword}
-                           onChangeText={setNewPassword}
-                />
-                 <TouchableOpacity
-                        className="absolute right-4 mt-[32px] h-5 w-6 items-center justify-center"
-                        onPress={() => setShowNewPassword(v => !v)}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        activeOpacity={1}
-                            >
-                         <Ionicons name={showNewPassword ? 'eye-off' : 'eye'} size={20} color="white" />
-                        </TouchableOpacity>
-              </View>
-              <View>
-              <TextInput className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
-                           placeholder="Confirm New Password"
-                           placeholderTextColor="#9CA3AF"
-                           secureTextEntry={!showConfirmPassword}
-                           autoCapitalize="none"
-                           autoCorrect={false}
-                           autoComplete="password"
-                           textContentType="password"
-                           returnKeyType="done"
-                           value={confirmPassword}
-                           onChangeText={setConfirmPassword}
-                />
-                 <TouchableOpacity
-                        className="absolute right-4 mt-[32px] h-5 w-6 items-center justify-center"
-                        onPress={() => setShowConfirmPassword(v => !v)}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        activeOpacity={1}
-                            >
-                         <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="white" />
-                        </TouchableOpacity>
-              </View>
-                    </>
-                ) : null}
 
                 {error ? (
                     <Text className="text-red-500 text-center mt-4 px-4">
@@ -226,38 +208,15 @@ export default function ResetPass() {
                     </Text>
                 ) : null}
 
-                {codeSent ? (
-                    <>
-                        <Pressable
-                            className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${loading ? 'bg-gray-500' : 'bg-[#900C27]'}`}
-                            onPress={submitNewPassword}
-                            disabled={loading}
-                        >
-                            <Text className="flex text-center py-4 text-white text-[16px] font-extrabold">
-                                {loading ? 'Resetting...' : 'Reset Password'}
-                            </Text>
-                        </Pressable>
-                        <TouchableOpacity
-                            className="mt-4"
-                            disabled={resendCooldown > 0 || loading}
-                            onPress={requestCode}
-                        >
-                            <Text className={`text-center ${resendCooldown > 0 ? 'text-gray-400' : 'text-white'} underline`}>
-                                {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Code'}
-                            </Text>
-                        </TouchableOpacity>
-                    </>
-                ) : (
-                    <Pressable
-                        className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${loading ? 'bg-gray-500' : 'bg-[#900C27]'}`}
-                        onPress={requestCode}
-                        disabled={loading}
-                    >
-                        <Text className="flex text-center py-4 text-white text-[16px] font-extrabold">
-                            {loading ? 'Sending...' : 'Send Code'}
-                        </Text>
-                    </Pressable>
-                )}
+                <Pressable
+                    className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${loading ? 'bg-gray-500' : 'bg-[#900C27]'}`}
+                    onPress={handleChangePassword}
+                    disabled={loading}
+                >
+                    <Text className="flex text-center py-4 text-white text-[16px] font-extrabold">
+                        {loading ? 'Saving...' : 'Save New Password'}
+                    </Text>
+                </Pressable>
                 
             </View>
         </SafeAreaView>

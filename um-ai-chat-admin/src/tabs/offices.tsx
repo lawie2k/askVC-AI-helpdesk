@@ -11,13 +11,21 @@ export default function offices() {
     const [newOffice, setNewOffice] = useState({
         name: "",
         building_id: "",
-        floor: ""
+        floor: "",
+        open_time: "",
+        close_time: "",
+        lunch_start: "",
+        lunch_end: ""
     });
     const [editingOffice, setEditingOffice] = useState<any>(null);
     const [editForm, setEditForm] = useState({
         name: "",
         building_id: "",
-        floor: ""
+        floor: "",
+        open_time: "",
+        close_time: "",
+        lunch_start: "",
+        lunch_end: ""
     });
 
     useEffect(() => {
@@ -37,8 +45,15 @@ export default function offices() {
     const loadOffices = async () => {
         try {
             setLoading(true);
-            const offices = await officeAPI.getAll();
-            setOffices(offices);
+        const offices = await officeAPI.getAll();
+        const normalized = (offices || []).map((office: any) => ({
+            ...office,
+            open_time: office.open_time || "",
+            close_time: office.close_time || "",
+            lunch_start: office.lunch_start || "",
+            lunch_end: office.lunch_end || ""
+        }));
+        setOffices(normalized);
         } catch (error) {
             console.error('Error loading offices:', error);
         } finally {
@@ -53,10 +68,16 @@ export default function offices() {
         });
     }, [offices, filterOfficesById]);
 
+    const renderTimeCell = (params: any) => (params?.value ? params.value : '—');
+
     const officeColumns = [
-        {field: 'name', headerName: 'Office Name', width: 200},
-        {field: 'building_name', headerName: 'Building', width: 200},
-        {field: 'floor', headerName: 'Floor', width: 150},
+        {field: 'name', headerName: 'Office Name', width: 100},
+        {field: 'building_name', headerName: 'Building', width: 100},
+        {field: 'floor', headerName: 'Floor', width: 120},
+        {field: 'open_time', headerName: 'Opens', width: 110, cellRenderer: renderTimeCell},
+        {field: 'close_time', headerName: 'Closes', width: 110, cellRenderer: renderTimeCell},
+        {field: 'lunch_start', headerName: 'Lunch Start', width: 120, cellRenderer: renderTimeCell},
+        {field: 'lunch_end', headerName: 'Lunch End', width: 120, cellRenderer: renderTimeCell},
         {field: 'created_at', headerName: 'Created At', width: 200, cellRenderer: (params: any) => {
             const v = params.value;
             if (!v) return '';
@@ -99,7 +120,11 @@ export default function offices() {
             setNewOffice({
                 name: "",
                 building_id: "",
-                floor: ""
+                floor: "",
+                open_time: "",
+                close_time: "",
+                lunch_start: "",
+                lunch_end: ""
             });
         } catch (error) {
             console.error('Error adding office:', error);
@@ -113,7 +138,11 @@ export default function offices() {
         setEditForm({
             name: office.name,
             building_id: office.building_id || '',
-            floor: office.floor || ''
+            floor: office.floor || '',
+            open_time: office.open_time || '',
+            close_time: office.close_time || '',
+            lunch_start: office.lunch_start || '',
+            lunch_end: office.lunch_end || ''
         });
     };
 
@@ -122,7 +151,11 @@ export default function offices() {
         setEditForm({
             name: "",
             building_id: "",
-            floor: ""
+            floor: "",
+            open_time: "",
+            close_time: "",
+            lunch_start: "",
+            lunch_end: ""
         });
     };
 
@@ -165,120 +198,173 @@ export default function offices() {
    <div className="flex justify-center justify-self-center text-xl xl:text-2xl 2xl:text-[32px] font-bold w-[180px] xl:w-[220px] 2xl:w-[250px] h-[42px] xl:h-[46px] 2xl:h-[50px] mx-auto ">
       <h1 className="truncate">Offices</h1>
     </div>
-      <div className="w-full max-w-[1170px] h-auto mt-6 xl:mx-10 px-4 flex flex-col">
-        {/* Form Row - Single form that switches between Add and Edit */}
-        <div className="">
+      <div className="w-full max-w-[1170px] h-auto mt-6 xl:mx-10 px-4">
+        <div className="bg-[#292929] border border-white rounded-2xl p-4 flex flex-col h-[615px]">
+          {/* Form Row - Single form that switches between Add and Edit */}
+          <div className="mb-4">
             <div className="flex flex-wrap gap-4">
+              <div className="flex flex-col">
+                <label className="text-white text-sm mb-1">Office Name</label>
+                <input 
+                  type="text"
+                  className="w-[200px] px-3 py-2 text-black rounded capitalize"
+                  placeholder="Enter office name" 
+                  value={editingOffice ? editForm.name : newOffice.name}
+                  onChange={(e) => editingOffice 
+                    ? setEditForm({ ...editForm, name: e.target.value })
+                    : setNewOffice({ ...newOffice, name: e.target.value })
+                  } 
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-white text-sm mb-1">Building</label>
+                <select 
+                  className="w-[200px] px-3 py-2 text-black rounded"
+                  value={editingOffice ? editForm.building_id : newOffice.building_id}
+                  onChange={(e) => editingOffice 
+                    ? setEditForm({ ...editForm, building_id: e.target.value })
+                    : setNewOffice({ ...newOffice, building_id: e.target.value })
+                  }
+                >
+                  <option value="">--Select Building--</option>
+                  {buildings.map((building) => (
+                    <option key={building.id} value={building.id}>
+                      {building.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-white text-sm mb-1">Floor</label>
+                <select 
+                  className="w-[200px] px-3 py-2 text-black rounded"
+                  value={editingOffice ? editForm.floor : newOffice.floor}
+                  onChange={(e) => editingOffice 
+                    ? setEditForm({ ...editForm, floor: e.target.value })
+                    : setNewOffice({ ...newOffice, floor: e.target.value })
+                  }
+                >
+                  <option value="">--Select Floor--</option>
+                  <option value="1st floor">1st floor</option>
+                  <option value="2nd floor">2nd floor</option>
+                  <option value="3rd floor">3rd floor</option>
+                </select>
+              </div>
+
                 <div className="flex flex-col">
-                    <label className="text-white text-sm mb-1">Office Name</label>
-                    <input 
-                        type="text"
-                        className="w-[200px] px-3 py-2 text-black rounded capitalize"
-                        placeholder="Enter office name" 
-                        value={editingOffice ? editForm.name : newOffice.name}
-                        onChange={(e) => editingOffice 
-                            ? setEditForm({ ...editForm, name: e.target.value })
-                            : setNewOffice({ ...newOffice, name: e.target.value })
-                        } 
+                    <label className="text-white text-sm mb-1">Opens At</label>
+                    <input
+                        type="time"
+                        className="w-[170px] px-3 py-2 text-black rounded"
+                        value={editingOffice ? editForm.open_time : newOffice.open_time}
+                        onChange={(e) => editingOffice
+                            ? setEditForm({ ...editForm, open_time: e.target.value })
+                            : setNewOffice({ ...newOffice, open_time: e.target.value })
+                        }
                     />
                 </div>
 
                 <div className="flex flex-col">
-                    <label className="text-white text-sm mb-1">Building</label>
-                    <select 
-                        className="w-[200px] px-3 py-2 text-black rounded"
-                        value={editingOffice ? editForm.building_id : newOffice.building_id}
-                        onChange={(e) => editingOffice 
-                            ? setEditForm({ ...editForm, building_id: e.target.value })
-                            : setNewOffice({ ...newOffice, building_id: e.target.value })
+                    <label className="text-white text-sm mb-1">Closes At</label>
+                    <input
+                        type="time"
+                        className="w-[170px] px-3 py-2 text-black rounded"
+                        value={editingOffice ? editForm.close_time : newOffice.close_time}
+                        onChange={(e) => editingOffice
+                            ? setEditForm({ ...editForm, close_time: e.target.value })
+                            : setNewOffice({ ...newOffice, close_time: e.target.value })
                         }
-                    >
-                        <option value="">--Select Building--</option>
-                        {buildings.map((building) => (
-                            <option key={building.id} value={building.id}>
-                                {building.name}
-                            </option>
-                        ))}
-                    </select>
+                    />
                 </div>
 
                 <div className="flex flex-col">
-                    <label className="text-white text-sm mb-1">Floor</label>
-                    <select 
-                        className="w-[200px] px-3 py-2 text-black rounded"
-                        value={editingOffice ? editForm.floor : newOffice.floor}
-                        onChange={(e) => editingOffice 
-                            ? setEditForm({ ...editForm, floor: e.target.value })
-                            : setNewOffice({ ...newOffice, floor: e.target.value })
+                    <label className="text-white text-sm mb-1">Lunch Start</label>
+                    <input
+                        type="time"
+                        className="w-[170px] px-3 py-2 text-black rounded"
+                        value={editingOffice ? editForm.lunch_start : newOffice.lunch_start}
+                        onChange={(e) => editingOffice
+                            ? setEditForm({ ...editForm, lunch_start: e.target.value })
+                            : setNewOffice({ ...newOffice, lunch_start: e.target.value })
                         }
+                    />
+                </div>
+
+                <div className="flex flex-col">
+                    <label className="text-white text-sm mb-1">Lunch End</label>
+                    <input
+                        type="time"
+                        className="w-[170px] px-3 py-2 text-black rounded"
+                        value={editingOffice ? editForm.lunch_end : newOffice.lunch_end}
+                        onChange={(e) => editingOffice
+                            ? setEditForm({ ...editForm, lunch_end: e.target.value })
+                            : setNewOffice({ ...newOffice, lunch_end: e.target.value })
+                        }
+                    />
+                </div>
+
+              <div className="flex flex-col justify-end">
+                {editingOffice ? (
+                  <div className="flex space-x-2">
+                    <button 
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold" 
+                      onClick={saveEdit}
                     >
-                        <option value="">--Select Floor--</option>
-                        <option value="1st floor">1st floor</option>
-                        <option value="2nd floor">2nd floor</option>
-                        <option value="3rd floor">3rd floor</option>
-                    </select>
-                </div>
-
-
-                <div className="flex flex-col justify-end">
-                    {editingOffice ? (
-                        <div className="flex space-x-2">
-                            <button 
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold" 
-                                onClick={saveEdit}
-                            >
-                                Update
-                            </button>
-                            <button 
-                                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold" 
-                                onClick={cancelEdit}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    ) : (
-                        <button 
-                            className="w-[150px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold" 
-                            onClick={addOffice}
-                        >
-                            Add Record
-                        </button>
-                    )}
-                </div>
+                      Update
+                    </button>
+                    <button 
+                      className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold" 
+                      onClick={cancelEdit}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    className="w-[150px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold" 
+                    onClick={addOffice}
+                  >
+                    Add Record
+                  </button>
+                )}
+              </div>
             </div>
-        </div>
+          </div>
 
-        <div className="mt-3">
+          <div className="mb-3">
             <label className="text-white text-sm block mb-1">Filter by Building</label>
             <div className="flex items-center gap-3">
-                <select
-                    className="w-[200px] px-3 py-2 text-black rounded"
-                    value={filterOfficesById}
-                    onChange={(e) => setFilterOfficesById(e.target.value)}
-                >
-                    <option value="">All Buildings</option>
-                    {buildings.map((b: any) => (
-                        <option key={b.id} value={String(b.id)}>{b.name}</option>
-                    ))}
-                </select>
+              <select
+                className="w-[200px] px-3 py-2 text-black rounded"
+                value={filterOfficesById}
+                onChange={(e) => setFilterOfficesById(e.target.value)}
+              >
+                <option value="">All Buildings</option>
+                {buildings.map((b: any) => (
+                  <option key={b.id} value={String(b.id)}>{b.name}</option>
+                ))}
+              </select>
             </div>
-        </div>
+          </div>
 
-        <div className="w-full h-[520px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg overflow-y-auto">
+          <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-hidden">
             {loading ? (
-                <div className="flex justify-center items-center h-full">
-                    <div className="text-white text-xl">Loading...</div>
-                </div>
+              <div className="flex justify-center items-center h-full">
+                <div className="text-white text-xl">Loading...</div>
+              </div>
             ) : (
-                <DataGrid 
-                    data={filteredOffices}
-                    columns={officeColumns}
-                    height="520px"
-                    className="text-white text-[14px] bg-[#292929]"
-                    showSearch={false}
-                    pageSize={14}
-                />
+              <DataGrid 
+                data={filteredOffices}
+                columns={officeColumns}
+                height="520px"
+                className="text-white text-[14px] bg-[#292929]"
+                showSearch={false}
+                pageSize={14}
+              />
             )}
+          </div>
         </div>
       </div>
         

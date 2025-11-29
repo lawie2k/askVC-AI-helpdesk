@@ -197,94 +197,96 @@ export default function Rooms() {
         <h1 className="truncate">Rooms</h1>
       </div>
 
-      <div className="w-full max-w-[1170px] h-auto mt-6 xl:mx-10 px-4 flex flex-col">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex flex-col">
-            <label className="text-white text-sm mb-1">Room Name</label>
-            <input
-              type="text"
-              className="w-[200px] px-3 py-2 text-black rounded capitalize"
-              placeholder="Enter room name"
-              value={currentForm.name}
-              onChange={(e) => updateForm(setCurrentForm, "name", e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label className="text-white text-sm mb-1">Building</label>
-            <select
-              className="w-[200px] px-3 py-2 text-black rounded"
-              value={currentForm.building_id}
-              onChange={(e) => updateForm(setCurrentForm, "building_id", e.target.value)}
-            >
-              <option value="">--Select Building--</option>
-              {buildings.map((building) => (
-                <option key={building.id} value={building.id}>
-                  {building.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-  <div className="flex flex-col">
-            <label className="text-white text-sm mb-1">Floor</label>
-            <select
-              className="w-[200px] px-3 py-2 text-black rounded"
-              value={currentForm.floor}
-              onChange={(e) => updateForm(setCurrentForm, "floor", e.target.value)}
-            >
-              <option value="">--Select Floor--</option>
-              <option value="1st floor">1st floor</option>
-              <option value="2nd floor">2nd floor</option>
-              <option value="3rd floor">3rd floor</option>
-            </select>
-          </div>
-
-          <div className="flex flex-col">
-            <label className="text-white text-sm mb-1">Type</label>
-            <select
-              className="w-[200px] px-3 py-2 text-black rounded"
-              value={currentForm.type}
-              onChange={(e) => updateForm(setCurrentForm, "type", e.target.value)}
-            >
-              <option value="Lecture">Lecture</option>
-              <option value="ComLab">ComLab</option>
-              <option value="Laboratory">Laboratory</option>
-            </select>
-          </div>
-
-          <div className="flex flex-col justify-end">
-            {editingRoom ? (
-              <div className="flex space-x-2">
-                <button
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold"
-                  onClick={saveEdit}
-                >
-                  Update
-                </button>
-                <button
-                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold"
-                  onClick={cancelEdit}
-                >
-                  Cancel
-                </button>
+      <div className="w-full max-w-[1170px] h-auto mt-6 xl:mx-10 px-4">
+        <div className="bg-[#292929] border border-white rounded-2xl p-4 flex flex-col h-[615px]">
+          <div className="mb-4">
+            <div className="flex flex-wrap gap-4">
+              <div className="flex flex-col">
+                <label className="text-white text-sm mb-1">Room Name</label>
+                <input
+                  type="text"
+                  className="w-[200px] px-3 py-2 text-black rounded capitalize"
+                  placeholder="Enter room name"
+                  value={currentForm.name}
+                  onChange={(e) => updateForm(setCurrentForm, "name", e.target.value)}
+                />
               </div>
-            ) : (
-              <button
-                className="w-[150px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold"
-                onClick={addRoom}
-              >
-                Add Record
-              </button>
-            )}
-          </div>
-        </div>
 
-        <div className="flex items-center gap-3 mt-3">
-          <div className="flex flex-col">
+              <div className="flex flex-col">
+                <label className="text-white text-sm mb-1">Building</label>
+                <select
+                  className="w-[200px] px-3 py-2 text-black rounded"
+                  value={currentForm.building_id}
+                  onChange={(e) => updateForm(setCurrentForm, "building_id", e.target.value)}
+                >
+                  <option value="">--Select Building--</option>
+                  {buildings.map((building) => (
+                    <option key={building.id} value={building.id}>
+                      {building.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-white text-sm mb-1">Floor</label>
+                <select
+                  className="w-[200px] px-3 py-2 text-black rounded"
+                  value={currentForm.floor}
+                  onChange={(e) => updateForm(setCurrentForm, "floor", e.target.value)}
+                >
+                  <option value="">--Select Floor--</option>
+                  <option value="1st floor">1st floor</option>
+                  <option value="2nd floor">2nd floor</option>
+                  <option value="3rd floor">3rd floor</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-white text-sm mb-1">Type</label>
+                <select
+                  className="w-[200px] px-3 py-2 text-black rounded"
+                  value={currentForm.type}
+                  onChange={(e) => updateForm(setCurrentForm, "type", e.target.value)}
+                >
+                  <option value="Lecture">Lecture</option>
+                  <option value="ComLab">ComLab</option>
+                  <option value="Laboratory">Laboratory</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col justify-end">
+                {editingRoom ? (
+                  <div className="flex space-x-2">
+                    <button
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold"
+                      onClick={saveEdit}
+                    >
+                      Update
+                    </button>
+                    <button
+                      className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold"
+                      onClick={cancelEdit}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="w-[150px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold"
+                    onClick={addRoom}
+                  >
+                    Add Record
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-3">
             <label className="text-white text-sm">Filter by Building</label>
             <select
-              className="w-[200px] px-3 py-2 text-black rounded"
+              className="w-[200px] px-3 py-2 mt-1 text-black rounded"
               value={filterRoomsById}
               onChange={(e) => setFilterRoomsById(e.target.value)}
             >
@@ -296,23 +298,23 @@ export default function Rooms() {
               ))}
             </select>
           </div>
-        </div>
 
-        <div className="w-full h-[520px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg overflow-y-auto">
-          {loading ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="text-white text-xl">Loading...</div>
-            </div>
-          ) : (
-            <DataGrid
-              data={filteredRooms}
-              columns={roomColumns}
-              height="520px"
-              className="text-white text-[14px] bg-[#292929]"
-              showSearch={false}
-              pageSize={14}
-            />
-          )}
+          <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-hidden">
+            {loading ? (
+              <div className="flex justify-center items-center h-full">
+                <div className="text-white text-xl">Loading...</div>
+              </div>
+            ) : (
+              <DataGrid
+                data={filteredRooms}
+                columns={roomColumns}
+                height="520px"
+                className="text-white text-[14px] bg-[#292929]"
+                showSearch={false}
+                pageSize={14}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

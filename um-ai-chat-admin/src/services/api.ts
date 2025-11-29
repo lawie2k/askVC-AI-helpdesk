@@ -213,6 +213,11 @@ export const reportsAPI = {
   }),
 };
 
+// Stats API (for dashboard charts)
+export const statsAPI = {
+  getTopQuestions: () => apiCall('/api/stats/top-questions'),
+};
+
 // Admin Authentication API functions
 export const adminAuthAPI = {
   login: (username: string, password: string) => apiCall('/auth/admin/login', {

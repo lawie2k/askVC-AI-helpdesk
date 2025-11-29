@@ -489,7 +489,7 @@ function getSearchableColumns(table) {
     departments: "name, short_name",
     professors: "name, position, email, program",
     buildings: "name",
-    offices: "name, floor",
+    offices: "name, floor, open_time, close_time, lunch_start, lunch_end",
     rules: "description",
     vision_mission: "description",
     campus_info: "description",

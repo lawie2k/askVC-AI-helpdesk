@@ -142,81 +142,83 @@ export default function Departments() {
     <div className="flex justify-center justify-self-center text-xl xl:text-2xl 2xl:text-[32px] font-bold w-[180px] xl:w-[220px] 2xl:w-[250px] h-[42px] xl:h-[46px] 2xl:h-[50px] mx-auto ">
       <h1 className="truncate">Departments</h1>
     </div>
-      <div className="w-full max-w-[1170px] h-auto mt-6 xl:mx-10 px-4 flex flex-col">
-        {/* Form Row - Single form that switches between Add and Edit */}
-        <div className="">
+      <div className="w-full max-w-[1170px] h-auto mt-6 xl:mx-10 px-4">
+        <div className="bg-[#292929] border border-white rounded-2xl p-4 flex flex-col h-[615px]">
+          {/* Form Row - Single form that switches between Add and Edit */}
+          <div className="mb-4">
             <div className="flex flex-wrap gap-4">
-                <div className="flex flex-col">
-                    <label className="text-white text-sm mb-1">Department Name</label>
-                    <input 
-                        type="text"
-                        className="w-[200px] px-3 py-2 text-black rounded capitalize"
-                        placeholder="Enter department name" 
-                        value={editingDepartment ? editForm.name : newDepartment.name}
-                        onChange={(e) => editingDepartment 
-                            ? setEditForm({ ...editForm, name: e.target.value })
-                            : setNewDepartment({ ...newDepartment, name: e.target.value })
-                        } 
-                    />
-                </div>
-
-                <div className="flex flex-col">
-                    <label className="text-white text-sm mb-1">Short Name</label>
-                    <input 
-                        type="text"
-                        className="w-[150px] px-3 py-2 text-black rounded capitalize"
-                        placeholder="Enter short name"
-                        value={editingDepartment ? editForm.short_name : newDepartment.short_name}
-                        onChange={(e) => editingDepartment 
-                            ? setEditForm({ ...editForm, short_name: e.target.value })
-                            : setNewDepartment({ ...newDepartment, short_name: e.target.value })
-                        } 
-                    />
-                </div>
-
-                <div className="flex flex-col justify-end">
-                    {editingDepartment ? (
-                        <div className="flex space-x-2">
-                            <button 
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold" 
-                                onClick={saveEdit}
-                            >
-                                Update
-                            </button>
-                            <button 
-                                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold" 
-                                onClick={cancelEdit}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    ) : (
-                        <button 
-                            className="w-[150px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold" 
-                            onClick={addDepartment}
-                        >
-                            Add Record
-                        </button>
-                    )}
-                </div>
-            </div>
-        </div>
-
-        <div className="w-full h-[590px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg overflow-y-auto">
-            {loading ? (
-                <div className="flex justify-center items-center h-full">
-                    <div className="text-white text-xl">Loading...</div>
-                </div>
-            ) : (
-                <DataGrid 
-                    data={departments}
-                    columns={departmentColumns}
-                    height="585px"
-                    className="text-white text-[14px] bg-[#292929]"
-                    showSearch={false}
-                    pageSize={14}
+              <div className="flex flex-col">
+                <label className="text-white text-sm mb-1">Department Name</label>
+                <input 
+                  type="text"
+                  className="w-[200px] px-3 py-2 text-black rounded capitalize"
+                  placeholder="Enter department name" 
+                  value={editingDepartment ? editForm.name : newDepartment.name}
+                  onChange={(e) => editingDepartment 
+                    ? setEditForm({ ...editForm, name: e.target.value })
+                    : setNewDepartment({ ...newDepartment, name: e.target.value })
+                  } 
                 />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-white text-sm mb-1">Short Name</label>
+                <input 
+                  type="text"
+                  className="w-[150px] px-3 py-2 text-black rounded capitalize"
+                  placeholder="Enter short name"
+                  value={editingDepartment ? editForm.short_name : newDepartment.short_name}
+                  onChange={(e) => editingDepartment 
+                    ? setEditForm({ ...editForm, short_name: e.target.value })
+                    : setNewDepartment({ ...newDepartment, short_name: e.target.value })
+                  } 
+                />
+              </div>
+
+              <div className="flex flex-col justify-end">
+                {editingDepartment ? (
+                  <div className="flex space-x-2">
+                    <button 
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold" 
+                      onClick={saveEdit}
+                    >
+                      Update
+                    </button>
+                    <button 
+                      className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold" 
+                      onClick={cancelEdit}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    className="w-[150px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold" 
+                    onClick={addDepartment}
+                  >
+                    Add Record
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-hidden">
+            {loading ? (
+              <div className="flex justify-center items-center h-full">
+                <div className="text-white text-xl">Loading...</div>
+              </div>
+            ) : (
+              <DataGrid 
+                data={departments}
+                columns={departmentColumns}
+                height="520px"
+                className="text-white text-[14px] bg-[#292929]"
+                showSearch={false}
+                pageSize={14}
+              />
             )}
+          </div>
         </div>
       </div>
         

@@ -76,7 +76,6 @@ export default function MainChat() {
                                 onPress={() => {
                                     setMessages([]);
                                     setChatKey(prev => prev + 1);
-                                    setHasLoadedFromParams(false);
                                     // Clear navigation params to prevent reloading
                                     navigation.setParams({ loadMessages: undefined } as any);
                                     setSideBar(false);

@@ -1,11 +1,24 @@
 const express = require("express");
-const { searchDatabase } = require("../services/ai-search");
+const { searchDatabase, extractDepartmentFromQuestion } = require("../services/ai-search");
 const AIService = require("../services/ai-service");
 const prisma = require("../config/prismaClient");
 const jwt = require("jsonwebtoken");
 
 const router = express.Router();
 const aiService = new AIService();
+
+// Department head info used for class schedule/subject concerns.
+// We prefer dynamic lookup from the professors table; these are just fallbacks.
+const DEPARTMENT_HEAD_FALLBACKS = {
+  BSIT: {
+    name: "BSIT Department Head",
+    email: "bsit.head@umindanao.edu.ph",
+  },
+  BSCS: {
+    name: "BSCS Department Head",
+    email: "bscs.head@umindanao.edu.ph",
+  },
+};
 
 // ============================================================================
 // CONVERSATION MEMORY - Store last Q&A per user session
@@ -107,6 +120,61 @@ router.post("/ask", async (req, res) => {
     const userId = getUserIdentifier(req);
     const lastConv = getLastConversation(userId);
 
+    // ======================================================================
+    // SPECIAL HANDLING: Class schedule / subject concerns
+    // ======================================================================
+    const maybeClassConcern = isClassScheduleConcern(question);
+    if (maybeClassConcern) {
+      // Try to detect department from the question itself
+      let deptKey = extractDepartmentFromQuestion(question);
+
+      // If not found, try last conversation answer/question
+      if (!deptKey && lastConv) {
+        deptKey =
+          extractDepartmentFromQuestion(lastConv.answer || "") ||
+          extractDepartmentFromQuestion(lastConv.question || "");
+      }
+
+      if (!deptKey) {
+        // Ask follow-up for their department
+        return res.json({
+          answer:
+            "For concerns about your class schedule or subjects, it's best to talk directly to your department head. What is your department (for example, BSIT or BSCS)?",
+        });
+      }
+
+      const head = await getDepartmentHeadInfo(deptKey);
+      if (!head) {
+        return res.json({
+          answer:
+            "For concerns about your class schedule or subjects, please go to your department head. I don't have the exact contact details yet.",
+        });
+      }
+
+      const answer = `For concerns about your class schedule or subjects, please go to your ${deptKey} department head. Their contact is ${head.name} (${head.email}).`;
+
+      // Save simple conversation context so follow-ups still work
+      saveConversation(userId, question, answer);
+
+      // Also save to history if user is authenticated
+      const authenticatedUserId = await getUserIdFromToken(req);
+      if (authenticatedUserId) {
+        try {
+          await prisma.historyChats.create({
+            data: {
+              user_id: authenticatedUserId,
+              question,
+              answer,
+            },
+          });
+        } catch (dbErr) {
+          console.error("⚠️ Failed to save chat history (class concern):", dbErr.message);
+        }
+      }
+
+      return res.json({ answer });
+    }
+
     // ========================================================================
     // DATABASE SEARCH - Find relevant information
     // ========================================================================
@@ -126,6 +194,10 @@ router.post("/ask", async (req, res) => {
           dbContext += `- ${JSON.stringify(item, null, 2)}\n`;
         });
       });
+      const timeGuidance = await generateTimeAwareGuidance(dbResults);
+      if (timeGuidance) {
+        dbContext += `\nTime-aware guidance:\n${timeGuidance}\n`;
+      }
     } else {
       console.log('📊 No specific database information found');
       dbContext = "\n\nNo specific information found in the database for this question.";
@@ -158,6 +230,7 @@ IMPORTANT INSTRUCTIONS:
 - Don't add unnecessary details or long explanations
 - Be conversational but brief
 - Don't answer questions that are not related to UM Visayan Campus topics
+- After answering, suggest simple smart follow-ups when helpful, like "Do you want directions from your building?" or "Do you want to see office hours?" (keep it to 1 follow-up line)
 - answer art laurence siojo, erhyl dhee toraja, george sangil, willge mahinay if
  question is about who is the developer of this app or project
 - Remember the previous conversation context when the user asks follow-up questions like "where is it?" or "tell me more"
@@ -167,9 +240,13 @@ and for the 3rd floor it is beside in AVR room
 - when they ask where is the motorcycle parking it is in the left side of the entrance walkway
 - when they ask for the UM radio station building it is in the right side of the entrance
 - when they ask for the LIC building it is in the left side of the campus
+- when they ask for the school storage it is located in the left side of the entrance behind the guard house
 - when they ask for the main Building it is in the right side of the campus
 - when they ask for the for the faculty building it is in the left side end of the campus
-- when they ask when will the new buildings be completed there is no data for that but maybe next school year
+- when they ask when will the new buildings be completed there is no data
+- basketball court is in the middle of the campus
+- all of the offices are half day always in weekends
+- okay if there is a concern about class scedules or about there subjects or something related to it tell it too you can ask the department head and a follow up question what is my department
 
 ${dbContext}${conversationContext}`;
 
@@ -243,6 +320,203 @@ ${dbContext}${conversationContext}`;
     });
   }
 });
+
+async function generateTimeAwareGuidance(dbResults) {
+  const officeResult = dbResults.find((result) => result.table === "offices");
+  if (!officeResult || !Array.isArray(officeResult.data) || officeResult.data.length === 0) {
+    return "";
+  }
+
+  let defaults = {};
+  try {
+    const keys = [
+      "default_office_open",
+      "default_office_close",
+      "default_lunch_start",
+      "default_lunch_end",
+    ];
+    const entries = await prisma.settings.findMany({
+      where: { key_name: { in: keys } },
+    });
+    defaults = entries.reduce((acc, entry) => {
+      acc[entry.key_name] = entry.value;
+      return acc;
+    }, {});
+  } catch (err) {
+    console.error("⚠️ Failed to load schedule settings:", err.message);
+  }
+
+  return buildOfficeScheduleNarrative(officeResult.data, defaults);
+}
+
+function buildOfficeScheduleNarrative(offices, defaults) {
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const day = now.getDay(); // 0 = Sunday, 6 = Saturday
+  const guidance = [];
+
+  offices.slice(0, 5).forEach((office) => {
+    // Sunday: all offices closed
+    if (day === 0) {
+      guidance.push(`• ${office.name}: closed today (offices are closed on Sundays).`);
+      return;
+    }
+
+    // Base schedule from DB or defaults
+    const schedule = {
+      open: parseTimeToMinutes(office.open_time) ?? parseTimeToMinutes(defaults.default_office_open),
+      close: parseTimeToMinutes(office.close_time) ?? parseTimeToMinutes(defaults.default_office_close),
+      lunchStart:
+        parseTimeToMinutes(office.lunch_start) ?? parseTimeToMinutes(defaults.default_lunch_start),
+      lunchEnd:
+        parseTimeToMinutes(office.lunch_end) ?? parseTimeToMinutes(defaults.default_lunch_end),
+    };
+
+    // Saturday: force half-day 7:00–12:00 regardless of stored schedule
+    if (day === 6) {
+      schedule.open = 7 * 60;
+      schedule.close = 12 * 60;
+    }
+
+    if (!schedule.open || !schedule.close) {
+      return;
+    }
+
+    const status = describeOfficeStatus(schedule, nowMinutes);
+    if (status) {
+      guidance.push(`• ${office.name}: ${status}`);
+    }
+  });
+
+  return guidance.length ? guidance.slice(0, 3).join("\n") : "";
+}
+
+function describeOfficeStatus(schedule, nowMinutes) {
+  const { open, close, lunchStart, lunchEnd } = schedule;
+
+  if (nowMinutes < open) {
+    const mins = open - nowMinutes;
+    if (mins <= 90) {
+      return `opens in ${formatMinutes(mins)} (opens at ${formatTimeLabel(open)}).`;
+    }
+    return `opens at ${formatTimeLabel(open)}.`;
+  }
+
+  if (nowMinutes >= close) {
+    return `closed right now (operates until ${formatTimeLabel(close)}).`;
+  }
+
+  if (lunchStart && lunchEnd && nowMinutes >= lunchStart && nowMinutes < lunchEnd) {
+    return `currently on lunch break until ${formatTimeLabel(lunchEnd)}, expect delays.`;
+  }
+
+  if (lunchStart && lunchEnd && nowMinutes < lunchStart && lunchStart - nowMinutes <= 30) {
+    return `lunch break starts in ${formatMinutes(
+      lunchStart - nowMinutes
+    )} (${formatTimeLabel(lunchStart)} - ${formatTimeLabel(lunchEnd)}).`;
+  }
+
+  const minsUntilClose = close - nowMinutes;
+  if (minsUntilClose <= 30) {
+    return `closes in ${formatMinutes(minsUntilClose)} (closes at ${formatTimeLabel(close)}).`;
+  }
+
+  return `open until ${formatTimeLabel(close)} today.`;
+}
+
+function parseTimeToMinutes(value) {
+  if (!value || typeof value !== "string") return null;
+  const [hourStr, minuteStr] = value.split(":");
+  const hours = Number(hourStr);
+  const minutes = Number(minuteStr || "0");
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  return hours * 60 + minutes;
+}
+
+function formatTimeLabel(totalMinutes) {
+  const hours24 = Math.floor(totalMinutes / 60) % 24;
+  const minutes = totalMinutes % 60;
+  const suffix = hours24 >= 12 ? "PM" : "AM";
+  const hours12 = hours24 % 12 || 12;
+  const paddedMinutes = minutes.toString().padStart(2, "0");
+  return `${hours12}:${paddedMinutes} ${suffix}`;
+}
+
+function formatMinutes(value) {
+  if (value <= 1) return "1 minute";
+  return `${value} minutes`;
+}
+
+function isClassScheduleConcern(text) {
+  if (!text) return false;
+  const q = text.toLowerCase();
+
+  const keywords = [
+    "class schedule",
+    "class schedules",
+    "my schedule",
+    "my subjects",
+    "my subject",
+    "subjects",
+    "enrollment",
+    "enrolment",
+    "pre-enrollment",
+    "preregistration",
+    "pre registration",
+    "overload",
+    "underload",
+    "change subject",
+    "change schedule",
+    "subject conflict",
+    "schedule conflict",
+  ];
+
+  return keywords.some((k) => q.includes(k));
+}
+
+async function getDepartmentHeadInfo(deptKey) {
+  const key = (deptKey || "").toUpperCase();
+
+  try {
+    // Try to find a professor in this program/department whose position suggests "head"
+    const headProfessor = await prisma.professors.findFirst({
+      where: {
+        OR: [
+          { program: key },
+          {
+            departments: {
+              short_name: key,
+            },
+          },
+        ],
+        position: {
+          contains: "head",
+          mode: "insensitive",
+        },
+      },
+      select: {
+        name: true,
+        email: true,
+      },
+    });
+
+    if (headProfessor) {
+      return {
+        name: headProfessor.name,
+        email: headProfessor.email || "No email on record",
+      };
+    }
+  } catch (err) {
+    console.error("⚠️ Failed to load department head from professors:", err.message);
+  }
+
+  // Fallback to static config if no DB match
+  if (DEPARTMENT_HEAD_FALLBACKS[key]) {
+    return DEPARTMENT_HEAD_FALLBACKS[key];
+  }
+
+  return null;
+}
 
 module.exports = router;
 

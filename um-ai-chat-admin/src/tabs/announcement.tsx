@@ -153,79 +153,81 @@ export default function Announcement() {
         <div className="flex justify-center justify-self-center text-xl xl:text-2xl 2xl:text-[32px] font-bold w-[180px] xl:w-[220px] 2xl:w-[250px] h-[42px] xl:h-[46px] 2xl:h-[50px] mx-auto ">
           <h1 className="truncate">Announcement</h1>
         </div>
-        <div className="w-full max-w-[1170px] h-auto mt-6 xl:mx-10 px-4 flex flex-col">
-          <div className="">
-            <div className="flex flex-wrap gap-4">
-              <div className="flex flex-col">
-                <label className="text-white text-sm mb-1">Title</label>
-                <input 
-                  type="text"
-                  className="w-[200px] px-3 py-2 text-black rounded"
-                  placeholder="Enter title" 
-                  value={editingAnnouncement ? editForm.title : newAnnouncement.title}
-                  onChange={(e) => editingAnnouncement 
-                    ? setEditForm({ ...editForm, title: e.target.value })
-                    : setNewAnnouncement({ ...newAnnouncement, title: e.target.value })
-                  } 
-                />
-              </div>
+        <div className="w-full max-w-[1170px] h-auto mt-6 xl:mx-10 px-4">
+          <div className="bg-[#292929] border border-white rounded-2xl p-4 flex flex-col h-[615px]">
+            <div className="mb-4">
+              <div className="flex flex-wrap gap-4">
+                <div className="flex flex-col">
+                  <label className="text-white text-sm mb-1">Title</label>
+                  <input 
+                    type="text"
+                    className="w-[200px] px-3 py-2 text-black rounded"
+                    placeholder="Enter title" 
+                    value={editingAnnouncement ? editForm.title : newAnnouncement.title}
+                    onChange={(e) => editingAnnouncement 
+                      ? setEditForm({ ...editForm, title: e.target.value })
+                      : setNewAnnouncement({ ...newAnnouncement, title: e.target.value })
+                    } 
+                  />
+                </div>
 
-              <div className="flex flex-col">
-                <label className="text-white text-sm mb-1">Description</label>
-                <textarea
-                  className="w-[400px] h-[40px] px-3 py-2 text-black rounded"
-                  placeholder="Enter description"
-                  value={editingAnnouncement ? editForm.description : newAnnouncement.description}
-                  onChange={(e) => editingAnnouncement 
-                    ? setEditForm({ ...editForm, description: e.target.value })
-                    : setNewAnnouncement({ ...newAnnouncement, description: e.target.value })
-                  }
-                />
-              </div>
+                <div className="flex flex-col">
+                  <label className="text-white text-sm mb-1">Description</label>
+                  <textarea
+                    className="w-[400px] h-[40px] px-3 py-2 text-black rounded"
+                    placeholder="Enter description"
+                    value={editingAnnouncement ? editForm.description : newAnnouncement.description}
+                    onChange={(e) => editingAnnouncement 
+                      ? setEditForm({ ...editForm, description: e.target.value })
+                      : setNewAnnouncement({ ...newAnnouncement, description: e.target.value })
+                    }
+                  />
+                </div>
 
-              <div className="flex flex-col justify-end">
-                {editingAnnouncement ? (
-                  <div className="flex space-x-2">
+                <div className="flex flex-col justify-end">
+                  {editingAnnouncement ? (
+                    <div className="flex space-x-2">
+                      <button 
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold" 
+                        onClick={saveEdit}
+                      >
+                        Update
+                      </button>
+                      <button 
+                        className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold" 
+                        onClick={cancelEdit}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
                     <button 
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold" 
-                      onClick={saveEdit}
+                      className="w-[100px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold"
+                      onClick={addAnnouncement}
                     >
-                      Update
+                      Add Record
                     </button>
-                    <button 
-                      className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold" 
-                      onClick={cancelEdit}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button 
-                    className="w-[100px] h-[40px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold"
-                    onClick={addAnnouncement}
-                  >
-                    Add Record
-                  </button>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="w-full h-[590px] bg-[#3C3C3C] mt-3 border-white border-2 rounded-lg overflow-y-auto">
-            {loading ? (
-              <div className="flex justify-center items-center h-full">
-                <div className="text-white text-xl">Loading...</div>
-              </div>
-            ) : (
-              <DataGrid 
-                data={announcements}
-                columns={announcementColumns}
-                height="585px"
-                className="text-white text-[14px] bg-[#292929]"
-                showSearch={false}
-                pageSize={14}
-              />
-            )}
+            <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-hidden">
+              {loading ? (
+                <div className="flex justify-center items-center h-full">
+                  <div className="text-white text-xl">Loading...</div>
+                </div>
+              ) : (
+                <DataGrid 
+                  data={announcements}
+                  columns={announcementColumns}
+                  height="520px"
+                  className="text-white text-[14px] bg-[#292929]"
+                  showSearch={false}
+                  pageSize={14}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

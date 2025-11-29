@@ -161,6 +161,7 @@ router.post("/request-password-reset", async (req, res) => {
         });
     } catch (e) {
         console.error("Error requesting password reset:", e);
+        // Keep a generic error for the client; details are only in server logs
         return res.status(500).json({ error: "Unable to process password reset request" });
     }
 });
