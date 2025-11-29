@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -11,7 +11,7 @@ model admins {
   id              Int           @id @default(autoincrement())
   username        String        @unique(map: "username") @db.VarChar(100)
   password_hashed String        @db.VarChar(255)
-  created_at      DateTime?     @default(now())
+  created_at      DateTime?     @default(now()) @db.DateTime(0)
   buildings       buildings[]
   departments     departments[]
   logs            logs[]
@@ -29,8 +29,8 @@ model admins {
 model buildings {
   id         Int       @id @default(autoincrement())
   name       String    @db.VarChar(100)
-  created_at DateTime? @default(now())
-  updated_at DateTime? @default(now())
+  created_at DateTime? @default(now()) @db.DateTime(0)
+  updated_at DateTime? @default(now()) @db.DateTime(0)
   admin_id   Int?
   admins     admins?   @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "buildings_ibfk_1")
   offices    offices[]
@@ -44,7 +44,7 @@ model departments {
   name       String       @db.VarChar(100)
   short_name String?      @db.VarChar(50)
   admin_id   Int?
-  created_at DateTime     @default(now())
+  created_at DateTime     @default(now()) @db.DateTime(0)
   admins     admins?      @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "departments_ibfk_1")
   professors professors[]
 
@@ -72,7 +72,7 @@ model offices {
   lunch_start String?    @db.VarChar(10)
   lunch_end   String?    @db.VarChar(10)
   admin_id    Int?
-  created_at  DateTime   @default(now())
+  created_at  DateTime   @default(now()) @db.DateTime(0)
   buildings   buildings? @relation(fields: [building_id], references: [id], onUpdate: NoAction, map: "offices_ibfk_1")
   admins      admins?    @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "offices_ibfk_2")
 
@@ -89,7 +89,7 @@ model professors {
   program       String?      @db.VarChar(50)
   department_id Int?
   admin_id      Int?
-  created_at    DateTime     @default(now())
+  created_at    DateTime     @default(now()) @db.DateTime(0)
   departments   departments? @relation(fields: [department_id], references: [id], onUpdate: NoAction, map: "professors_ibfk_1")
   admins        admins?      @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "professors_ibfk_2")
 
@@ -105,7 +105,7 @@ model rooms {
   admin_id    Int?
   status      String?    @db.VarChar(30)
   type        String     @default("Lecture") @db.VarChar(30)
-  created_at  DateTime   @default(now())
+  created_at  DateTime   @default(now()) @db.DateTime(0)
   buildings   buildings? @relation(fields: [building_id], references: [id], onUpdate: NoAction, map: "rooms_ibfk_1")
   admins      admins?    @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "rooms_ibfk_2")
 
