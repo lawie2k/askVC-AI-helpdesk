@@ -11,6 +11,8 @@ export default function Employee() {
   const [loading, setLoading] = useState(false);
   const [ntLoading, setNtLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'professors' | 'nonTeaching'>('professors');
+  const [filterDepartment, setFilterDepartment] = useState<string>('');
+  const [filterRole, setFilterRole] = useState<string>('');
 
   const [newProfessor, setNewProfessor] = useState({
     name: "",
@@ -84,6 +86,18 @@ export default function Employee() {
       setNtLoading(false);
     }
   };
+
+  // Filter professors by department
+  const filteredProfessors = professors.filter((prof: any) => {
+    if (!filterDepartment) return true;
+    return prof.department === filterDepartment || prof.department_id?.toString() === filterDepartment;
+  });
+
+  // Filter non-teaching staff by role
+  const filteredNonTeaching = nonTeaching.filter((staff: any) => {
+    if (!filterRole) return true;
+    return staff.role === filterRole;
+  });
 
   const professorColumns = [
     { field: 'name', headerName: 'Name', width: 70 },
@@ -341,6 +355,7 @@ export default function Employee() {
         </div>
 
         {activeTab === 'professors' && (
+          <>
           <div className="bg-[#292929] border border-white rounded-2xl p-4 flex flex-col h-[615px]">
 
             <div className="mb-4">
@@ -417,11 +432,14 @@ export default function Employee() {
                         ? setEditProfessorForm({ ...editProfessorForm, program: e.target.value })
                         : setNewProfessor({ ...newProfessor, program: e.target.value })
                     }
-                    className="w-[120px] h-[40px] px-3 py-2 text-black rounded"
+                    className="w-[200px] h-[40px] px-3 py-2 text-black rounded"
                   >
-                    <option value="">Program</option>
+                    <option value="">-- Choose Program --</option>
                     <option value="BSIT">BSIT</option>
                     <option value="BSCS">BSCS</option>
+                    <option value="BSCPE">BSCPE</option>
+                    <option value="BSEE">BSEE</option>
+                    <option value="BSECE">BSECE</option>
                   </select>
                 </div>
                 <div className="flex flex-col justify-end">
@@ -452,6 +470,22 @@ export default function Employee() {
               </div>
             </div>
 
+            <div className="mb-3">
+              <label className="text-white text-sm block mb-1">Filter by Department</label>
+              <select
+                className="w-[200px] px-3 py-2 text-black rounded"
+                value={filterDepartment}
+                onChange={(e) => setFilterDepartment(e.target.value)}
+              >
+                <option value="">All Departments</option>
+                {departments.map((dept: any) => (
+                  <option key={dept.id} value={dept.short_name || dept.id}>
+                    {dept.short_name || dept.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-y-auto">
               {loading ? (
                 <div className="flex justify-center items-center h-full">
@@ -459,9 +493,9 @@ export default function Employee() {
                 </div>
               ) : (
                 <DataGrid
-                  data={professors}
+                  data={filteredProfessors}
                   columns={professorColumns}
-                  height="520px"
+                  height="480px"
                   className="text-white text-[12px] bg-[#292929]"
                   showSearch={false}
                   pageSize={10}
@@ -469,9 +503,11 @@ export default function Employee() {
               )}
             </div>
           </div>
+          </>
         )}
 
         {activeTab === 'nonTeaching' && (
+          <>
           <div className="bg-[#292929] border border-white rounded-2xl p-4 flex flex-col h-[615px]">
 
             <div className="mb-4">
@@ -535,6 +571,20 @@ export default function Employee() {
               </div>
             </div>
 
+            <div className="mb-3">
+              <label className="text-white text-sm block mb-1">Filter by Role</label>
+              <select
+                className="w-[200px] px-3 py-2 text-black rounded"
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
+              >
+                <option value="">All Roles</option>
+                {NON_TEACHING_ROLES.map((role) => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-y-auto">
               {ntLoading ? (
                 <div className="flex justify-center items-center h-full">
@@ -542,9 +592,9 @@ export default function Employee() {
                 </div>
               ) : (
                 <DataGrid
-                  data={nonTeaching}
+                  data={filteredNonTeaching}
                   columns={staffColumns}
-                  height="520px"
+                  height="480px"
                   className="text-white text-[14px] bg-[#292929]"
                   showSearch={false}
                   pageSize={10}
@@ -552,6 +602,7 @@ export default function Employee() {
               )}
             </div>
           </div>
+          </>
         )}
       </div>
     </div>
