@@ -5,6 +5,7 @@ const { authenticateAdmin, logAdminActivity } = require("../middleware/adminAuth
 const router = express.Router();
 
 
+
 async function findDepartmentIdByShortName(shortName) {
   if (!shortName) return null;
   const department = await prisma.departments.findFirst({
@@ -18,23 +19,32 @@ async function findDepartmentIdByShortName(shortName) {
 router.get('/', async (_req, res) => {
   try {
     const professors = await prisma.professors.findMany({
-      include: {
-        departments: {
-          select: { short_name: true },
-        },
-      },
       orderBy: { name: 'asc' },
     });
 
-    const shaped = professors.map((prof) => ({
-      ...prof,
-      department: prof.departments?.short_name || null,
+    // Get departments
+    const departmentIds = [...new Set(professors.map(p => p.department_id).filter(Boolean))];
+    const departments = departmentIds.length > 0 
+      ? await prisma.departments.findMany({
+          where: { id: { in: departmentIds } },
+          select: { id: true, short_name: true },
+        })
+      : [];
+    
+    const deptMap = departments.reduce((acc, d) => {
+      acc[d.id] = d.short_name;
+      return acc;
+    }, {});
+
+    const result = professors.map((p) => ({
+      ...p,
+      department: p.department_id ? (deptMap[p.department_id] || null) : null,
     }));
 
-    res.json(shaped);
+    res.json(result);
   } catch (err) {
     console.error('Error fetching professors:', err);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: err.message || 'Database error' });
   }
 });
 
@@ -83,9 +93,9 @@ router.post('/migrate', authenticateAdmin, async (req, res) => {
 });
 
 router.post('/', authenticateAdmin, async (req, res) => {
-  const { name, nickname, position, email, program, department } = req.body; // department short_name
-  if (!name || !position || !email || !department) {
-    return res.status(400).json({ error: 'name, position, email, department are required' });
+  const { name, position, email, program, department } = req.body; // department short_name
+  if (!name || !position || !department) {
+    return res.status(400).json({ error: 'name, position, department are required' });
   }
 
   try {
@@ -93,9 +103,8 @@ router.post('/', authenticateAdmin, async (req, res) => {
     const professor = await prisma.professors.create({
       data: {
         name,
-        nickname: nickname ?? null,
         position,
-        email,
+        email: email ?? null,
         program: program ?? null,
         department_id: departmentId,
         admin_id: req.admin?.id || null,
@@ -115,9 +124,9 @@ router.post('/', authenticateAdmin, async (req, res) => {
 
 router.put('/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
-  const { name, nickname, position, email, program, department } = req.body; // department short_name
-  if (!name || !position || !email || !department) {
-    return res.status(400).json({ error: 'name, position, email, department are required' });
+  const { name, position, email, program, department } = req.body; // department short_name
+  if (!name || !position || !department) {
+    return res.status(400).json({ error: 'name, position, department are required' });
   }
 
   try {
@@ -126,9 +135,8 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
       where: { id: Number(id) },
       data: {
         name,
-        nickname: nickname ?? null,
         position,
-        email,
+        email: email ?? null,
         program: program ?? null,
         department_id: departmentId,
         admin_id: req.admin?.id || null,
