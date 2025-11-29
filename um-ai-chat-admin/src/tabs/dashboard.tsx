@@ -27,7 +27,7 @@ ChartJS.register(
 
 export default function Dashboard() {
     const [rooms, setRooms] = useState<any[]>([]);
-    const [logs, setLogs] = useState([]);
+    const [logs, setLogs] = useState<any[]>([]);
     const [topQuestions, setTopQuestions] = useState<{ question: string; count: number }[]>([]);
     const [professors, setProfessors] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
