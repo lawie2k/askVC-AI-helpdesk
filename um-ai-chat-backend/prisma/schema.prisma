@@ -11,7 +11,7 @@ model admins {
   id              Int           @id @default(autoincrement())
   username        String        @unique(map: "username") @db.VarChar(100)
   password_hashed String        @db.VarChar(255)
-  created_at      DateTime?     @default(now()) @db.DateTime(0)
+  created_at      DateTime?     @default(now())
   buildings       buildings[]
   departments     departments[]
   logs            logs[]
@@ -29,14 +29,14 @@ model admins {
 model buildings {
   id         Int       @id @default(autoincrement())
   name       String    @db.VarChar(100)
-  created_at DateTime? @default(now()) @db.DateTime(0)
-  updated_at DateTime? @default(now()) @db.DateTime(0)
+  created_at DateTime? @default(now())
+  updated_at DateTime? @default(now())
   admin_id   Int?
   admins     admins?   @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "buildings_ibfk_1")
   offices    offices[]
   rooms      rooms[]
 
-  @@index([admin_id], map: "admin_id")
+  @@index([admin_id], map: "buildings_admin_id_idx")
 }
 
 model departments {
@@ -44,11 +44,11 @@ model departments {
   name       String       @db.VarChar(100)
   short_name String?      @db.VarChar(50)
   admin_id   Int?
-  created_at DateTime     @default(now()) @db.DateTime(0)
+  created_at DateTime     @default(now())
   admins     admins?      @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "departments_ibfk_1")
   professors professors[]
 
-  @@index([admin_id], map: "admin_id")
+  @@index([admin_id], map: "departments_admin_id_idx")
 }
 
 model logs {
@@ -56,10 +56,10 @@ model logs {
   admin_id   Int?
   action     String    @db.VarChar(255)
   details    String?   @db.Text
-  created_at DateTime? @default(now()) @db.DateTime(0)
+  created_at DateTime? @default(now())
   admins     admins?   @relation(fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "logs_ibfk_1")
 
-  @@index([admin_id], map: "admin_id")
+  @@index([admin_id], map: "logs_admin_id_idx")
 }
 
 model offices {
@@ -72,12 +72,12 @@ model offices {
   lunch_start String?    @db.VarChar(10)
   lunch_end   String?    @db.VarChar(10)
   admin_id    Int?
-  created_at  DateTime   @default(now()) @db.DateTime(0)
+  created_at  DateTime   @default(now())
   buildings   buildings? @relation(fields: [building_id], references: [id], onUpdate: NoAction, map: "offices_ibfk_1")
   admins      admins?    @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "offices_ibfk_2")
 
-  @@index([admin_id], map: "admin_id")
-  @@index([building_id], map: "building_id")
+  @@index([admin_id], map: "offices_admin_id_idx")
+  @@index([building_id], map: "offices_building_id_idx")
 }
 
 model professors {
@@ -89,12 +89,12 @@ model professors {
   program       String?      @db.VarChar(50)
   department_id Int?
   admin_id      Int?
-  created_at    DateTime     @default(now()) @db.DateTime(0)
+  created_at    DateTime     @default(now())
   departments   departments? @relation(fields: [department_id], references: [id], onUpdate: NoAction, map: "professors_ibfk_1")
   admins        admins?      @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "professors_ibfk_2")
 
-  @@index([admin_id], map: "admin_id")
-  @@index([department_id], map: "department_id")
+  @@index([admin_id], map: "professors_admin_id_idx")
+  @@index([department_id], map: "professors_department_id_idx")
 }
 
 model rooms {
@@ -105,42 +105,42 @@ model rooms {
   admin_id    Int?
   status      String?    @db.VarChar(30)
   type        String     @default("Lecture") @db.VarChar(30)
-  created_at  DateTime   @default(now()) @db.DateTime(0)
+  created_at  DateTime   @default(now())
   buildings   buildings? @relation(fields: [building_id], references: [id], onUpdate: NoAction, map: "rooms_ibfk_1")
   admins      admins?    @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "rooms_ibfk_2")
 
-  @@index([admin_id], map: "admin_id")
-  @@index([building_id], map: "building_id")
+  @@index([admin_id], map: "rooms_admin_id_idx")
+  @@index([building_id], map: "rooms_building_id_idx")
 }
 
 model rules {
   id          Int      @id @default(autoincrement())
   description String   @db.Text
   admin_id    Int?
-  created_at  DateTime @default(now()) @db.DateTime(0)
+  created_at  DateTime @default(now())
   admins      admins?  @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "rules_ibfk_1")
 
-  @@index([admin_id], map: "admin_id")
+  @@index([admin_id], map: "rules_admin_id_idx")
 }
 
 model vision_mission {
   id          Int      @id @default(autoincrement())
   description String   @db.Text
   admin_id    Int?
-  created_at  DateTime @default(now()) @db.DateTime(0)
+  created_at  DateTime @default(now())
   admins      admins?  @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "vision_mission_ibfk_1")
 
-  @@index([admin_id], map: "admin_id")
+  @@index([admin_id], map: "vision_mission_admin_id_idx")
 }
 
 model campus_info {
   id          Int      @id @default(autoincrement())
   description String   @db.Text
   admin_id    Int?
-  created_at  DateTime @default(now()) @db.DateTime(0)
+  created_at  DateTime @default(now())
   admins      admins?  @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "campus_info_ibfk_1")
 
-  @@index([admin_id], map: "admin_id")
+  @@index([admin_id], map: "campus_info_admin_id_idx")
 }
 
 model announcements {
@@ -148,10 +148,10 @@ model announcements {
   title       String   @db.VarChar(255)
   description String   @db.Text
   admin_id    Int?
-  created_at  DateTime @default(now()) @db.DateTime(0)
+  created_at  DateTime @default(now())
   admins      admins?  @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "announcements_ibfk_1")
 
-  @@index([admin_id], map: "admin_id")
+  @@index([admin_id], map: "announcements_admin_id_idx")
 }
 
 model non_teaching_staff {
@@ -159,10 +159,10 @@ model non_teaching_staff {
   name        String   @db.VarChar(100)
   role        String   @db.VarChar(50)
   admin_id    Int?
-  created_at  DateTime @default(now()) @db.DateTime(0)
+  created_at  DateTime @default(now())
   admins      admins?  @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "non_teaching_staff_ibfk_1")
 
-  @@index([admin_id], map: "admin_id")
+  @@index([admin_id], map: "non_teaching_staff_admin_id_idx")
 }
 
 model settings {
@@ -170,17 +170,17 @@ model settings {
   key_name   String   @unique(map: "key_name") @db.VarChar(100)
   value      String   @db.Text
   admin_id   Int?
-  created_at DateTime @default(now()) @db.DateTime(0)
+  created_at DateTime @default(now())
   admins     admins?  @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "settings_ibfk_1")
 
-  @@index([admin_id], map: "admin_id")
+  @@index([admin_id], map: "settings_admin_id_idx")
 }
 
 model users {
   id              Int       @id @default(autoincrement())
   email           String    @unique(map: "email") @db.VarChar(255)
   password_hashed String    @db.VarChar(255)
-  created_at      DateTime? @default(now()) @db.DateTime(0)
+  created_at      DateTime? @default(now())
   password_reset_tokens password_reset_tokens[]
   historyChats    historyChats[]
 }
@@ -191,7 +191,7 @@ model password_reset_tokens {
   code_hash  String   @db.VarChar(255)
   expires_at DateTime
   used       Boolean  @default(false)
-  created_at DateTime @default(now()) @db.DateTime(0)
+  created_at DateTime @default(now())
   users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "password_resets_user_fk")
 
   @@index([user_id], map: "password_resets_user_idx")
@@ -202,7 +202,7 @@ model historyChats {
   user_id    Int
   question   String   @db.Text
   answer     String   @db.Text
-  created_at DateTime @default(now()) @db.DateTime(0)
+  created_at DateTime @default(now())
   users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "history_chats_user_fk")
 
   @@index([user_id], map: "history_chats_user_idx")
