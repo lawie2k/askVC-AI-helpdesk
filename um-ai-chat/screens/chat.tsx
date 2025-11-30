@@ -1,5 +1,5 @@
 import React from "react";
-import {View, Text, Platform, TouchableOpacity, Image} from "react-native";
+import {View, Text, Platform, TouchableOpacity, Image, Modal, Dimensions} from "react-native";
 import {
   GiftedChat,
   IMessage,
@@ -24,6 +24,9 @@ export function Chat({messages, setMessages}: {
     const BASE_URL = "https://askvc-ai-helpdesk.onrender.com";
 
     const [isThinking, setIsThinking] = React.useState(false);
+    const [selectedImage, setSelectedImage] = React.useState<{ url: string; name: string } | null>(null);
+    const screenWidth = Dimensions.get('window').width;
+    const screenHeight = Dimensions.get('window').height;
 
     const renderEmailHighlightedText = (text: string) => {
         const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig;
@@ -300,14 +303,20 @@ export function Chat({messages, setMessages}: {
                             {images.length > 0 && message?.user?._id === 2 && (
                                 <View className="ml-4 mt-2 mb-2">
                                     {images.map((img: any, idx: number) => (
-                                        <View key={idx} className="mb-2 bg-[#292929] rounded-lg p-2 max-w-[250px]">
-                                            <Image
-                                                source={{ uri: img.url }}
-                                                className="w-full h-[150px] rounded"
-                                                resizeMode="cover"
-                                            />
-                                            <Text className="text-white text-xs mt-1">{img.name}</Text>
-                                        </View>
+                                        <TouchableOpacity
+                                            key={idx}
+                                            onPress={() => setSelectedImage({ url: img.url, name: img.name })}
+                                            activeOpacity={0.8}
+                                        >
+                                            <View className="mb-2 bg-[#292929] rounded-lg p-2 max-w-[250px]">
+                                                <Image
+                                                    source={{ uri: img.url }}
+                                                    className="w-full h-[150px] rounded"
+                                                    resizeMode="cover"
+                                                />
+                                                <Text className="text-white text-xs mt-1">{img.name}</Text>
+                                            </View>
+                                        </TouchableOpacity>
                                     ))}
                                 </View>
                             )}
@@ -390,6 +399,81 @@ export function Chat({messages, setMessages}: {
 
                 </View>
             )}
+
+            {/* Full Screen Image Modal */}
+            <Modal
+                visible={selectedImage !== null}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setSelectedImage(null)}
+            >
+                <TouchableOpacity
+                    activeOpacity={1}
+                    style={{
+                        flex: 1,
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}
+                    onPress={() => setSelectedImage(null)}
+                >
+                    {selectedImage && (
+                        <>
+                            <TouchableOpacity
+                                activeOpacity={1}
+                                onPress={(e) => e.stopPropagation()}
+                                style={{
+                                    width: screenWidth * 0.95,
+                                    height: screenHeight * 0.8,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                }}
+                            >
+                                <Image
+                                    source={{ uri: selectedImage.url }}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        resizeMode: 'contain',
+                                    }}
+                                />
+                            </TouchableOpacity>
+                            <View style={{
+                                position: 'absolute',
+                                top: 50,
+                                left: 0,
+                                right: 0,
+                                alignItems: 'center',
+                            }}>
+                                <Text style={{
+                                    color: 'white',
+                                    fontSize: 16,
+                                    fontWeight: 'bold',
+                                    marginBottom: 10,
+                                }}>
+                                    {selectedImage.name}
+                                </Text>
+                            </View>
+                            <TouchableOpacity
+                                onPress={() => setSelectedImage(null)}
+                                style={{
+                                    position: 'absolute',
+                                    top: 40,
+                                    right: 20,
+                                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                    borderRadius: 20,
+                                    width: 40,
+                                    height: 40,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                }}
+                            >
+                                <Text style={{ color: 'white', fontSize: 24, fontWeight: 'bold' }}>×</Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
+                </TouchableOpacity>
+            </Modal>
         </View>
     );
 }
