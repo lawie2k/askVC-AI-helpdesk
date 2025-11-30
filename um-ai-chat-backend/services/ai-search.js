@@ -269,8 +269,24 @@ async function searchDatabase(question) {
         console.log("🚪 Searching ROOMS table...");
         const q = question.toLowerCase();
         
-        // Extract specific room identifier (e.g., "comlab 1", "room 301", "comlab1")
+        // Extract specific room identifier (e.g., "comlab 1", "room 301", "avr", "laboratory")
         let roomIdentifier = null;
+        let roomType = null;
+        
+        // Check for specific room types (avr, laboratory, lecture, etc.)
+        const roomTypes = [
+          { keywords: ['avr', 'audio visual', 'audio-visual'], name: 'avr' },
+          { keywords: ['laboratory', 'lab'], name: 'laboratory' },
+          { keywords: ['lecture', 'lecture room'], name: 'lecture' },
+          { keywords: ['comlab', 'computer lab', 'computer laboratory'], name: 'comlab' },
+        ];
+        
+        for (const type of roomTypes) {
+          if (type.keywords.some(keyword => q.includes(keyword))) {
+            roomType = type.name;
+            break;
+          }
+        }
         
         // Check for "comlab" with number (e.g., "comlab 1", "comlab1", "comlab 10")
         const comlabMatch = q.match(/\bcomlab\s*(\d+)\b/i);
@@ -294,6 +310,11 @@ async function searchDatabase(question) {
           }
         }
         
+        // If we have a room type but no identifier, use the type as identifier
+        if (!roomIdentifier && roomType) {
+          roomIdentifier = roomType;
+        }
+        
         let query = `
           SELECT r.*, b.name as building_name, "room_query" as match_type 
           FROM rooms r 
@@ -302,9 +323,9 @@ async function searchDatabase(question) {
         
         const queryParams = [];
         if (roomIdentifier) {
-          // Try exact match first, then partial match
-          query += ` WHERE LOWER(r.name) LIKE ? OR LOWER(r.name) = ?`;
-          queryParams.push(`%${roomIdentifier}%`, roomIdentifier);
+          // Search for rooms that match the identifier in their name or type
+          query += ` WHERE LOWER(r.name) LIKE ? OR LOWER(r.type) LIKE ?`;
+          queryParams.push(`%${roomIdentifier}%`, `%${roomIdentifier}%`);
         }
         
         db.query(query, queryParams, (err, results) => {
@@ -314,6 +335,7 @@ async function searchDatabase(question) {
             // Score results: exact match gets highest score, partial match gets lower
             const scoredResults = results.map(result => {
               const roomNameLower = (result.name || '').toLowerCase().trim();
+              const roomTypeLower = (result.type || '').toLowerCase().trim();
               let score = 50; // Base score for partial match
               
               if (roomIdentifier) {
@@ -335,12 +357,16 @@ async function searchDatabase(question) {
                   // Check if the prefix matches (comlab, room, etc.)
                   const identifierPrefix = normalizedIdentifier.replace(/[0-9\s]/g, '').toLowerCase();
                   const roomNamePrefix = normalizedRoomName.replace(/[0-9\s]/g, '').toLowerCase();
-                  if (identifierPrefix && roomNamePrefix.includes(identifierPrefix) || 
-                      identifierPrefix.includes(roomNamePrefix)) {
+                  if (identifierPrefix && (roomNamePrefix.includes(identifierPrefix) || 
+                      identifierPrefix.includes(roomNamePrefix))) {
                     score = 95; // Very close match (same number, similar prefix)
                   } else {
                     score = 80; // Same number but different prefix
                   }
+                }
+                // Room type match (e.g., "avr" matches room with type "AVR")
+                else if (roomType && (roomTypeLower === roomType || roomTypeLower.includes(roomType))) {
+                  score = 90; // Room type match
                 }
                 // Partial match (contains the identifier)
                 else if (normalizedRoomName.includes(normalizedIdentifier) || 
