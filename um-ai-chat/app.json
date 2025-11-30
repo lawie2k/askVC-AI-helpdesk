@@ -37,6 +37,12 @@
         "resizeMode": "contain",
         "backgroundColor": "#900C27"
       },
+      "splash": {
+        "image": "./assets/ios-light.png",
+        "imageWidth": 200,
+        "resizeMode": "contain",
+        "backgroundColor": "#900C27"
+      },
       "package": "com.lawie.umaichat"
     },
     "web": {

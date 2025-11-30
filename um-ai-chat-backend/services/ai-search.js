@@ -16,6 +16,7 @@ async function searchDatabase(question) {
     const isBuildings = isBuildingsQuestion(question);
     const isPrograms = isProgramsQuestion(question);
     const isOffices = isOfficesQuestion(question);
+    const isRooms = isRoomsQuestion(question);
 
 
     const targetDepartment = extractDepartmentFromQuestion(question);
@@ -27,11 +28,12 @@ async function searchDatabase(question) {
       { name: "departments", priority: 1 },  // Search departments first
       { name: "professors", priority: 2 },   // Then professors
       { name: "buildings", priority: 3 },    // Then buildings
-      { name: "offices", priority: 4 },      // Then offices
-      { name: "rules", priority: 5 },        // Campus rules
-      { name: "vision_mission", priority: 6 }, // Vision & mission
-      { name: "campus_info", priority: 7 },  // Services & other info
-      { name: "settings", priority: 8 }      // Finally settings
+      { name: "rooms", priority: 4 },        // Then rooms
+      { name: "offices", priority: 5 },      // Then offices
+      { name: "rules", priority: 6 },        // Campus rules
+      { name: "vision_mission", priority: 7 }, // Vision & mission
+      { name: "campus_info", priority: 8 },  // Services & other info
+      { name: "settings", priority: 9 }      // Finally settings
     ];
 
     if (tablesToSearch.length === 0) {
@@ -240,6 +242,50 @@ async function searchDatabase(question) {
         db.query('SELECT *, "buildings_query" as match_type FROM buildings', (err, results) => {
           if (!err && results.length > 0) {
             console.log(`   ✅ Found ${results.length} buildings`);
+            const scoredResults = results.map(result => ({
+              ...result,
+              relevance_score: 100
+            }));
+            searchResults.push({
+              table: table,
+              data: scoredResults,
+              priority: tableInfo.priority
+            });
+          }
+
+          completedSearches++;
+          if (completedSearches === tablesToSearch.length) {
+            const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
+            resolve(finalResults);
+          }
+        });
+        return;
+      }
+
+      // ====================================================================
+      // ROOMS SEARCH - When user asks about room locations
+      // ====================================================================
+      if (isRooms && table === 'rooms') {
+        console.log("🚪 Searching ROOMS table...");
+        // Extract room number from question if present
+        const roomNumberMatch = question.match(/\b(room\s*)?(\d{3,4})\b/i);
+        const roomNumber = roomNumberMatch ? roomNumberMatch[2] : null;
+        
+        let query = `
+          SELECT r.*, b.name as building_name, "room_query" as match_type 
+          FROM rooms r 
+          LEFT JOIN buildings b ON r.building_id = b.id
+        `;
+        
+        const queryParams = [];
+        if (roomNumber) {
+          query += ` WHERE r.name LIKE ?`;
+          queryParams.push(`%${roomNumber}%`);
+        }
+        
+        db.query(query, queryParams, (err, results) => {
+          if (!err && results.length > 0) {
+            console.log(`   ✅ Found ${results.length} rooms`);
             const scoredResults = results.map(result => ({
               ...result,
               relevance_score: 100
@@ -489,6 +535,7 @@ function getSearchableColumns(table) {
     departments: "name, short_name",
     professors: "name, position, email, program",
     buildings: "name",
+    rooms: "name, floor, type",
     offices: "name, floor, open_time, close_time, lunch_start, lunch_end",
     rules: "description",
     vision_mission: "description",
