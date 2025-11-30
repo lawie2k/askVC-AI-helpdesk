@@ -267,9 +267,32 @@ async function searchDatabase(question) {
       // ====================================================================
       if (isRooms && table === 'rooms') {
         console.log("🚪 Searching ROOMS table...");
-        // Extract room number from question if present
-        const roomNumberMatch = question.match(/\b(room\s*)?(\d{3,4})\b/i);
-        const roomNumber = roomNumberMatch ? roomNumberMatch[2] : null;
+        const q = question.toLowerCase();
+        
+        // Extract specific room identifier (e.g., "comlab 1", "room 301", "comlab1")
+        let roomIdentifier = null;
+        
+        // Check for "comlab" with number (e.g., "comlab 1", "comlab1", "comlab 10")
+        const comlabMatch = q.match(/\bcomlab\s*(\d+)\b/i);
+        if (comlabMatch) {
+          roomIdentifier = `comlab ${comlabMatch[1]}`.toLowerCase();
+        }
+        
+        // Check for "room" with number (e.g., "room 301", "room301")
+        if (!roomIdentifier) {
+          const roomNumberMatch = q.match(/\broom\s*(\d{3,4})\b/i);
+          if (roomNumberMatch) {
+            roomIdentifier = `room ${roomNumberMatch[1]}`.toLowerCase();
+          }
+        }
+        
+        // Check for standalone 3-4 digit numbers (e.g., "301", "301A")
+        if (!roomIdentifier) {
+          const standaloneNumberMatch = q.match(/\b(\d{3,4}[a-z]?)\b/i);
+          if (standaloneNumberMatch) {
+            roomIdentifier = standaloneNumberMatch[1].toLowerCase();
+          }
+        }
         
         let query = `
           SELECT r.*, b.name as building_name, "room_query" as match_type 
@@ -278,21 +301,75 @@ async function searchDatabase(question) {
         `;
         
         const queryParams = [];
-        if (roomNumber) {
-          query += ` WHERE r.name LIKE ?`;
-          queryParams.push(`%${roomNumber}%`);
+        if (roomIdentifier) {
+          // Try exact match first, then partial match
+          query += ` WHERE LOWER(r.name) LIKE ? OR LOWER(r.name) = ?`;
+          queryParams.push(`%${roomIdentifier}%`, roomIdentifier);
         }
         
         db.query(query, queryParams, (err, results) => {
           if (!err && results.length > 0) {
             console.log(`   ✅ Found ${results.length} rooms`);
-            const scoredResults = results.map(result => ({
-              ...result,
-              relevance_score: 100
-            }));
+            
+            // Score results: exact match gets highest score, partial match gets lower
+            const scoredResults = results.map(result => {
+              const roomNameLower = (result.name || '').toLowerCase().trim();
+              let score = 50; // Base score for partial match
+              
+              if (roomIdentifier) {
+                // Normalize both for comparison (remove extra spaces, handle variations)
+                const normalizedIdentifier = roomIdentifier.replace(/\s+/g, ' ').trim();
+                const normalizedRoomName = roomNameLower.replace(/\s+/g, ' ').trim();
+                
+                // Extract just the number from identifier for comparison
+                const identifierNumber = normalizedIdentifier.replace(/[^0-9]/g, '');
+                const roomNameNumber = normalizedRoomName.replace(/[^0-9]/g, '');
+                
+                // Exact match (handles "comlab 1" vs "comlab1" vs "ComLab 1")
+                if (normalizedRoomName === normalizedIdentifier || 
+                    normalizedRoomName.replace(/\s/g, '') === normalizedIdentifier.replace(/\s/g, '')) {
+                  score = 100; // Perfect exact match
+                }
+                // Same number match (e.g., "comlab 1" matches "ComLab 1" or "comlab1")
+                else if (identifierNumber && roomNameNumber === identifierNumber) {
+                  // Check if the prefix matches (comlab, room, etc.)
+                  const identifierPrefix = normalizedIdentifier.replace(/[0-9\s]/g, '').toLowerCase();
+                  const roomNamePrefix = normalizedRoomName.replace(/[0-9\s]/g, '').toLowerCase();
+                  if (identifierPrefix && roomNamePrefix.includes(identifierPrefix) || 
+                      identifierPrefix.includes(roomNamePrefix)) {
+                    score = 95; // Very close match (same number, similar prefix)
+                  } else {
+                    score = 80; // Same number but different prefix
+                  }
+                }
+                // Partial match (contains the identifier)
+                else if (normalizedRoomName.includes(normalizedIdentifier) || 
+                         normalizedIdentifier.includes(normalizedRoomName)) {
+                  score = 75; // Partial match
+                }
+                // Contains the number
+                else if (identifierNumber && roomNameNumber.includes(identifierNumber)) {
+                  score = 60; // Number match but different format
+                }
+              }
+              
+              return {
+                ...result,
+                relevance_score: score
+              };
+            });
+            
+            // Sort by relevance score (highest first)
+            scoredResults.sort((a, b) => b.relevance_score - a.relevance_score);
+            
+            // Only return the top result if we have a specific identifier
+            const finalResults = roomIdentifier && scoredResults.length > 0 
+              ? [scoredResults[0]] // Only the best match
+              : scoredResults; // All results if no specific identifier
+            
             searchResults.push({
               table: table,
-              data: scoredResults,
+              data: finalResults,
               priority: tableInfo.priority
             });
           }

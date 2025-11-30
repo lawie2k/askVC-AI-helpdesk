@@ -190,23 +190,74 @@ router.post("/ask", async (req, res) => {
     let dbContext = "";
     const imageUrls = []; // Collect image URLs from rooms and offices
     
+    // Determine if question is specifically about rooms or offices
+    const questionLower = question.toLowerCase();
+    const isRoomQuestion = /\b(room|rooms|classroom|comlab|laboratory|lab)\b/i.test(question) || /\b(room\s*)?\d{3,4}\b/i.test(question);
+    const isOfficeQuestion = /\b(office|offices|sao|student affairs|registrar|cashier|clinic|library|faculty)\b/i.test(question);
+    
     if (dbResults.length > 0) {
       console.log(`📊 Found ${dbResults.length} relevant database results`);
       dbContext = "\n\nRelevant information from UM Visayan Campus database:\n";
+      
+      // Track the best match for images (highest relevance score)
+      let bestRoomMatch = null;
+      let bestOfficeMatch = null;
+      
       dbResults.forEach((result) => {
         dbContext += `\nFrom ${result.table} table:\n`;
         result.data.forEach((item) => {
           dbContext += `- ${JSON.stringify(item, null, 2)}\n`;
-          // Extract image URLs from rooms and offices
-          if ((result.table === "rooms" || result.table === "offices") && item.image_url) {
-            imageUrls.push({
-              url: item.image_url,
-              name: item.name || "Image",
-              type: result.table === "rooms" ? "room" : "office",
-            });
+          
+          // Only keep the best match for images (highest relevance score)
+          // Only include images from the relevant table type based on question
+          if (result.table === "rooms" && item.image_url) {
+            // Only include room images if question is about rooms, or if no office question
+            if (isRoomQuestion || (!isOfficeQuestion && !isRoomQuestion)) {
+              const relevance = item.relevance_score || 0;
+              if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
+                bestRoomMatch = {
+                  url: item.image_url,
+                  name: item.name || "Image",
+                  type: "room",
+                  relevance_score: relevance
+                };
+              }
+            }
+          }
+          
+          if (result.table === "offices" && item.image_url) {
+            // Only include office images if question is about offices, or if no room question
+            if (isOfficeQuestion || (!isRoomQuestion && !isOfficeQuestion)) {
+              const relevance = item.relevance_score || 0;
+              if (!bestOfficeMatch || relevance > (bestOfficeMatch.relevance_score || 0)) {
+                bestOfficeMatch = {
+                  url: item.image_url,
+                  name: item.name || "Image",
+                  type: "office",
+                  relevance_score: relevance
+                };
+              }
+            }
           }
         });
       });
+      
+      // Only add the best matches to imageUrls
+      // If question is specifically about rooms, only return room images
+      // If question is specifically about offices, only return office images
+      if (isRoomQuestion && bestRoomMatch) {
+        imageUrls.push(bestRoomMatch);
+      } else if (isOfficeQuestion && bestOfficeMatch) {
+        imageUrls.push(bestOfficeMatch);
+      } else {
+        // If question is ambiguous, return the best match from either
+        if (bestRoomMatch) {
+          imageUrls.push(bestRoomMatch);
+        }
+        if (bestOfficeMatch) {
+          imageUrls.push(bestOfficeMatch);
+        }
+      }
       const timeGuidance = await generateTimeAwareGuidance(dbResults);
       if (timeGuidance) {
         dbContext += `\nTime-aware guidance:\n${timeGuidance}\n`;
