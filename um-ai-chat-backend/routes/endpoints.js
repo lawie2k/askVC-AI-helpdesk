@@ -34,6 +34,7 @@ const announcementsRoutes = require("./api/announcements");
 const logsRoutes = require("./api/logs");
 const chatHistoryRoutes = require("./api/chatHistory");
 const statsRoutes = require("./api/stats");
+const uploadRoutes = require("./api/upload");
 
 // Mount API routes
 router.use("/api/departments", departmentsRoutes);
@@ -50,6 +51,7 @@ router.use("/api/settings", settingsRoutes);
 router.use("/api/logs", logsRoutes);
 router.use("/api/chat-history", chatHistoryRoutes);
 router.use("/api/stats", statsRoutes);
+router.use("/api/upload", uploadRoutes);
 
 // ============================================================================
 // EXPORT ROUTER - Make endpoints available to server.js

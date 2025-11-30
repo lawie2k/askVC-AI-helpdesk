@@ -1,5 +1,5 @@
 import React from "react";
-import {View, Text, Platform, TouchableOpacity} from "react-native";
+import {View, Text, Platform, TouchableOpacity, Image} from "react-native";
 import {
   GiftedChat,
   IMessage,
@@ -93,6 +93,8 @@ export function Chat({messages, setMessages}: {
                 text: answerText,
                 createdAt: new Date(),
                 user: {_id: 2, name: "UM AI"},
+                // Store images in custom data
+                ...(data.images && data.images.length > 0 ? { images: data.images } : {}),
             };
             setMessages((prev) => GiftedChat.append(prev, [aiMessage]));
 
@@ -289,7 +291,28 @@ export function Chat({messages, setMessages}: {
                 }}
                 renderMessage={(props) => {
                     const { key, ...messageProps } = props as any;
-                    return <Message key={key} {...messageProps} />;
+                    const message = messageProps.currentMessage as any;
+                    const images = message?.images || [];
+                    
+                    return (
+                        <View>
+                            <Message key={key} {...messageProps} />
+                            {images.length > 0 && message?.user?._id === 2 && (
+                                <View className="ml-4 mt-2 mb-2">
+                                    {images.map((img: any, idx: number) => (
+                                        <View key={idx} className="mb-2 bg-[#292929] rounded-lg p-2 max-w-[250px]">
+                                            <Image
+                                                source={{ uri: img.url }}
+                                                className="w-full h-[150px] rounded"
+                                                resizeMode="cover"
+                                            />
+                                            <Text className="text-white text-xs mt-1">{img.name}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    );
                 }}
                 renderFooter={() =>
                     isThinking ? (

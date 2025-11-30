@@ -50,7 +50,7 @@ router.get("/structure", async (_req, res) => {
 // CREATE ROOM (NO AVAILABILITY/STATUS)
 // ============================================================================
 router.post("/", authenticateAdmin, async (req, res) => {
-  const { name, building_id, floor, type } = req.body;
+  const { name, building_id, floor, type, image_url } = req.body;
 
   if (!name || !building_id || !floor) {
     return res.status(400).json({ error: "Name, building, and floor are required" });
@@ -63,6 +63,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         building_id: Number(building_id),
         floor,
         type: type ?? "Lecture",
+        image_url: image_url || null,
         admin_id: req.admin?.id || null,
       },
     });
@@ -80,7 +81,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
 // ============================================================================
 router.put("/:id", authenticateAdmin, async (req, res) => {
   const { id } = req.params;
-  const { name, building_id, floor, type } = req.body;
+  const { name, building_id, floor, type, image_url } = req.body;
 
   if (!name || !building_id || !floor) {
     return res.status(400).json({ error: "Name, building, and floor are required" });
@@ -94,6 +95,7 @@ router.put("/:id", authenticateAdmin, async (req, res) => {
         building_id: Number(building_id),
         floor,
         type: type ?? "Lecture",
+        image_url: image_url || null,
         admin_id: req.admin?.id || null,
       },
     });

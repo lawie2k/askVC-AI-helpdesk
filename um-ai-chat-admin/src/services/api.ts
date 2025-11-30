@@ -218,6 +218,72 @@ export const statsAPI = {
   getTopQuestions: () => apiCall('/api/stats/top-questions'),
 };
 
+// Upload API functions
+export const uploadAPI = {
+  uploadImage: async (file: File) => {
+    const token = localStorage.getItem('adminToken');
+    console.log('🔑 Token exists:', !!token);
+    console.log('🌐 API URL:', `${API_BASE_URL}/api/upload/image`);
+    
+    const formData = new FormData();
+    formData.append('image', file);
+    console.log('📦 FormData created with file:', file.name, file.size, 'bytes');
+
+    try {
+      console.log('🚀 Sending upload request...');
+      const response = await fetch(`${API_BASE_URL}/api/upload/image`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          // Don't set Content-Type - browser will set it with boundary for FormData
+        },
+        body: formData,
+      });
+
+      console.log('📥 Response status:', response.status, response.statusText);
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+
+      // Read response as text first (can only read once)
+      const responseText = await response.text();
+      console.log('📥 Response text:', responseText);
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch (e) {
+          // Not JSON, use text as error message
+          errorData = { error: responseText || `HTTP ${response.status}: ${response.statusText}` };
+        }
+        console.error('❌ Upload error response:', errorData);
+        const errorMessage = errorData.error || errorData.message || `API Error: ${response.status} ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+
+      // Response is OK, parse as JSON
+      let result;
+      try {
+        result = JSON.parse(responseText);
+        console.log('✅ Upload response:', result);
+      } catch (e) {
+        console.error('❌ Failed to parse response as JSON:', e, 'Response text:', responseText);
+        throw new Error(`Invalid JSON response from server: ${responseText.substring(0, 100)}`);
+      }
+      return result;
+    } catch (error: any) {
+      console.error('❌ Upload request failed:', error);
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        throw new Error('Network error: Could not reach server. Check your connection.');
+      }
+      // Re-throw with a more descriptive message if it's just "Unknown error"
+      if (error.message === 'Unknown error' || !error.message) {
+        throw new Error('Upload failed: Server returned an error. Check backend logs for details.');
+      }
+      throw error;
+    }
+  },
+};
+
 // Admin Authentication API functions
 export const adminAuthAPI = {
   login: (username: string, password: string) => apiCall('/auth/admin/login', {

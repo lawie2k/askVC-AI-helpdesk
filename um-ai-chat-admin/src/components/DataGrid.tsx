@@ -7,6 +7,7 @@ interface DataGridProps {
   className?: string;
   showSearch?: boolean;
   pageSize?: number;
+  onRowClick?: (row: any) => void;
 }
 
 const DataGrid: React.FC<DataGridProps> = ({ 
@@ -15,7 +16,8 @@ const DataGrid: React.FC<DataGridProps> = ({
   height = "400px",
   className = "",
   showSearch = true,
-  pageSize = 10
+  pageSize = 10,
+  onRowClick
 }) => {
   const [sortField, setSortField] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -115,7 +117,20 @@ const DataGrid: React.FC<DataGridProps> = ({
           </thead>
           <tbody>
             {paginatedData.map((row, index) => (
-              <tr key={row.id || index} className="border-b border-gray-700 hover:bg-gray-800">
+              <tr 
+                key={row.id || index} 
+                className={`border-b border-gray-700 hover:bg-gray-800 ${onRowClick ? 'cursor-pointer' : ''}`}
+                onClick={(e) => {
+                  if (onRowClick) {
+                    // Don't trigger if clicking on action buttons
+                    const target = e.target as HTMLElement;
+                    if (target && (target.tagName === 'BUTTON' || target.closest('button'))) {
+                      return;
+                    }
+                    onRowClick(row);
+                  }
+                }}
+              >
                 {columns.map((column) => (
                   <td key={column.field} className="px-2 py-1 text-sm">
                     {renderCell(row, column)}

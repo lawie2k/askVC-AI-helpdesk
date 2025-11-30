@@ -71,6 +71,7 @@ model offices {
   close_time  String?    @db.VarChar(10)
   lunch_start String?    @db.VarChar(10)
   lunch_end   String?    @db.VarChar(10)
+  image_url   String?    @db.Text
   admin_id    Int?
   created_at  DateTime   @default(now()) @db.DateTime(0)
   buildings   buildings? @relation(fields: [building_id], references: [id], onUpdate: NoAction, map: "offices_ibfk_1")
@@ -104,6 +105,7 @@ model rooms {
   admin_id    Int?
   status      String?    @db.VarChar(30)
   type        String     @default("Lecture") @db.VarChar(30)
+  image_url   String?    @db.Text
   created_at  DateTime   @default(now()) @db.DateTime(0)
   buildings   buildings? @relation(fields: [building_id], references: [id], onUpdate: NoAction, map: "rooms_ibfk_1")
   admins      admins?    @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "rooms_ibfk_2")

@@ -32,7 +32,7 @@ router.get('/', async (_req, res) => {
 });
 
 router.post('/', authenticateAdmin, async (req, res) => {
-  const { name, building_id, floor, open_time, close_time, lunch_start, lunch_end } = req.body;
+  const { name, building_id, floor, open_time, close_time, lunch_start, lunch_end, image_url } = req.body;
   
   if (!name || !building_id || !floor) {
     return res.status(400).json({ error: 'Name, building, and floor are required' });
@@ -47,6 +47,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
         close_time: close_time || null,
         lunch_start: lunch_start || null,
         lunch_end: lunch_end || null,
+        image_url: image_url || null,
         // relations
         admins: req.admin?.id
           ? {
@@ -71,7 +72,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
 
 router.put('/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
-  const { name, building_id, floor, open_time, close_time, lunch_start, lunch_end } = req.body;
+  const { name, building_id, floor, open_time, close_time, lunch_start, lunch_end, image_url } = req.body;
   
   if (!name || !building_id || !floor) {
     return res.status(400).json({ error: 'Name, building, and floor are required' });
@@ -87,6 +88,7 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
         close_time: close_time || null,
         lunch_start: lunch_start || null,
         lunch_end: lunch_end || null,
+        image_url: image_url || null,
         admins: req.admin?.id
           ? {
               connect: { id: Number(req.admin.id) },

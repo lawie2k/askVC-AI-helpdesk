@@ -1,7 +1,7 @@
 
 import React, {useEffect, useMemo, useState} from "react";
 import DataGrid from "../components/DataGrid";
-import {officeAPI, buildingAPI} from "../services/api";
+import {officeAPI, buildingAPI, uploadAPI} from "../services/api";
 
 export default function offices() {
     const [offices, setOffices] = useState<any[]>([]);
@@ -27,6 +27,10 @@ export default function offices() {
         lunch_start: "",
         lunch_end: ""
     });
+    const [newOfficeImage, setNewOfficeImage] = useState<string>("");
+    const [editOfficeImage, setEditOfficeImage] = useState<string>("");
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
 
     useEffect(() => {
         loadOffices();
@@ -115,6 +119,34 @@ export default function offices() {
         },
     ];
 
+    const handleImageUpload = async (file: File, isEdit: boolean = false) => {
+        try {
+            setUploadingImage(true);
+            console.log("📤 Starting image upload...", { 
+                fileName: file.name, 
+                fileSize: file.size, 
+                fileType: file.type 
+            });
+            
+            const result = await uploadAPI.uploadImage(file);
+            console.log("✅ Upload successful:", result);
+            
+            if (isEdit) {
+                setEditOfficeImage(result.url);
+            } else {
+                setNewOfficeImage(result.url);
+            }
+            return result.url;
+        } catch (error: any) {
+            console.error("❌ Error uploading image:", error);
+            const errorMessage = error?.message || "Failed to upload image. Please try again.";
+            alert(`Upload failed: ${errorMessage}\n\nCheck console for details.`);
+            throw error;
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
     const addOffice = async () => {
         try {
             const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
@@ -124,7 +156,10 @@ export default function offices() {
                 return;
             }
             setLoading(true);
-            await officeAPI.create(newOffice);
+            await officeAPI.create({
+                ...newOffice,
+                image_url: newOfficeImage || null,
+            });
             await loadOffices();
             setNewOffice({
                 name: "",
@@ -135,6 +170,7 @@ export default function offices() {
                 lunch_start: "",
                 lunch_end: ""
             });
+            setNewOfficeImage("");
         } catch (error) {
             console.error('Error adding office:', error);
         } finally {
@@ -153,6 +189,7 @@ export default function offices() {
             lunch_start: office.lunch_start || '',
             lunch_end: office.lunch_end || ''
         });
+        setEditOfficeImage(office.image_url || "");
     };
 
     const cancelEdit = () => {
@@ -166,6 +203,7 @@ export default function offices() {
             lunch_start: "",
             lunch_end: ""
         });
+        setEditOfficeImage("");
     };
 
     const saveEdit = async () => {
@@ -177,7 +215,10 @@ export default function offices() {
                 return;
             }
             setLoading(true);
-            await officeAPI.update(editingOffice.id, editForm);
+            await officeAPI.update(editingOffice.id, {
+                ...editForm,
+                image_url: editOfficeImage || null,
+            });
             await loadOffices();
             cancelEdit();
         } catch (error) {
@@ -314,6 +355,34 @@ export default function offices() {
                     />
                 </div>
 
+                <div className="flex flex-col">
+                    <label className="text-white text-sm mb-1">Office Image</label>
+                    <input
+                        type="file"
+                        accept="image/*"
+                        className="w-[200px] px-3 py-2 text-white text-sm"
+                        onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                                await handleImageUpload(file, !!editingOffice);
+                            }
+                        }}
+                        disabled={uploadingImage}
+                    />
+                    {uploadingImage && (
+                        <span className="text-xs text-gray-400 mt-1">Uploading...</span>
+                    )}
+                    {(editingOffice ? editOfficeImage : newOfficeImage) && (
+                        <div className="mt-2">
+                            <img 
+                                src={editingOffice ? editOfficeImage : newOfficeImage} 
+                                alt="Office preview" 
+                                className="w-[200px] h-[120px] object-cover rounded border border-white"
+                            />
+                        </div>
+                    )}
+                </div>
+
               <div className="flex flex-col justify-end">
                 {editingOffice ? (
                   <div className="flex space-x-2">
@@ -371,11 +440,44 @@ export default function offices() {
                 className="text-white text-[14px] bg-[#292929]"
                 showSearch={false}
                 pageSize={14}
+                onRowClick={(row) => {
+                  if (row.image_url) {
+                    setSelectedImage({ url: row.image_url, name: row.name });
+                  }
+                }}
               />
             )}
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div 
+            className="bg-[#292929] rounded-lg p-6 max-w-4xl max-h-[90vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-white text-xl font-bold">{selectedImage.name}</h3>
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="text-white hover:text-gray-300 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            <img 
+              src={selectedImage.url} 
+              alt={selectedImage.name}
+              className="max-w-full max-h-[70vh] rounded-lg"
+            />
+          </div>
+        </div>
+      )}
         
       
    </div>

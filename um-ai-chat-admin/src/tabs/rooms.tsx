@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import DataGrid from "../components/DataGrid";
-import { roomAPI, buildingAPI } from "../services/api";
+import { roomAPI, buildingAPI, uploadAPI } from "../services/api";
 
 interface RoomForm {
   name: string;
@@ -27,6 +27,10 @@ export default function Rooms() {
     floor: "",
     type: "Lecture",
   });
+  const [newRoomImage, setNewRoomImage] = useState<string>("");
+  const [editRoomImage, setEditRoomImage] = useState<string>("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
     loadRooms();
@@ -106,6 +110,34 @@ export default function Rooms() {
   const hasRequiredValues = (form: RoomForm) =>
     ["name", "building_id", "floor"].every((key) => String(form[key as keyof RoomForm]).trim() !== "");
 
+  const handleImageUpload = async (file: File, isEdit: boolean = false) => {
+    try {
+      setUploadingImage(true);
+      console.log("📤 Starting image upload...", { 
+        fileName: file.name, 
+        fileSize: file.size, 
+        fileType: file.type 
+      });
+      
+      const result = await uploadAPI.uploadImage(file);
+      console.log("✅ Upload successful:", result);
+      
+      if (isEdit) {
+        setEditRoomImage(result.url);
+      } else {
+        setNewRoomImage(result.url);
+      }
+      return result.url;
+    } catch (error: any) {
+      console.error("❌ Error uploading image:", error);
+      const errorMessage = error?.message || "Failed to upload image. Please try again.";
+      alert(`Upload failed: ${errorMessage}\n\nCheck console for details.`);
+      throw error;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const addRoom = async () => {
     if (!hasRequiredValues(newRoom)) {
       alert("Please fill out all required fields.");
@@ -114,7 +146,10 @@ export default function Rooms() {
 
     try {
       setLoading(true);
-      await roomAPI.create(newRoom);
+      await roomAPI.create({
+        ...newRoom,
+        image_url: newRoomImage || null,
+      });
       await loadRooms();
       setNewRoom({
         name: "",
@@ -122,6 +157,7 @@ export default function Rooms() {
         floor: "",
         type: "Lecture",
       });
+      setNewRoomImage("");
     } catch (error) {
       console.error("Error adding room:", error);
     } finally {
@@ -137,6 +173,7 @@ export default function Rooms() {
       floor: room.floor || "",
       type: room.type || "Lecture",
     });
+    setEditRoomImage(room.image_url || "");
   };
 
   const cancelEdit = () => {
@@ -147,6 +184,7 @@ export default function Rooms() {
       floor: "",
       type: "Lecture",
     });
+    setEditRoomImage("");
   };
 
   const saveEdit = async () => {
@@ -157,7 +195,10 @@ export default function Rooms() {
     }
     try {
       setLoading(true);
-      await roomAPI.update(editingRoom.id, editForm);
+      await roomAPI.update(editingRoom.id, {
+        ...editForm,
+        image_url: editRoomImage || null,
+      });
       await loadRooms();
       cancelEdit();
     } catch (error) {
@@ -255,6 +296,34 @@ export default function Rooms() {
                 </select>
               </div>
 
+              <div className="flex flex-col">
+                <label className="text-white text-sm mb-1">Room Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="w-[200px] px-3 py-2 text-white text-sm"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      await handleImageUpload(file, !!editingRoom);
+                    }
+                  }}
+                  disabled={uploadingImage}
+                />
+                {uploadingImage && (
+                  <span className="text-xs text-gray-400 mt-1">Uploading...</span>
+                )}
+                {(editingRoom ? editRoomImage : newRoomImage) && (
+                  <div className="mt-2">
+                    <img 
+                      src={editingRoom ? editRoomImage : newRoomImage} 
+                      alt="Room preview" 
+                      className="w-[200px] h-[120px] object-cover rounded border border-white"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-col justify-end">
                 {editingRoom ? (
                   <div className="flex space-x-2">
@@ -312,11 +381,44 @@ export default function Rooms() {
                 className="text-white text-[14px] bg-[#292929]"
                 showSearch={false}
                 pageSize={14}
+                onRowClick={(row) => {
+                  if (row.image_url) {
+                    setSelectedImage({ url: row.image_url, name: row.name });
+                  }
+                }}
               />
             )}
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div 
+            className="bg-[#292929] rounded-lg p-6 max-w-4xl max-h-[90vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-white text-xl font-bold">{selectedImage.name}</h3>
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="text-white hover:text-gray-300 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            <img 
+              src={selectedImage.url} 
+              alt={selectedImage.name}
+              className="max-w-full max-h-[70vh] rounded-lg"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

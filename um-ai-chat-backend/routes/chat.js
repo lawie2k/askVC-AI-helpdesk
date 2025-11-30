@@ -172,7 +172,10 @@ router.post("/ask", async (req, res) => {
         }
       }
 
-      return res.json({ answer });
+      return res.json({ 
+        answer,
+        images: imageUrls.length > 0 ? imageUrls : undefined,
+      });
     }
 
     // ========================================================================
@@ -185,6 +188,8 @@ router.post("/ask", async (req, res) => {
     // PREPARE AI CONTEXT - Format database results for AI
     // ========================================================================
     let dbContext = "";
+    const imageUrls = []; // Collect image URLs from rooms and offices
+    
     if (dbResults.length > 0) {
       console.log(`📊 Found ${dbResults.length} relevant database results`);
       dbContext = "\n\nRelevant information from UM Visayan Campus database:\n";
@@ -192,6 +197,14 @@ router.post("/ask", async (req, res) => {
         dbContext += `\nFrom ${result.table} table:\n`;
         result.data.forEach((item) => {
           dbContext += `- ${JSON.stringify(item, null, 2)}\n`;
+          // Extract image URLs from rooms and offices
+          if ((result.table === "rooms" || result.table === "offices") && item.image_url) {
+            imageUrls.push({
+              url: item.image_url,
+              name: item.name || "Image",
+              type: result.table === "rooms" ? "room" : "office",
+            });
+          }
         });
       });
       const timeGuidance = await generateTimeAwareGuidance(dbResults);
@@ -278,7 +291,10 @@ ${dbContext}${conversationContext}`;
           }
         }
         
-        return res.json({ answer });
+        return res.json({ 
+          answer,
+          images: imageUrls.length > 0 ? imageUrls : undefined,
+        });
       } catch (aiErr) {
         console.warn('⚠️ AI service failed:', aiErr.message);
         
