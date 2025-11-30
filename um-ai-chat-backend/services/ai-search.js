@@ -497,9 +497,17 @@ function isProgramsQuestion(question) {
 
 
 function isOfficesQuestion(question) {
-  const officeKeywords = ['office', 'offices', 'sao', 'student affairs', 'registrar', 'cashier', 'clinic', 'library', 'faculty', 'where is', 'location'];
+  const officeKeywords = ['office', 'offices', 'sao', 'student affairs', 'registrar', 'cashier', 'clinic', 'library', 'faculty'];
   const q = question.toLowerCase();
   return officeKeywords.some(k => q.includes(k));
+}
+
+function isRoomsQuestion(question) {
+  const roomKeywords = ['room', 'rooms', 'classroom', 'classrooms', 'lecture', 'comlab', 'laboratory', 'lab'];
+  const q = question.toLowerCase();
+  // Also check for room numbers (e.g., "room 301", "301")
+  const roomNumberPattern = /\b(room\s*)?\d{3,4}\b/i;
+  return roomKeywords.some(k => q.includes(k)) || roomNumberPattern.test(q);
 }
 
 
