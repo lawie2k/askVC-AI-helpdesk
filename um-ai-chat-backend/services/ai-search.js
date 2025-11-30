@@ -388,20 +388,94 @@ async function searchDatabase(question) {
       // ====================================================================
       if (isOffices && table === 'offices') {
         console.log("🏢 Searching OFFICES table...");
-        db.query(`
+        const q = question.toLowerCase();
+        
+        // Extract specific office name from question
+        let officeIdentifier = null;
+        const officeKeywords = [
+          { keywords: ['library', 'librarian'], name: 'library' },
+          { keywords: ['cashier', 'cash'], name: 'cashier' },
+          { keywords: ['faculty', 'faculty room'], name: 'faculty' },
+          { keywords: ['registrar', 'registrar\'s'], name: 'registrar' },
+          { keywords: ['sao', 'student affairs', 'student affairs office'], name: 'sao' },
+          { keywords: ['clinic', 'health', 'medical'], name: 'clinic' },
+          { keywords: ['osa', 'office of student affairs'], name: 'osa' },
+          { keywords: ['dean', 'dean\'s office'], name: 'dean' },
+        ];
+        
+        // Find which office is mentioned in the question
+        for (const office of officeKeywords) {
+          if (office.keywords.some(keyword => q.includes(keyword))) {
+            officeIdentifier = office.name;
+            break;
+          }
+        }
+        
+        let query = `
           SELECT o.*, b.name as building_name, "office_query" as match_type 
           FROM offices o 
           LEFT JOIN buildings b ON o.building_id = b.id
-        `, (err, results) => {
+        `;
+        
+        const queryParams = [];
+        if (officeIdentifier) {
+          // Search for offices that match the identifier in their name
+          query += ` WHERE LOWER(o.name) LIKE ?`;
+          queryParams.push(`%${officeIdentifier}%`);
+        }
+        
+        db.query(query, queryParams, (err, results) => {
           if (!err && results.length > 0) {
             console.log(`   ✅ Found ${results.length} offices`);
-            const scoredResults = results.map(result => ({
-              ...result,
-              relevance_score: 100
-            }));
+            
+            // Score results: exact match gets highest score
+            const scoredResults = results.map(result => {
+              const officeNameLower = (result.name || '').toLowerCase().trim();
+              let score = 50; // Base score for partial match
+              
+              if (officeIdentifier) {
+                const normalizedIdentifier = officeIdentifier.toLowerCase().trim();
+                const normalizedOfficeName = officeNameLower.replace(/\s+/g, ' ').trim();
+                
+                // Exact match (e.g., "library" matches "Library" or "Library Office")
+                if (normalizedOfficeName === normalizedIdentifier || 
+                    normalizedOfficeName === `${normalizedIdentifier} office` ||
+                    normalizedOfficeName === `${normalizedIdentifier} room`) {
+                  score = 100; // Perfect exact match
+                }
+                // Contains the identifier as a word (e.g., "library" in "Main Library")
+                else if (normalizedOfficeName.includes(normalizedIdentifier) && 
+                         (normalizedOfficeName.startsWith(normalizedIdentifier) || 
+                          normalizedOfficeName.includes(` ${normalizedIdentifier} `) ||
+                          normalizedOfficeName.includes(` ${normalizedIdentifier}`))) {
+                  score = 95; // Very close match
+                }
+                // Partial match
+                else if (normalizedOfficeName.includes(normalizedIdentifier)) {
+                  score = 75; // Partial match
+                }
+              } else {
+                // No specific identifier, give all results same score
+                score = 50;
+              }
+              
+              return {
+                ...result,
+                relevance_score: score
+              };
+            });
+            
+            // Sort by relevance score (highest first)
+            scoredResults.sort((a, b) => b.relevance_score - a.relevance_score);
+            
+            // Only return the top result if we have a specific identifier
+            const finalResults = officeIdentifier && scoredResults.length > 0 
+              ? [scoredResults[0]] // Only the best match
+              : scoredResults; // All results if no specific identifier
+            
             searchResults.push({
               table: table,
-              data: scoredResults,
+              data: finalResults,
               priority: tableInfo.priority
             });
           }
