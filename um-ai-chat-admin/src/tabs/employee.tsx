@@ -12,6 +12,7 @@ export default function Employee() {
   const [ntLoading, setNtLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'professors' | 'nonTeaching'>('professors');
   const [filterDepartment, setFilterDepartment] = useState<string>('');
+  const [filterProgram, setFilterProgram] = useState<string>('');
   const [filterRole, setFilterRole] = useState<string>('');
 
   const [newProfessor, setNewProfessor] = useState({
@@ -87,10 +88,15 @@ export default function Employee() {
     }
   };
 
-  // Filter professors by department
+  // Filter professors by department and program
   const filteredProfessors = professors.filter((prof: any) => {
-    if (!filterDepartment) return true;
-    return prof.department === filterDepartment || prof.department_id?.toString() === filterDepartment;
+    if (filterDepartment && !(prof.department === filterDepartment || prof.department_id?.toString() === filterDepartment)) {
+      return false;
+    }
+    if (filterProgram && prof.program !== filterProgram) {
+      return false;
+    }
+    return true;
   });
 
   // Filter non-teaching staff by role
@@ -470,20 +476,38 @@ export default function Employee() {
               </div>
             </div>
 
-            <div className="mb-3">
-              <label className="text-white text-sm block mb-1">Filter by Department</label>
-              <select
-                className="w-[200px] px-3 py-2 text-black rounded"
-                value={filterDepartment}
-                onChange={(e) => setFilterDepartment(e.target.value)}
-              >
-                <option value="">All Departments</option>
-                {departments.map((dept: any) => (
-                  <option key={dept.id} value={dept.short_name || dept.id}>
-                    {dept.short_name || dept.name}
-                  </option>
-                ))}
-              </select>
+            <div className="mb-3 flex flex-wrap gap-4">
+              <div className="flex flex-col">
+                <label className="text-white text-sm block mb-1">Filter by Department</label>
+                <select
+                  className="w-[200px] px-3 py-2 text-black rounded"
+                  value={filterDepartment}
+                  onChange={(e) => setFilterDepartment(e.target.value)}
+                >
+                  <option value="">All Departments</option>
+                  {departments.map((dept: any) => (
+                    <option key={dept.id} value={dept.short_name || dept.id}>
+                      {dept.short_name || dept.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-white text-sm block mb-1">Filter by Program</label>
+                <select
+                  className="w-[200px] px-3 py-2 text-black rounded"
+                  value={filterProgram}
+                  onChange={(e) => setFilterProgram(e.target.value)}
+                >
+                  <option value="">All Programs</option>
+                  <option value="BSIT">BSIT</option>
+                  <option value="BSCS">BSCS</option>
+                  <option value="BSCPE">BSCPE</option>
+                  <option value="BSEE">BSEE</option>
+                  <option value="BSECE">BSECE</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex-1 bg-[#3C3C3C] border border-white/10 rounded-xl overflow-y-auto">
