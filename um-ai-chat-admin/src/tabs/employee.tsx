@@ -495,10 +495,10 @@ export default function Employee() {
                 <DataGrid
                   data={filteredProfessors}
                   columns={professorColumns}
-                  height="480px"
+                  height="370px"
                   className="text-white text-[12px] bg-[#292929]"
                   showSearch={false}
-                  pageSize={10}
+                  pageSize={9}
                 />
               )}
             </div>
@@ -594,7 +594,7 @@ export default function Employee() {
                 <DataGrid
                   data={filteredNonTeaching}
                   columns={staffColumns}
-                  height="480px"
+                  height="427px"
                   className="text-white text-[14px] bg-[#292929]"
                   showSearch={false}
                   pageSize={10}

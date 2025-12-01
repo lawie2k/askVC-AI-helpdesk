@@ -91,7 +91,7 @@ export default function offices() {
         {field: 'close_time', headerName: 'Closes', width: 110, cellRenderer: renderTimeCell},
         {field: 'lunch_start', headerName: 'Lunch Start', width: 120, cellRenderer: renderTimeCell},
         {field: 'lunch_end', headerName: 'Lunch End', width: 120, cellRenderer: renderTimeCell},
-        {field: 'created_at', headerName: 'Created At', width: 200, cellRenderer: (params: any) => {
+        {field: 'created_at', headerName: 'Created At', width: 180, cellRenderer: (params: any) => {
             const v = params.value;
             if (!v) return '';
             try { return new Date(v).toLocaleString(); } catch { return String(v); }
@@ -436,10 +436,10 @@ export default function offices() {
               <DataGrid 
                 data={filteredOffices}
                 columns={officeColumns}
-                height="520px"
+                height="342px"
                 className="text-white text-[14px] bg-[#292929]"
                 showSearch={false}
-                pageSize={14}
+                pageSize={4}
                 onRowClick={(row) => {
                   if (row.image_url) {
                     setSelectedImage({ url: row.image_url, name: row.name });

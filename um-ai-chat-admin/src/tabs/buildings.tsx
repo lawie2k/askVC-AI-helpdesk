@@ -185,7 +185,7 @@ export default function Buildings() {
               <DataGrid 
                 data={buildings}
                 columns={buildingColumns}
-                height="520px"
+                height="500px"
                 className="text-white text-[14px] bg-[#292929]"
                 showSearch={false}
                 pageSize={14}

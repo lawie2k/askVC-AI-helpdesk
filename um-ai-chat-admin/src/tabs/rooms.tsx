@@ -377,10 +377,10 @@ export default function Rooms() {
               <DataGrid
                 data={filteredRooms}
                 columns={roomColumns}
-                height="520px"
+                height="390px"
                 className="text-white text-[14px] bg-[#292929]"
                 showSearch={false}
-                pageSize={14}
+                pageSize={9}
                 onRowClick={(row) => {
                   if (row.image_url) {
                     setSelectedImage({ url: row.image_url, name: row.name });
