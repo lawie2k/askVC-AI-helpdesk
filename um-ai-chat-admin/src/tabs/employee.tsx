@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import DataGrid from "../components/DataGrid";
 import { professorAPI, departmentAPI, nonTeachingAPI } from "../services/api";
 
-const NON_TEACHING_ROLES = ["Cashier", "Librarian", "Librarian Head", "OSA Head"];
+const NON_TEACHING_ROLES = ["Librarian", "Librarian Head", "OSA Head"];
 
 export default function Employee() {
   const [professors, setProfessors] = useState<any[]>([]);

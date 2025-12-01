@@ -207,6 +207,7 @@ router.post("/ask", async (req, res) => {
       // Track the best match for images (highest relevance score)
       let bestRoomMatch = null;
       let bestOfficeMatch = null;
+      let highestOfficeRelevance = -Infinity;
       
       dbResults.forEach((result) => {
         dbContext += `\nFrom ${result.table} table:\n`;
@@ -230,11 +231,15 @@ router.post("/ask", async (req, res) => {
             }
           }
           
-          if (result.table === "offices" && item.image_url) {
-            // Only include office images if question is clearly about offices
-            if (isOfficeQuestion) {
-              const relevance = item.relevance_score || 0;
-              if (!bestOfficeMatch || relevance > (bestOfficeMatch.relevance_score || 0)) {
+          if (result.table === "offices") {
+            // Track highest scoring OFFICE overall, and only allow an image
+            // for that top office. If the top office has no image_url, we
+            // will NOT fall back to some other random office image.
+            const relevance = item.relevance_score || 0;
+            if (relevance > highestOfficeRelevance) {
+              highestOfficeRelevance = relevance;
+              bestOfficeMatch = null;
+              if (isOfficeQuestion && item.image_url) {
                 bestOfficeMatch = {
                   url: item.image_url,
                   name: item.name || "Image",
@@ -242,6 +247,20 @@ router.post("/ask", async (req, res) => {
                   relevance_score: relevance
                 };
               }
+            } else if (
+              relevance === highestOfficeRelevance &&
+              !bestOfficeMatch &&
+              isOfficeQuestion &&
+              item.image_url
+            ) {
+              // Tie-breaker: if multiple offices share the same top score,
+              // take the first one that actually has an image.
+              bestOfficeMatch = {
+                url: item.image_url,
+                name: item.name || "Image",
+                type: "office",
+                relevance_score: relevance
+              };
             }
           }
         });
@@ -302,6 +321,7 @@ and for the 3rd floor it is beside in AVR room
 - when they ask where is the motorcycle parking it is in the left side of the entrance walkway
 - when they ask for the UM radio station building it is in the right side of the entrance
 - when they ask for the LIC building it is in the left side of the campus
+- when they ask where is the canteen it is just in the hallway going to the main building
 - when they ask for the school storage it is located in the left side of the entrance behind the guard house
 - when they ask for the main Building it is in the right side of the campus
 - when they ask for the for the faculty building it is in the left side end of the campus
@@ -309,6 +329,10 @@ and for the 3rd floor it is beside in AVR room
 - basketball court is in the middle of the campus
 - all of the offices are half day always in weekends
 - okay if there is a concern about class scedules or about there subjects or something related to it tell it too you can ask the department head and a follow up question what is my department
+- restrooms or CR or cr is located beside RV4 and one is located beside the clinic or the center of health services there is beside the faculty
+- if the input is clinic it is same with the center of health services
+- if the input is comlab 1,2 or 3 it is same with Com Lab 1,2 or 3
+- if the input is Audio Visual room it is same with AVR or room AVR
 
 ${dbContext}${conversationContext}`;
 

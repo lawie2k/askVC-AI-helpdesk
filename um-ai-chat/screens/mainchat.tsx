@@ -37,7 +37,7 @@ export default function MainChat() {
     }
     return (
         <SafeAreaView className="flex-1 bg-[#292929]">
-            <View className="flex-1 p-4 shadow-2xl">
+            <View className="flex-1 pt-4 px-4 shadow-2xl">
                 <View className="flex-row items-center gap-5 border-b-2 border-gray-600 pb-4">
                     <TouchableOpacity onPress={() => setSideBar(!sideBar)}>
                         <FontAwesomeIcon icon={faListUl} color="#ffffff" size={24}/>
@@ -48,88 +48,99 @@ export default function MainChat() {
                 </View>
 
                 {sideBar && (
-                    <View className="absolute top-0 left-0 w-64 h-full bg-[#292929] z-50 shadow-lg">
-                        <TouchableOpacity
-                            onPress={() => setSideBar(false)}
-                            className=" w-5 p-4"
-                        >
-                            <FontAwesomeIcon icon={faTimes} color="#ffffff" size={20} />
-                        </TouchableOpacity>
-                        <View className="p-4">
-                            <Text className="text-[#900C27] text-3xl mb-4">Menu</Text>
-
-                            <Pressable
-                                accessibilityRole="button"
-                                hitSlop={10}
-                                onPress={() => {
-                                    setSideBar(false);
-                                    navigation.navigate("Profile" as never);
-                                }}
-                            >
-                                <Text className="text-gray-300 text-2xl font-black">
-                                    Profile
-                                </Text>
-                            </Pressable>
-
+                    <View className="absolute inset-0 flex-row z-50 h-screen">
+                        {/* Sidebar on the left - full height */}
+                        <View className="w-64 bg-[#292929] shadow-lg">
                             <TouchableOpacity
-                                className="py-2"
-                                onPress={() => {
-                                    setMessages([]);
-                                    setChatKey(prev => prev + 1);
-                                    // Clear navigation params to prevent reloading
-                                    navigation.setParams({ loadMessages: undefined } as any);
-                                    setSideBar(false);
-                                }}
+                                onPress={() => setSideBar(false)}
+                                className="w-5 p-4"
                             >
-                                <Text className="text-gray-300 text-2xl font-black">
-                                    New chat
-                                </Text>
+                                <FontAwesomeIcon icon={faTimes} color="#ffffff" size={20} />
                             </TouchableOpacity>
+                            <View className="p-4">
+                                <Text className="text-[#900C27] font-black text-3xl mb-4">Menu</Text>
 
-                            <TouchableOpacity
-                                className="py-2"
-                                onPress={() => {
-                                    setSideBar(false);
-                                    navigation.navigate("ChatHistory" as never);
-                                }}
-                            >
-                                <Text className="text-gray-300 text-2xl font-black">
-                                    Chat History
-                                </Text>
-                            </TouchableOpacity>
+                                <Pressable
+                                    className="py-2"
+                                    accessibilityRole="button"
+                                    hitSlop={10}
+                                    onPress={() => {
+                                        setSideBar(false);
+                                        navigation.navigate("Profile" as never);
+                                    }}
+                                >
+                                    <Text className="text-gray-300 text-2xl font-black">
+                                        Profile
+                                    </Text>
+                                </Pressable>
 
-                            <TouchableOpacity
-                                className="py-2"
-                                onPress={() => {
-                                    setSideBar(false);
-                                    navigation.navigate("Feedback" as never);
-                                }}
-                            >
-                                <Text className="text-gray-300 text-2xl font-black">
-                                    Feedback
-                                </Text>
-                            </TouchableOpacity>
+                                <TouchableOpacity
+                                    className="py-2"
+                                    onPress={() => {
+                                        setMessages([]);
+                                        setChatKey(prev => prev + 1);
+                                       
+                                        navigation.setParams({ loadMessages: undefined } as any);
+                                        setSideBar(false);
+                                    }}
+                                >
+                                    <Text className="text-gray-300 text-2xl font-black">
+                                        New chat
+                                    </Text>
+                                </TouchableOpacity>
 
-                            <TouchableOpacity
-                                className="py-2"
-                                onPress={async () => {
-                                    setSideBar(false);
-                                    try { await logout(); } catch {}
-                                }}
-                            >
-                                <Text className="text-gray-300 text-2xl font-black">
-                                    log out
-                                </Text>
-                            </TouchableOpacity>
+                                <TouchableOpacity
+                                    className="py-2"
+                                    onPress={() => {
+                                        setSideBar(false);
+                                        navigation.navigate("ChatHistory" as never);
+                                    }}
+                                >
+                                    <Text className="text-gray-300 text-2xl font-black">
+                                        Chat History
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    className="py-2"
+                                    onPress={() => {
+                                        setSideBar(false);
+                                        navigation.navigate("Feedback" as never);
+                                    }}
+                                >
+                                    <Text className="text-gray-300 text-2xl font-black">
+                                        Feedback
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    className="py-2"
+                                    onPress={async () => {
+                                        setSideBar(false);
+                                        try { await logout(); } catch {}
+                                    }}
+                                >
+                                    <Text className="text-gray-300 text-2xl font-black">
+                                        log out
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
+
+                        {/* Backdrop covering the rest of the screen */}
+                        <TouchableOpacity
+                            className="flex-1 bg-black/40"
+                            activeOpacity={1}
+                            onPress={() => setSideBar(false)}
+                        />
                     </View>
                 )}
 
                 <Chat key={chatKey} messages={messages} setMessages={setMessages}/>
 
 
-                <View className="flex-row justify-center mb-[-35px]">
-                    <Text className="text-white text-[12px] text-center">© 2025 All Rights Reserved. By Group 1</Text>
+                <View className="flex-row justify-center pt-[10px] mb-[-20px]">
+                    <Text className="text-white text-[12px] text-center">© 2025 All Rights Reserved. By Art laurence Siojo</Text>
                 </View>
             </View>
         </SafeAreaView>

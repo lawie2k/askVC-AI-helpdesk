@@ -1,5 +1,5 @@
 import React from "react";
-import {View, Text, Platform, TouchableOpacity, Image, Modal, Dimensions} from "react-native";
+import {View, Text, Platform, TouchableOpacity, Image, Modal, Dimensions, KeyboardAvoidingView} from "react-native";
 import {
   GiftedChat,
   IMessage,
@@ -132,6 +132,11 @@ export function Chat({messages, setMessages}: {
 
     return (
         <View className="flex-1">
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+            >
             {messages.length === 0 && (
                 <View className="flex-col">
                     <View className=" flex items-center px-4 pt-32">
@@ -333,6 +338,7 @@ export function Chat({messages, setMessages}: {
                     ) : null
                 }
             />
+            </KeyboardAvoidingView>
             {messages.length === 0 && (
                 <View className="absolute left-3 bottom-[72px] z-40 flex-row flex-wrap gap-3 max-w-[80%]">
                     <TouchableOpacity

@@ -30,38 +30,39 @@ export default function Profile(){
         <SafeAreaProvider>
             <SafeAreaView className="flex-1 bg-[#292929]">
 
-                <View>
-                    <View className="px-8 py-6">
-
-                        <Pressable onPress={() => navigation.goBack()}>
-                            <FontAwesomeIcon
-                                icon={faArrowLeft as IconProp}
-                                size={24}
-                                style={{ color: "#C70039" }}
-                            />
-                        </Pressable>
-
-                        <Text className="text-white text-[28px] font-extrabold pt-10">Profile</Text>
+                <View className="flex-1">
+                    {/* Header matching ChatHistory style */}
+                    <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-700">
+                        <View className="flex-row items-center flex-1">
+                            <Pressable onPress={() => navigation.goBack()} className="mr-4">
+                                <FontAwesomeIcon
+                                    icon={faArrowLeft as IconProp}
+                                    size={24}
+                                    style={{ color: "#C70039" }}
+                                />
+                            </Pressable>
+                            <Text className="text-white text-[24px] font-extrabold">Profile</Text>
+                        </View>
                     </View>
 
-                    <View className="flex items-center ">
-                        <View className=" w-[360px] h-[100px] bg-[#3C3C3C] rounded-lg px-3">
-                            <Text className="text-white text-[18px] py-4 font-extrabold">
-                                Email
+                    {/* Content */}
+                    <View className="flex-1 items-center pt-6">
+                        <View className="w-[360px] bg-[#3C3C3C] rounded-2xl px-4 py-4 mb-4">
+                            <Text className="text-white text-[18px] pb-4 font-extrabold">
+                                Email:
                             </Text>
-                            <Text className="text-white text-[16px] font-bold">
+                            <Text className="text-white text-[16px] font-bold pb-2">
                                 {email || "—"}
                             </Text>
                         </View>
 
-                            <TouchableOpacity
-                                className="w-[360px] h-[40px] mt-5 bg-[#3C3C3C] rounded-lg px-3"
-                                onPress={() =>{
+                        <TouchableOpacity
+                            className="w-[360px] h-[50px] mt-2 bg-[#900C27] rounded-full px-4 items-center justify-center"
+                            onPress={() =>{
                                 navigation.navigate("ResetPass" as never)
                             }}>
-                                <Text className="text-white py-4 font-bold">Reset Password</Text>
-                            </TouchableOpacity>
-
+                            <Text className="text-white text-[16px] font-extrabold">Reset Password</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 

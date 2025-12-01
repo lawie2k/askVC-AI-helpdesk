@@ -423,11 +423,13 @@ async function searchDatabase(question) {
           { keywords: ['library', 'librarian'], name: 'library' },
           { keywords: ['cashier', 'cash'], name: 'cashier' },
           { keywords: ['faculty', 'faculty room'], name: 'faculty' },
-          { keywords: ['registrar', 'registrar\'s'], name: 'registrar' },
+          { keywords: ['registrar', "registrar's"], name: 'registrar' },
           { keywords: ['sao', 'student affairs', 'student affairs office'], name: 'sao' },
           { keywords: ['clinic', 'health', 'medical'], name: 'clinic' },
           { keywords: ['osa', 'office of student affairs'], name: 'osa' },
-          { keywords: ['dean', 'dean\'s office'], name: 'dean' },
+          { keywords: ['dean', "dean's office"], name: 'dean' },
+          // RAC office (e.g. "RAC office", "where is the RAC office")
+          { keywords: ['rac', 'rac office'], name: 'rac' },
         ];
         
         // Find which office is mentioned in the question
