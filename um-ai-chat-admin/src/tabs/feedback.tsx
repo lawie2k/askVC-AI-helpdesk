@@ -39,7 +39,6 @@ export default function FeedbackTab() {
       },
     },
     { field: "rating", headerName: "Rating", width: 50 },
-    { field: "user_email", headerName: "Email (optional)", width: 100 },
     {
       field: "message",
       headerName: "Feedback",

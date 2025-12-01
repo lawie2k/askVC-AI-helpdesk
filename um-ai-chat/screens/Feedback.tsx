@@ -1,10 +1,12 @@
 import React from "react";
 import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 
 const API_URL = "https://askvc-ai-helpdesk.onrender.com";
 
 export default function FeedbackScreen() {
+  const navigation = useNavigation();
   const [message, setMessage] = React.useState("");
   const [rating, setRating] = React.useState<number | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -49,6 +51,15 @@ export default function FeedbackScreen() {
   return (
     <SafeAreaView className="flex-1 bg-[#292929]">
       <View className="flex-1 p-4">
+        <TouchableOpacity
+          className="mb-4"
+          onPress={() => navigation.goBack()}
+        >
+          <Text className="text-[#900C27] text-base font-bold">
+            ← Back
+          </Text>
+        </TouchableOpacity>
+
         <Text className="text-white text-2xl font-extrabold mb-2">
           Help us improve ask<Text className="text-[#900C27]">VC</Text>
         </Text>
