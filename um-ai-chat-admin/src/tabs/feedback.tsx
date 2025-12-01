@@ -24,7 +24,6 @@ export default function FeedbackTab() {
   };
 
   const columns = [
-    { field: "id", headerName: "ID", width: 40 },
     {
       field: "created_at",
       headerName: "Date",
@@ -50,13 +49,13 @@ export default function FeedbackTab() {
   ];
 
   return (
-    <div className="flex flex-col 2xl:items-center bg-[#3C3C3C] mx-4 xl:mx-7 h-[800px] pt-10 pb-8 shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]">
-      <div className="flex justify-center text-xl xl:text-2xl 2xl:text-[32px] font-bold w-[220px] h-[42px] mx-auto">
+    <div className="flex flex-col 2xl:items-center  bg-[#3C3C3C] mx-4 xl:mx-7 h-[800px] pt-10 pb-8 shadow-[0px_-1px_29px_4px_rgba(0,_0,_0,_0.8)]">
+      <div className="flex justify-center  text-xl xl:text-2xl 2xl:text-[32px] font-bold w-[220px] h-[42px] mx-auto">
         <h1 className="truncate">Feedback</h1>
       </div>
 
-      <div className="w-full max-w-[1180px] mt-6 px-4 space-y-4">
-        <div className="flex justify-between items-center">
+      <div className="w-full max-w-[1180px]  mt-6 px-4 space-y-4">
+        <div className="flex justify-between  items-center">
           <p className="text-gray-200 text-sm">
             These are feedback messages sent from the mobile app.
           </p>
@@ -69,7 +68,7 @@ export default function FeedbackTab() {
           </button>
         </div>
 
-        <div className="flex-1 bg-[#292929] border border-white/10 rounded-xl overflow-hidden">
+        <div className="flex-1 bg-[#292929] border border-white rounded-xl overflow-hidden">
           {loading ? (
             <div className="flex justify-center items-center h-[500px] text-white">
               Loading...
@@ -78,6 +77,7 @@ export default function FeedbackTab() {
             <DataGrid
               data={items}
               columns={columns}
+              showSearch={false}
               height="620px"
               className="text-white text-[12px] bg-[#292929]"
             />

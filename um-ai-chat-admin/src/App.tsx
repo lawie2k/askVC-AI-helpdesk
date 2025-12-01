@@ -8,6 +8,7 @@ import Rooms from "./tabs/rooms";
 import Employee from "./tabs/employee";
 import Buildings from "./tabs/buildings";
 import Offices from "./tabs/offices"
+import OfficersTab from "./tabs/officers";
 import Departments from "./tabs/departments";
 import Reports from "./tabs/reports";
 import Logs from "./tabs/logs";
@@ -30,6 +31,7 @@ export default function App() {
                     <Route path="Buildings" element={<Buildings/>}/>
                     <Route path="Rooms" element={<Rooms/>}/>
                     <Route path="Offices" element={<Offices/>}/>
+                    <Route path="Officers" element={<OfficersTab/>}/>
                     <Route path="Departments" element={<Departments/>}/>
                     <Route path="Reports" element={<Reports/>}/>
                     <Route path="Logs" element={<Logs/>}/>

@@ -181,6 +181,21 @@ export const nonTeachingAPI = {
   }),
 };
 
+export const officersAPI = {
+  getAll: () => apiCall('/api/officers'),
+  create: (data: any) => apiCall('/api/officers', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: number, data: any) => apiCall(`/api/officers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: number) => apiCall(`/api/officers/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
 // Logs API functions
 export const logsAPI = {
   getAll: () => apiCall('/api/logs'),
