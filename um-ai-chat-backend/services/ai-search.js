@@ -25,15 +25,16 @@ async function searchDatabase(question) {
     //  DEFINE WHICH DATABASE TABLES TO SEARCH
     // ========================================================================
     const tablesToSearch = [
-      { name: "departments", priority: 1 },  // Search departments first
-      { name: "professors", priority: 2 },   // Then professors
-      { name: "buildings", priority: 3 },    // Then buildings
-      { name: "rooms", priority: 4 },        // Then rooms
-      { name: "offices", priority: 5 },      // Then offices
-      { name: "rules", priority: 6 },        // Campus rules
+      { name: "departments", priority: 1 },    // Search departments first
+      { name: "professors", priority: 2 },     // Then professors
+      { name: "buildings", priority: 3 },      // Then buildings
+      { name: "rooms", priority: 4 },          // Then rooms
+      { name: "offices", priority: 5 },        // Then offices
+      { name: "rules", priority: 6 },          // Campus rules
       { name: "vision_mission", priority: 7 }, // Vision & mission
-      { name: "campus_info", priority: 8 },  // Services & other info
-      { name: "settings", priority: 9 }      // Finally settings
+      { name: "announcements", priority: 8 },  // School events, enrollment, schedules
+      { name: "campus_info", priority: 9 },    // Services & other info
+      { name: "settings", priority: 10 }       // Finally settings
     ];
 
     if (tablesToSearch.length === 0) {
@@ -724,6 +725,7 @@ function getSearchableColumns(table) {
     offices: "name, floor, open_time, close_time, lunch_start, lunch_end",
     rules: "description",
     vision_mission: "description",
+    announcements: "title, description",
     campus_info: "description",
     settings: "key_name, value",
   };
