@@ -27,7 +27,7 @@ export default function MainChat() {
     }, [route.params]);
 
     async function logout() {
-        await AsyncStorage.multiRemove(['token', 'auth_user', 'remember_me', 'remembered_email']);
+        await AsyncStorage.multiRemove(['token', 'auth_user', 'remember_me', 'remembered_email', 'last_login_at']);
         navigation.dispatch(
             CommonActions.reset({
                 index: 0,
@@ -95,6 +95,18 @@ export default function MainChat() {
                             >
                                 <Text className="text-gray-300 text-2xl font-black">
                                     Chat History
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                className="py-2"
+                                onPress={() => {
+                                    setSideBar(false);
+                                    navigation.navigate("Feedback" as never);
+                                }}
+                            >
+                                <Text className="text-gray-300 text-2xl font-black">
+                                    Feedback
                                 </Text>
                             </TouchableOpacity>
 

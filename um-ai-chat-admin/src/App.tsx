@@ -12,6 +12,7 @@ import Departments from "./tabs/departments";
 import Reports from "./tabs/reports";
 import Logs from "./tabs/logs";
 import Announcement from "./tabs/announcement";
+import FeedbackTab from "./tabs/feedback";
 import Signup from "./signup";
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
                     <Route path="Reports" element={<Reports/>}/>
                     <Route path="Logs" element={<Logs/>}/>
                     <Route path="Announcement" element={<Announcement/>}/>
+                    <Route path="Feedback" element={<FeedbackTab/>}/>
 
                 </Route>
             </Routes>

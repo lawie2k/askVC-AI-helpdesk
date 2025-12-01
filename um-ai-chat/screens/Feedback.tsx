@@ -1,0 +1,100 @@
+import React from "react";
+import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+const API_URL = "https://askvc-ai-helpdesk.onrender.com";
+
+export default function FeedbackScreen() {
+  const [message, setMessage] = React.useState("");
+  const [rating, setRating] = React.useState<number | null>(null);
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const handleSubmit = async () => {
+    if (!message.trim()) {
+      Alert.alert("Feedback", "Please enter your feedback first.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const res = await fetch(`${API_URL}/api/feedback`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: message.trim(),
+          rating,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Feedback error:", text);
+        throw new Error("Failed to send feedback");
+      }
+
+      setMessage("");
+      setRating(null);
+      Alert.alert("Thank you!", "Your feedback has been submitted.");
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert("Error", e?.message || "Failed to send feedback.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <SafeAreaView className="flex-1 bg-[#292929]">
+      <View className="flex-1 p-4">
+        <Text className="text-white text-2xl font-extrabold mb-2">
+          Help us improve ask<Text className="text-[#900C27]">VC</Text>
+        </Text>
+        <Text className="text-gray-300 mb-4">
+          Tell us what you like, what is confusing, or what we should fix.
+        </Text>
+
+        <Text className="text-white mb-2">How was your experience?</Text>
+        <View className="flex-row mb-4">
+          {[1, 2, 3, 4, 5].map((value) => (
+            <TouchableOpacity
+              key={value}
+              onPress={() => setRating(value)}
+              className={`w-10 h-10 mr-2 rounded-full items-center justify-center ${
+                rating === value ? "bg-[#900C27]" : "bg-[#3C3C3C]"
+              }`}
+            >
+              <Text className="text-white font-bold">{value}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text className="text-white mb-2">Your feedback</Text>
+        <TextInput
+          className="w-full h-40 bg-[#3C3C3C] rounded-2xl px-4 py-3 text-white text-sm"
+          placeholder="Type your feedback here..."
+          placeholderTextColor="#9CA3AF"
+          multiline
+          value={message}
+          onChangeText={setMessage}
+        />
+
+        <TouchableOpacity
+          className={`w-full h-12 rounded-full mt-5 items-center justify-center ${
+            submitting ? "bg-gray-500" : "bg-[#900C27]"
+          }`}
+          onPress={handleSubmit}
+          disabled={submitting}
+        >
+          <Text className="text-white text-base font-extrabold">
+            {submitting ? "Sending..." : "Submit feedback"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+

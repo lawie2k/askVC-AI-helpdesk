@@ -110,6 +110,7 @@ export default function Login(){
             const { token, user } = data;
             await AsyncStorage.setItem("token", token);
             await AsyncStorage.setItem("auth_user", JSON.stringify(user));
+            await AsyncStorage.setItem("last_login_at", String(Date.now()));
             if (rememberMe && normalizedEmail) {
                 await AsyncStorage.setItem("remembered_email", normalizedEmail);
             }

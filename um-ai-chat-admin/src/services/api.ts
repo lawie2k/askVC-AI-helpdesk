@@ -218,6 +218,10 @@ export const statsAPI = {
   getTopQuestions: () => apiCall('/api/stats/top-questions'),
 };
 
+// Feedback API functions
+export const feedbackAPI = {
+  getAll: () => apiCall('/api/feedback'),
+};
 // Upload API functions
 export const uploadAPI = {
   uploadImage: async (file: File) => {
