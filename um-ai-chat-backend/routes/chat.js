@@ -192,8 +192,13 @@ router.post("/ask", async (req, res) => {
     
     // Determine if question is specifically about rooms or offices
     const questionLower = question.toLowerCase();
-    const isRoomQuestion = /\b(room|rooms|classroom|comlab|laboratory|lab)\b/i.test(question) || /\b(room\s*)?\d{3,4}\b/i.test(question);
-    const isOfficeQuestion = /\b(office|offices|sao|student affairs|registrar|cashier|clinic|library|faculty)\b/i.test(question);
+    const isRoomQuestion =
+      /\b(room|rooms|classroom|comlab|laboratory|lab)\b/i.test(question) ||
+      /\b(room\s*)?\d{3,4}\b/i.test(question);
+    const isOfficeQuestion =
+      /\b(office|offices|sao|student affairs|registrar|cashier|clinic|library|faculty)\b/i.test(
+        question
+      );
     
     if (dbResults.length > 0) {
       console.log(`📊 Found ${dbResults.length} relevant database results`);
@@ -211,8 +216,8 @@ router.post("/ask", async (req, res) => {
           // Only keep the best match for images (highest relevance score)
           // Only include images from the relevant table type based on question
           if (result.table === "rooms" && item.image_url) {
-            // Only include room images if question is about rooms, or if no office question
-            if (isRoomQuestion || (!isOfficeQuestion && !isRoomQuestion)) {
+            // Only include room images if question is clearly about rooms
+            if (isRoomQuestion) {
               const relevance = item.relevance_score || 0;
               if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
                 bestRoomMatch = {
@@ -226,8 +231,8 @@ router.post("/ask", async (req, res) => {
           }
           
           if (result.table === "offices" && item.image_url) {
-            // Only include office images if question is about offices, or if no room question
-            if (isOfficeQuestion || (!isRoomQuestion && !isOfficeQuestion)) {
+            // Only include office images if question is clearly about offices
+            if (isOfficeQuestion) {
               const relevance = item.relevance_score || 0;
               if (!bestOfficeMatch || relevance > (bestOfficeMatch.relevance_score || 0)) {
                 bestOfficeMatch = {
@@ -249,14 +254,6 @@ router.post("/ask", async (req, res) => {
         imageUrls.push(bestRoomMatch);
       } else if (isOfficeQuestion && bestOfficeMatch) {
         imageUrls.push(bestOfficeMatch);
-      } else {
-        // If question is ambiguous, return the best match from either
-        if (bestRoomMatch) {
-          imageUrls.push(bestRoomMatch);
-        }
-        if (bestOfficeMatch) {
-          imageUrls.push(bestOfficeMatch);
-        }
       }
       const timeGuidance = await generateTimeAwareGuidance(dbResults);
       if (timeGuidance) {
