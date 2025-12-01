@@ -182,7 +182,6 @@ model officers {
   position_order Int      @default(0)
   admin_id       Int?
   created_at     DateTime @default(now())
-  admins         admins?  @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "officers_ibfk_1")
 
   @@index([organization], map: "officers_organization_idx")
   @@index([admin_id], map: "officers_admin_id_idx")
