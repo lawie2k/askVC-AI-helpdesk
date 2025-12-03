@@ -25,6 +25,11 @@ export default function FeedbackScreen() {
   const [submitting, setSubmitting] = React.useState(false);
 
   const handleSubmit = async () => {
+    if (rating === null) {
+      Alert.alert("Feedback", "Please tap a rating before submitting.");
+      return;
+    }
+
     if (!message.trim()) {
       Alert.alert("Feedback", "Please enter your feedback first.");
       return;
@@ -95,6 +100,7 @@ export default function FeedbackScreen() {
               <TouchableOpacity
                 key={value}
                 onPress={() => setRating(value)}
+                activeOpacity={1}
                 className={`w-10 h-10 mr-2 rounded-full items-center justify-center ${
                   rating === value ? "bg-[#900C27]" : "bg-[#3C3C3C]"
                 }`}

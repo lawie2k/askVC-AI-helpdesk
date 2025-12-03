@@ -48,7 +48,7 @@ export default function MainChat() {
         <SafeAreaView className="flex-1 bg-[#292929]">
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                behavior="padding"
                 keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
             >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>

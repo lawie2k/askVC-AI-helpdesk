@@ -211,6 +211,7 @@ export function Chat({messages, setMessages}: {
                             fontSize: 16,
                             color: "#F9FAFB", // Gray-50 - text color
                             borderColor: "#3C3C3C", // Gray-600 - border color
+                            borderRadius: 9999, // fully rounded input
                         }}
                     />
                     );

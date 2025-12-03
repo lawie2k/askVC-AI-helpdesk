@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "um-ai-chat",
+    "name": "askVC",
     "slug": "um-ai-chat",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/ios-light.png",
-    "backgroundColor": "#900C27",
+    "backgroundColor": "#292929",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -19,7 +19,7 @@
       "splash": {
         "image": "./assets/ios-light.png",
         "resizeMode": "contain",
-        "backgroundColor": "#900C27"
+        "backgroundColor": "#292929"
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -27,16 +27,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/ios-light.png",
-        "backgroundColor": "#900C27"
+        "foregroundImage": "./assets/android-icon.png",
+        "backgroundColor": "#292929"
       },
       "edgeToEdgeEnabled": true,
-      "splash": {
-        "image": "./assets/ios-light.png",
-        "imageWidth": 200,
-        "resizeMode": "contain",
-        "backgroundColor": "#900C27"
-      },
+      "windowSoftInputMode": "adjustResize",
       "splash": {
         "image": "./assets/ios-light.png",
         "imageWidth": 200,

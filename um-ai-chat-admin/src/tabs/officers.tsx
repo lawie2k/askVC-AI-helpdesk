@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import DataGrid from "../components/DataGrid";
 import { officersAPI } from "../services/api";
 
-const ORGANIZATIONS = ["CSIT", "CODES"];
+const ORGANIZATIONS = ["CSIT", "CODES","EESA"];
 
 export default function OfficersTab() {
   const [officers, setOfficers] = useState<any[]>([]);
