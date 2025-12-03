@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "heroku-postbuild": "cd um-ai-chat-backend && npm install"
+  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.2",
