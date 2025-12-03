@@ -199,10 +199,11 @@ model settings {
 }
 
 model users {
-  id              Int       @id @default(autoincrement())
-  email           String    @unique(map: "email") @db.VarChar(255)
-  password_hashed String    @db.VarChar(255)
-  created_at      DateTime? @default(now())
+  id              Int        @id @default(autoincrement())
+  email           String     @unique(map: "email") @db.VarChar(255)
+  password_hashed String     @db.VarChar(255)
+  created_at      DateTime?  @default(now())
+  last_active_at  DateTime?  @db.DateTime(0)
   password_reset_tokens password_reset_tokens[]
   historyChats    historyChats[]
 }

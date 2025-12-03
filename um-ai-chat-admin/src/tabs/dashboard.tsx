@@ -29,6 +29,8 @@ export default function Dashboard() {
     const [rooms, setRooms] = useState<any[]>([]);
     const [logs, setLogs] = useState<any[]>([]);
     const [topQuestions, setTopQuestions] = useState<{ question: string; count: number }[]>([]);
+    const [signupsPerDay, setSignupsPerDay] = useState<{ date: string; count: number }[]>([]);
+    const [dailyActiveUsers, setDailyActiveUsers] = useState<{ date: string; count: number }[]>([]);
     const [professors, setProfessors] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -58,12 +60,22 @@ export default function Dashboard() {
                 console.error('Failed to load top questions:', err); 
                 return []; 
             });
+            const loadSignupsPerDay = statsAPI.getSignupsPerDay(7).catch(err => {
+                console.error('Failed to load signups-per-day stats:', err);
+                return [];
+            });
+            const loadDailyActiveUsers = statsAPI.getDailyActiveUsers(7).catch(err => {
+                console.error('Failed to load daily-active-users stats:', err);
+                return [];
+            });
             
-            const [roomsData, logsData, professorsData, topQuestionsData] = await Promise.all([
+            const [roomsData, logsData, professorsData, topQuestionsData, signupsData, dauData] = await Promise.all([
                 loadRooms,
                 loadLogs,
                 loadProfessors,
-                loadTopQuestions
+                loadTopQuestions,
+                loadSignupsPerDay,
+                loadDailyActiveUsers,
             ]);
             
             const finalProfessors = Array.isArray(professorsData) ? professorsData : [];
@@ -72,6 +84,8 @@ export default function Dashboard() {
                 logsCount: Array.isArray(logsData) ? logsData.length : 0, 
                 professorsCount: finalProfessors.length, 
                 topQuestionsCount: Array.isArray(topQuestionsData) ? topQuestionsData.length : 0,
+                signupsPerDayCount: Array.isArray(signupsData) ? signupsData.length : 0,
+                dailyActiveUsersCount: Array.isArray(dauData) ? dauData.length : 0,
                 professorsSample: finalProfessors.slice(0, 3),
                 allProfessors: finalProfessors
             });
@@ -81,6 +95,8 @@ export default function Dashboard() {
             setLogs(Array.isArray(logsData) ? logsData : []);
             setProfessors(finalProfessors);
             setTopQuestions(Array.isArray(topQuestionsData) ? topQuestionsData : []);
+            setSignupsPerDay(Array.isArray(signupsData) ? signupsData : []);
+            setDailyActiveUsers(Array.isArray(dauData) ? dauData : []);
         }catch(error){
             console.error('Error loading dashboard data:', error);
             setError('Failed to load dashboard data. Please check your connection and try again.');
@@ -134,6 +150,64 @@ export default function Dashboard() {
             ],
         };
     }, [topQuestions]);
+
+    const signupsChartData = useMemo(() => {
+        if (!signupsPerDay || signupsPerDay.length === 0) {
+            return { labels: [], datasets: [] };
+        }
+
+        const labels = [...signupsPerDay]
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+            .map(row => new Date(row.date).toLocaleDateString());
+
+        const counts = [...signupsPerDay]
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+            .map(row => row.count);
+
+        return {
+            labels,
+            datasets: [
+                {
+                    label: "New users",
+                    data: counts,
+                    borderColor: "#34D399",
+                    backgroundColor: "rgba(52,211,153,0.25)",
+                    tension: 0.35,
+                    pointRadius: 4,
+                    fill: true,
+                },
+            ],
+        };
+    }, [signupsPerDay]);
+
+    const dauChartData = useMemo(() => {
+        if (!dailyActiveUsers || dailyActiveUsers.length === 0) {
+            return { labels: [], datasets: [] };
+        }
+
+        const labels = [...dailyActiveUsers]
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+            .map(row => new Date(row.date).toLocaleDateString());
+
+        const counts = [...dailyActiveUsers]
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+            .map(row => row.count);
+
+        return {
+            labels,
+            datasets: [
+                {
+                    label: "Active users",
+                    data: counts,
+                    borderColor: "#60A5FA",
+                    backgroundColor: "rgba(96,165,250,0.25)",
+                    tension: 0.35,
+                    pointRadius: 4,
+                    fill: true,
+                },
+            ],
+        };
+    }, [dailyActiveUsers]);
 
     const logsByDay = useMemo(() => {
         const counts: Record<string, number> = {};
@@ -329,14 +403,14 @@ export default function Dashboard() {
           )}
           <div className="w-full max-w-[1170px] h-[660px] mt-6 xl:mx-10 px-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
               <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg p-4">
-                  <h2 className="text-white font-semibold text-lg mb-2">Rooms by type</h2>
+                  <h2 className="text-white font-semibold text-lg mb-2">Daily active users (last 7 days)</h2>
                   {renderChartOrEmpty(
-                      roomsByType.labels.length > 0,
+                      dauChartData.labels.length > 0,
                       <div className="h-[240px]">
-                          <Bar data={roomsByType} options={barOptions} />
-      </div>
-    )}
-</div>
+                          <Line data={dauChartData} options={lineOptions} />
+                      </div>
+                  )}
+              </div>
               <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg p-4">
                   <h2 className="text-white font-semibold text-lg mb-2">Admin activity (last 7 days)</h2>
                   {renderChartOrEmpty(
@@ -347,12 +421,12 @@ export default function Dashboard() {
                   )}
               </div>
               <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg p-4">
-                  <h2 className="text-white font-semibold text-lg mb-2">Most asked questions</h2>
+                  <h2 className="text-white font-semibold text-lg mb-2">New signups (last 7 days)</h2>
                   {renderChartOrEmpty(
-                      questionsChartData.labels.length > 0,
+                      signupsChartData.labels.length > 0,
                       <div className="h-[240px]">
-                          <Bar data={questionsChartData} options={questionsBarOptions} />
-                    </div>
+                          <Line data={signupsChartData} options={lineOptions} />
+                      </div>
                   )}
               </div>
               <div className="w-full h-[330px] bg-[#3C3C3C] border-white border-2 rounded-lg p-4">

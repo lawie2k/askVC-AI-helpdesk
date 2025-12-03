@@ -89,13 +89,14 @@ async function getUserIdFromToken(req) {
     
     if (!userId) return null;
     
-    // Verify user exists
-    const user = await prisma.users.findUnique({
+    // Verify user exists and update last_active_at for DAU tracking
+    const user = await prisma.users.update({
       where: { id: Number(userId) },
+      data: { last_active_at: new Date() },
       select: { id: true },
     });
-    
-    return user ? user.id : null;
+
+    return user?.id ?? null;
   } catch (error) {
     return null; // Invalid token, but don't block the request
   }

@@ -56,6 +56,17 @@ router.post("/login", async (req, res) => {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
+        // Update last_active_at on successful login
+        try {
+            await prisma.users.update({
+                where: { id: user.id },
+                data: { last_active_at: new Date() },
+            });
+        } catch (activityErr) {
+            console.error("Failed to update last_active_at on login:", activityErr);
+            // Don't block login if this fails
+        }
+
         if (!JWT_SECRET) {
             return res.status(500).json({ error: "Server misconfigured: missing JWT_SECRET" });
         }
@@ -89,6 +100,8 @@ router.post("/register", async (req, res) => {
             data: {
                 email,
                 password_hashed: hashedPassword,
+                // Consider newly registered users as active at registration time
+                last_active_at: new Date(),
             },
         });
 

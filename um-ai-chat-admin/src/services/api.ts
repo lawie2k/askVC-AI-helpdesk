@@ -231,6 +231,8 @@ export const reportsAPI = {
 // Stats API (for dashboard charts)
 export const statsAPI = {
   getTopQuestions: () => apiCall('/api/stats/top-questions'),
+  getSignupsPerDay: (days: number = 7) => apiCall(`/api/stats/signups-per-day?days=${days}`),
+  getDailyActiveUsers: (days: number = 7) => apiCall(`/api/stats/daily-active-users?days=${days}`),
 };
 
 // Feedback API functions
