@@ -1,0 +1,4 @@
+build:
+  config:
+    PROJECT_PATH: um-ai-chat-backend
+
