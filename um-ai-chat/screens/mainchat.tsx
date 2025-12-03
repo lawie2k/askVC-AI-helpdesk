@@ -1,4 +1,13 @@
-import {Pressable, Text, TouchableOpacity, View} from "react-native";
+import {
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    Text,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
+} from "react-native";
 import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
 import {faListUl, faTimes} from "@fortawesome/free-solid-svg-icons";
 import React, {useState} from "react";
@@ -37,6 +46,12 @@ export default function MainChat() {
     }
     return (
         <SafeAreaView className="flex-1 bg-[#292929]">
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+            >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <View className="flex-1 pt-4 px-4 shadow-2xl">
                 <View className="flex-row items-center gap-5 border-b-2 border-gray-600 pb-4">
                     <TouchableOpacity onPress={() => setSideBar(!sideBar)}>
@@ -143,6 +158,8 @@ export default function MainChat() {
                     <Text className="text-white text-[12px] text-center">© 2025 All Rights Reserved. By Art laurence Siojo</Text>
                 </View>
             </View>
+            </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     )
 }

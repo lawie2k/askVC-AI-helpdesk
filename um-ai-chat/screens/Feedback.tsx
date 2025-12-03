@@ -1,12 +1,22 @@
 import React from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import {
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import type { IconProp } from "@fortawesome/fontawesome-svg-core";
 
-const API_URL = "https://askvc-ai-helpdesk.onrender.com";
+const API_URL = "https://askvc-backend-0b6f10fad280.herokuapp.com";
 
 export default function FeedbackScreen() {
   const navigation = useNavigation();
@@ -53,6 +63,12 @@ export default function FeedbackScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#292929]">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View className="flex-1">
         {/* Header (match ChatHistory 1:1 style) */}
         <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-700">
@@ -94,6 +110,7 @@ export default function FeedbackScreen() {
             placeholder="Type your feedback here..."
             placeholderTextColor="#9CA3AF"
             multiline
+            textAlignVertical="top"
             value={message}
             onChangeText={setMessage}
           />
@@ -111,6 +128,8 @@ export default function FeedbackScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

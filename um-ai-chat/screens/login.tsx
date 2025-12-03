@@ -1,11 +1,11 @@
-import {View, Text, TextInput, TouchableOpacity, Pressable} from "react-native";
+import {Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, View, Text, TextInput, TouchableOpacity, Pressable} from "react-native";
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
 import React, {useState} from "react";
-import { useNavigation } from "@react-navigation/native";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = "https://askvc-ai-helpdesk.onrender.com";
+const API_URL = "https://askvc-backend-0b6f10fad280.herokuapp.com";
 
 const isUmEmail = (value: string) => {
 	const trimmed = value.trim();
@@ -115,7 +115,12 @@ export default function Login(){
                 await AsyncStorage.setItem("remembered_email", normalizedEmail);
             }
 
-            navigation.navigate("MainChat" as never);
+            navigation.dispatch(
+                CommonActions.reset({
+                    index: 0,
+                    routes: [{ name: "MainChat" as never }],
+                })
+            );
         } catch (e: any) {
             console.error(e);
             setError(e?.message || "Failed to login");
@@ -127,7 +132,13 @@ export default function Login(){
     return(
         <SafeAreaProvider>
             <SafeAreaView className="flex-1 bg-[#292929]">
-                <View>
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+                >
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <View className="flex-1">
                     <View>
                         <Text className="text-white text-[40px] font-extrabold text-center mt-[75px]">ask
                             <Text className="text-[#900C27]">VC</Text>
@@ -238,6 +249,8 @@ export default function Login(){
                         </View>
                     </View>
                 </View>
+                </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
             </SafeAreaView>
         </SafeAreaProvider>
     )

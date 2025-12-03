@@ -20,7 +20,7 @@ export default function ChatHistory() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const BASE_URL = "https://askvc-ai-helpdesk.onrender.com";
+  const BASE_URL = "https://askvc-backend-0b6f10fad280.herokuapp.com";
 
   useEffect(() => {
     loadChatHistory();
@@ -45,7 +45,12 @@ export default function ChatHistory() {
       if (response.ok) {
         const data = await response.json();
         if (data.history) {
-          setConversations(data.history);
+          // Sort so newest conversations appear at the top
+          const sorted = [...data.history].sort(
+            (a: Conversation, b: Conversation) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          setConversations(sorted);
         }
       }
     } catch (error) {

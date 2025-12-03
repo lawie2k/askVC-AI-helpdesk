@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {View, Text, TextInput, Pressable, TouchableOpacity, Platform} from 'react-native';
+import {
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
+} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
 import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
 import {faArrowLeft} from "@fortawesome/free-solid-svg-icons";
@@ -10,7 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ResetPass() {
     const navigation = useNavigation();
-    const API_URL = "https://askvc-ai-helpdesk.onrender.com";
+    const API_URL = "https://askvc-backend-0b6f10fad280.herokuapp.com";
 
     const [userId, setUserId] = useState<number | null>(null);
     const [oldPassword, setOldPassword] = useState('');
@@ -106,8 +116,15 @@ export default function ResetPass() {
 
   return (
     <SafeAreaProvider>
-        <SafeAreaView className="flex-1 bg-[#292929]">
-            <View className="px-8 py-6">
+    <SafeAreaView className="flex-1 bg-[#292929]">
+        <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View className="flex-1">
+        <View className="px-8 py-6">
                 <Pressable onPress={() => navigation.goBack()}>
                     <FontAwesomeIcon
                         icon={faArrowLeft as IconProp}
@@ -215,6 +232,9 @@ export default function ResetPass() {
                 </Pressable>
                 
             </View>
+        </View>
+        </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
         </SafeAreaView>
     </SafeAreaProvider>
   );

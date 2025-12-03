@@ -1,5 +1,16 @@
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
-import {View, Text, TextInput, TouchableOpacity, Pressable, Alert} from "react-native";
+import {
+    Alert,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
+} from "react-native";
 import React from "react";
 import {faArrowLeft} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
@@ -7,7 +18,7 @@ import {IconProp} from "@fortawesome/fontawesome-svg-core";
 import {useNavigation} from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = "https://askvc-ai-helpdesk.onrender.com";
+const API_URL = "https://askvc-backend-0b6f10fad280.herokuapp.com";
 
 const isUmEmail = (value: string) => {
     const trimmed = value.trim();
@@ -77,6 +88,12 @@ export default function Signup() {
     return(
         <SafeAreaProvider>
             <SafeAreaView className="flex-1 bg-[#292929]">
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+            >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
 
                 <View className=" ml-8 mt-10 ">
                     <Pressable onPress={() => navigation.goBack()}>
@@ -173,6 +190,9 @@ export default function Signup() {
                         </TouchableOpacity>
                     </View>
                 </View>
+
+            </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
             </SafeAreaView>
         </SafeAreaProvider>
     )
