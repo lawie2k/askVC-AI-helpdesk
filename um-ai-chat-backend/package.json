@@ -1,6 +1,14 @@
 {
   "name": "um-ai-chat-backend",
   "version": "1.0.0",
+  "scripts": {
+    "start": "node server.js",
+    "postinstall": "prisma generate || echo 'Prisma generate failed, continuing...'"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "dependencies": {
     "@azure-rest/ai-inference": "^1.0.0-beta.6",
     "@azure/core-auth": "^1.10.1",
