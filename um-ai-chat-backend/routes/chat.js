@@ -355,7 +355,7 @@ and for the 3rd floor it is beside in AVR room
 - if the input is comlab 1,2 or 3 it is same with Com Lab 1,2 or 3
 - if the input is Audio Visual room it is same with AVR or room AVR
 - if the input is LJ or lj it should point to the professor lowel jay orcullo
-- the school director is Dr. Evelyn P. Saludes
+- the school director of University of Mindanao Tagum College is Dr. Evelyn P. Saludes 
 
 ${dbContext}${conversationContext}`;
 
