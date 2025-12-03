@@ -100,6 +100,7 @@ um-ai-chat/node_modules/
 um-ai-chat/ios/Pods/
 um-ai-chat/ios/build/
 um-ai-chat-admin/node_modules/
+um-ai-chat-admin/dist/
 um-ai-chat-backend/node_modules/
 
 # Backend env

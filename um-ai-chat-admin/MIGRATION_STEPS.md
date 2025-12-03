@@ -228,3 +228,5 @@ If you encounter issues:
 3. Check file permissions
 4. Contact Hostinger support if Apache issues persist
 
+
+

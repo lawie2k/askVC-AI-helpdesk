@@ -212,6 +212,26 @@ router.post("/ask", async (req, res) => {
       dbResults.forEach((result) => {
         dbContext += `\nFrom ${result.table} table:\n`;
         result.data.forEach((item) => {
+          // Give the AI a clearer, human-friendly summary for professors
+          if (result.table === "professors") {
+            const displayDept =
+              item.program && item.program.trim()
+                ? item.program.trim()
+                : item.department && String(item.department).trim()
+                ? String(item.department).trim()
+                : null;
+
+            const parts = [];
+            if (item.name) parts.push(`Name: ${item.name}`);
+            if (displayDept) parts.push(`Department: ${displayDept}`);
+            if (item.position) parts.push(`Position: ${item.position}`);
+
+            if (parts.length > 0) {
+              dbContext += `- ${parts.join(" | ")}\n`;
+            }
+          }
+
+          // Keep the raw JSON as fallback context so the AI still sees all fields
           dbContext += `- ${JSON.stringify(item, null, 2)}\n`;
           
           // Only keep the best match for images (highest relevance score)

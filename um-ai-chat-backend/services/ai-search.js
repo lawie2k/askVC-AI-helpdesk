@@ -273,6 +273,8 @@ async function searchDatabase(question) {
         // Extract specific room identifier (e.g., "comlab 1", "room 301", "avr", "laboratory")
         let roomIdentifier = null;
         let roomType = null;
+        let comlabAltIdentifier = null; // For names like "Com Lab V1"
+        let usedSpecificLabPhrase = false; // e.g. "electrical laboratory"
         
         // Check for specific room types (avr, laboratory, lecture, etc.)
         const roomTypes = [
@@ -293,6 +295,8 @@ async function searchDatabase(question) {
         const comlabMatch = q.match(/\bcomlab\s*(\d+)\b/i);
         if (comlabMatch) {
           roomIdentifier = `comlab ${comlabMatch[1]}`.toLowerCase();
+          // Special-case mapping: "comlab 1/2/3" → "Com Lab V1/V2/V3"
+          comlabAltIdentifier = `com lab v${comlabMatch[1]}`.toLowerCase();
         }
         
         // Check for "room" with number (e.g., "room 301", "room301")
@@ -311,7 +315,17 @@ async function searchDatabase(question) {
           }
         }
         
-        // If we have a room type but no identifier, use the type as identifier
+        // If we have a "X laboratory/lab" phrase (e.g. "electrical laboratory"),
+        // use the full phrase as identifier so we don't mix different labs.
+        if (!roomIdentifier) {
+          const labPhraseMatch = q.match(/\b([a-z]+)\s+(laboratory|lab)\b/i);
+          if (labPhraseMatch && labPhraseMatch[1]) {
+            roomIdentifier = `${labPhraseMatch[1]} ${labPhraseMatch[2]}`.toLowerCase();
+            usedSpecificLabPhrase = true;
+          }
+        }
+
+        // If we have a room type but still no identifier, use the type as identifier
         if (!roomIdentifier && roomType) {
           roomIdentifier = roomType;
         }
@@ -325,8 +339,14 @@ async function searchDatabase(question) {
         const queryParams = [];
         if (roomIdentifier) {
           // Search for rooms that match the identifier in their name or type
-          query += ` WHERE LOWER(r.name) LIKE ? OR LOWER(r.type) LIKE ?`;
-          queryParams.push(`%${roomIdentifier}%`, `%${roomIdentifier}%`);
+          // plus a special alternate form for Com Lab V1/V2/V3
+          if (comlabAltIdentifier) {
+            query += ` WHERE (LOWER(r.name) LIKE ? OR LOWER(r.type) LIKE ? OR LOWER(r.name) LIKE ?)`;
+            queryParams.push(`%${roomIdentifier}%`, `%${roomIdentifier}%`, `%${comlabAltIdentifier}%`);
+          } else {
+            query += ` WHERE LOWER(r.name) LIKE ? OR LOWER(r.type) LIKE ?`;
+            queryParams.push(`%${roomIdentifier}%`, `%${roomIdentifier}%`);
+          }
         }
         
         db.query(query, queryParams, (err, results) => {
@@ -397,6 +417,42 @@ async function searchDatabase(question) {
             searchResults.push({
               table: table,
               data: finalResults,
+              priority: tableInfo.priority
+            });
+          } else if (!err && results.length === 0 && usedSpecificLabPhrase && roomIdentifier) {
+            // The user asked for a very specific lab (e.g. "electrical laboratory")
+            // but we found no matching room. Tell the AI clearly so it doesn't
+            // incorrectly map to some other laboratory like Physics Lab.
+            searchResults.push({
+              table: table,
+              data: [
+                {
+                  name: null,
+                  type: null,
+                  building_name: null,
+                  match_type: "no_room_match",
+                  requested_identifier: roomIdentifier,
+                  message: `There is NO room in the database that matches "${roomIdentifier}". Do NOT assume it is another laboratory like Physics Lab.`
+                }
+              ],
+              priority: tableInfo.priority
+            });
+          } else if (!err && results.length === 0 && roomIdentifier) {
+            // Generic case: user asked for a specific room/identifier (e.g. "ComLab 5" or
+            // "Room 999") that does not exist in the database. Make this explicit so the
+            // AI does not guess another room.
+            searchResults.push({
+              table: table,
+              data: [
+                {
+                  name: null,
+                  type: null,
+                  building_name: null,
+                  match_type: "no_room_match",
+                  requested_identifier: roomIdentifier,
+                  message: `There is NO room in the database that matches "${roomIdentifier}". Do NOT guess or substitute a different room.`
+                }
+              ],
               priority: tableInfo.priority
             });
           }
@@ -505,6 +561,24 @@ async function searchDatabase(question) {
             searchResults.push({
               table: table,
               data: finalResults,
+              priority: tableInfo.priority
+            });
+          } else if (!err && results.length === 0 && officeIdentifier) {
+            // The user asked for a specific office (e.g. "OSA office", "RAC office")
+            // that does not exist in the database. Tell the AI explicitly so it does
+            // NOT answer with some random other office.
+            searchResults.push({
+              table: table,
+              data: [
+                {
+                  name: null,
+                  floor: null,
+                  building_name: null,
+                  match_type: "no_office_match",
+                  requested_identifier: officeIdentifier,
+                  message: `There is NO office in the database that matches "${officeIdentifier}". Do NOT guess or substitute a different office.`
+                }
+              ],
               priority: tableInfo.priority
             });
           }
