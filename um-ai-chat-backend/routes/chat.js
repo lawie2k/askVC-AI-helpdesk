@@ -618,18 +618,35 @@ function isClassScheduleConcern(text) {
   if (!text) return false;
   const q = text.toLowerCase();
 
-  const keywords = [
-    "class schedule",
-    "class schedules",
+  // Only trigger for personal concerns, not general information questions
+  // Questions like "what are the subjects" should NOT trigger this
+  const personalKeywords = [
     "my schedule",
     "my subjects",
     "my subject",
-    "subjects",
-    "enrollment",
-    "enrolment",
-    "pre-enrollment",
-    "preregistration",
-    "pre registration",
+    "my class schedule",
+    "my enrollment",
+    "my enrolment",
+    "my pre-enrollment",
+    "my preregistration",
+    "my pre registration",
+    "my overload",
+    "my underload",
+    "change my subject",
+    "change my schedule",
+    "my subject conflict",
+    "my schedule conflict",
+    "i want to change",
+    "i need to change",
+    "help me with my",
+  ];
+  
+  // General keywords that indicate a concern (not just asking for info)
+  const concernKeywords = [
+    "enrollment concern",
+    "enrolment concern",
+    "schedule concern",
+    "subject concern",
     "overload",
     "underload",
     "change subject",
@@ -638,7 +655,14 @@ function isClassScheduleConcern(text) {
     "schedule conflict",
   ];
 
-  return keywords.some((k) => q.includes(k));
+  // Check if it's a personal question or concern
+  const isPersonal = personalKeywords.some((k) => q.includes(k));
+  const isConcern = concernKeywords.some((k) => q.includes(k));
+  
+  // Don't trigger if asking for general information (what, which, list, show)
+  const isInfoQuestion = /^(what|which|list|show|tell me|what are|what is|what's)/i.test(q.trim());
+  
+  return (isPersonal || isConcern) && !isInfoQuestion;
 }
 
 async function getDepartmentHeadInfo(deptKey) {

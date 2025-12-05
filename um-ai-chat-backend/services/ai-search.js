@@ -778,8 +778,11 @@ function extractDepartmentFromQuestion(question) {
   if (q.includes('bsit') || q.includes(' it ') || q.endsWith(' it') || q.startsWith('it ') || q.includes('information technology') || q.includes('in it') || q.includes('it department')) {
     return 'BSIT';
   }
-  if (q.includes('bscs') || q.includes(' cs ') || q.endsWith(' cs') || q.startsWith('cs ') || q.includes('computer science')) {
+  if (q.includes('bscs') || q.includes(' cs ') || q.endsWith(' cs') || q.startsWith('cs ') || q.includes('computer science') || q.includes('com sci') || q.includes('comsci')) {
     return 'BSCS';
+  }
+  if (q.includes('bsce') || q.includes(' ce ') || q.endsWith(' ce') || q.startsWith('ce ') || q.includes('computer engineering') || q.includes('com eng') || q.includes('comeng')) {
+    return 'BSCE';
   }
   if (q.includes('it?') || q.includes('it,')) {
     return 'BSIT';
