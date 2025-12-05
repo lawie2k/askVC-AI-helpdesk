@@ -21,6 +21,7 @@ export default function MainChat() {
     const navigation = useNavigation();
     const route = useRoute();
     const [sideBar, setSideBar] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [messages, setMessages] = React.useState<IMessage[]>([]);
     const [chatKey, setChatKey] = React.useState(0);
 
@@ -52,7 +53,7 @@ export default function MainChat() {
                 keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
             >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <View className="flex-1 pt-4 px-4 shadow-2xl">
+            <View className="flex-1 pt-4 px-4 pb-10 shadow-2xl relative">
                 <View className="flex-row items-center gap-5 border-b-2 border-gray-600 pb-4">
                     <TouchableOpacity onPress={() => setSideBar(!sideBar)}>
                         <FontAwesomeIcon icon={faListUl} color="#ffffff" size={24}/>
@@ -130,9 +131,8 @@ export default function MainChat() {
 
                                 <TouchableOpacity
                                     className="py-2"
-                                    onPress={async () => {
-                                        setSideBar(false);
-                                        try { await logout(); } catch {}
+                                    onPress={() => {
+                                        setShowLogoutConfirm(true);
                                     }}
                                 >
                                     <Text className="text-gray-300 text-2xl font-black">
@@ -153,9 +153,43 @@ export default function MainChat() {
 
                 <Chat key={chatKey} messages={messages} setMessages={setMessages}/>
 
+                {/* Custom logout confirmation popup */}
+                {showLogoutConfirm && (
+                    <View className="absolute inset-0 z-50 items-center justify-center bg-black/50">
+                        <View className="w-[300px] bg-[#3C3C3C] rounded-2xl px-5 py-6 border border-white/20">
+                            <Text className="text-white text-[18px] font-extrabold mb-2">
+                                Log out
+                            </Text>
+                            <Text className="text-gray-200 mb-5">
+                                Are you sure you want to log out?
+                            </Text>
+                            <View className="flex-row justify-end gap-3">
+                                <TouchableOpacity
+                                    className="px-4 py-2 rounded-full bg-gray-600"
+                                    onPress={() => setShowLogoutConfirm(false)}
+                                >
+                                    <Text className="text-white font-bold">Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className="px-4 py-2 rounded-full bg-[#900C27]"
+                                    onPress={async () => {
+                                        setShowLogoutConfirm(false);
+                                        setSideBar(false);
+                                        try { await logout(); } catch {}
+                                    }}
+                                >
+                                    <Text className="text-white font-bold">Log out</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                )}
 
-                <View className="flex-row justify-center pt-[10px] mb-[-20px]">
-                    <Text className="text-white text-[12px] text-center">© 2025 All Rights Reserved. By Art laurence Siojo</Text>
+
+                <View className="absolute bottom-4 left-0 right-0 items-center pointer-events-none">
+                    <Text className="text-white text-[12px] text-center">
+                        © 2025 All Rights Reserved. By Art laurence Siojo
+                    </Text>
                 </View>
             </View>
             </TouchableWithoutFeedback>

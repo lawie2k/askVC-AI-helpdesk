@@ -3,6 +3,7 @@ const { searchDatabase, extractDepartmentFromQuestion } = require("../services/a
 const AIService = require("../services/ai-service");
 const prisma = require("../config/prismaClient");
 const jwt = require("jsonwebtoken");
+const { fetchMultipleUrls } = require("../services/url-fetcher");
 
 const router = express.Router();
 const aiService = new AIService();
@@ -186,6 +187,54 @@ router.post("/ask", async (req, res) => {
     const dbResults = await searchDatabase(question);
 
     // ========================================================================
+    // SCANNED URLS - Fetch content from pre-configured URLs
+    // ========================================================================
+    let scannedUrlContext = "";
+    try {
+      // Get all active scanned URLs from database
+      const scannedUrls = await prisma.scanned_urls.findMany({
+        where: { is_active: true },
+        orderBy: { created_at: 'desc' },
+      });
+
+      if (scannedUrls.length > 0) {
+        console.log(`🌐 Found ${scannedUrls.length} active scanned URL(s), fetching content...`);
+        const urlList = scannedUrls.map(su => su.url);
+        const urlResults = await fetchMultipleUrls(urlList);
+        
+        const successfulFetches = urlResults.filter(r => r.success);
+        if (successfulFetches.length > 0) {
+          scannedUrlContext = "\n\nContent from configured web sources:\n";
+          successfulFetches.forEach((result, index) => {
+            // Find the corresponding scanned URL record for title/description
+            const scannedUrlRecord = scannedUrls.find(su => su.url === result.url);
+            scannedUrlContext += `\n[Source ${index + 1}]\n`;
+            if (scannedUrlRecord?.title) {
+              scannedUrlContext += `Title: ${scannedUrlRecord.title}\n`;
+            } else if (result.title) {
+              scannedUrlContext += `Title: ${result.title}\n`;
+            }
+            scannedUrlContext += `URL: ${result.url}\n`;
+            if (scannedUrlRecord?.description) {
+              scannedUrlContext += `Description: ${scannedUrlRecord.description}\n`;
+            }
+            if (result.content) {
+              scannedUrlContext += `Content: ${result.content}\n`;
+            }
+          });
+          console.log(`✅ Successfully fetched content from ${successfulFetches.length} scanned URL(s)`);
+        } else {
+          console.log('⚠️ Failed to fetch content from any scanned URLs');
+        }
+      } else {
+        console.log('📝 No active scanned URLs configured');
+      }
+    } catch (urlErr) {
+      console.error('⚠️ Error fetching scanned URLs:', urlErr.message);
+      // Don't fail the request if URL fetching fails
+    }
+
+    // ========================================================================
     // PREPARE AI CONTEXT - Format database results for AI
     // ========================================================================
     let dbContext = "";
@@ -357,8 +406,9 @@ and for the 3rd floor it is beside in AVR room
 - if the input is Audio Visual room it is same with AVR or room AVR
 - if the input is LJ or lj it should point to the professor lowel jay orcullo
 - the school director of University of Mindanao Tagum College is Dr. Evelyn P. Saludes 
+- When answering questions, search through both the database information AND the content from configured web sources below. Use information from web sources to supplement or answer questions when the database doesn't have the information.
 
-${dbContext}${conversationContext}`;
+${dbContext}${scannedUrlContext}${conversationContext}`;
 
     // Try AI service (with timeout protection)
     if (aiService.isAvailable()) {
@@ -415,21 +465,21 @@ ${dbContext}${conversationContext}`;
         
         // Check if it's a timeout
         if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
-          return res.json({ answer: "network error" });
+          return res.json({ answer: "Sorry, I'm having trouble processing your question right now. Please try again in a moment." });
         }
         
-        // Generic error fallback
-        return res.json({ answer: "network error" });
+        // Generic error fallback - user-friendly message
+        return res.json({ answer: "Sorry, I don't have that information available right now. Please try asking a different question." });
       }
     } else {
       console.log('⚠️ AI service not available');
-      return res.json({ answer: "network error" });
+      return res.json({ answer: "Sorry, I'm currently unavailable. Please try again later." });
     }
     
   } catch (error) {
     console.error("❌ Error in AI chat endpoint:", error);
-    res.status(500).json({
-      answer: "Sorry, I'm having trouble processing your request. Please try again.",
+    return res.json({
+      answer: "Sorry, I don't have that information available. Please try asking a different question.",
     });
   }
 });

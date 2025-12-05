@@ -103,9 +103,9 @@ export function Chat({messages, setMessages}: {
 
         } catch (e: any) {
             console.error("AI fetch failed:", e);
-            let errorText = "Error fetching AI response";
+            let errorText = "Sorry, I don't have that information available right now. Please try asking a different question.";
             if (e?.name === "AbortError" || (e?.message || "").includes("Network request failed")) {
-                errorText = "No internet connection";
+                errorText = "No internet connection. Please check your connection and try again.";
             }
             const errorMessage: ChatMessage = {
                 _id: Date.now(),

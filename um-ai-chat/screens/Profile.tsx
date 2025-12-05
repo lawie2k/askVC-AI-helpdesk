@@ -1,4 +1,4 @@
-import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
+import {SafeAreaView} from "react-native-safe-area-context";
 import {View, Text, Pressable, TouchableOpacity} from "react-native";
 import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
 import {faArrowLeft} from "@fortawesome/free-solid-svg-icons";
@@ -27,7 +27,6 @@ export default function Profile(){
         })();
     }, []);
     return(
-        <SafeAreaProvider>
             <SafeAreaView className="flex-1 bg-[#292929]">
 
                 <View className="flex-1">
@@ -67,6 +66,5 @@ export default function Profile(){
                 </View>
 
             </SafeAreaView>
-        </SafeAreaProvider>
     )
 }

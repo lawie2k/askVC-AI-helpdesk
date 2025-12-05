@@ -24,6 +24,7 @@ model admins {
   non_teaching_staff non_teaching_staff[]
   announcements   announcements[]
   settings        settings[]
+  scanned_urls    scanned_urls[]
 }
 
 model buildings {
@@ -230,4 +231,19 @@ model historyChats {
 
   @@index([user_id], map: "history_chats_user_idx")
   @@index([created_at], map: "history_chats_created_idx")
+}
+
+model scanned_urls {
+  id          Int      @id @default(autoincrement())
+  url         String   @db.VarChar(500)
+  title       String?  @db.VarChar(255)
+  description String?  @db.Text
+  is_active   Boolean  @default(true)
+  admin_id    Int?
+  created_at  DateTime @default(now()) @db.DateTime(0)
+  updated_at  DateTime @default(now()) @db.DateTime(0)
+  admins      admins?  @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "scanned_urls_ibfk_1")
+
+  @@index([admin_id], map: "scanned_urls_admin_id_idx")
+  @@index([is_active], map: "scanned_urls_is_active_idx")
 }

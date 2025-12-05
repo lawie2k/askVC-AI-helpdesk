@@ -1,5 +1,5 @@
 import {Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, View, Text, TextInput, TouchableOpacity, Pressable} from "react-native";
-import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
+import {SafeAreaView} from "react-native-safe-area-context";
 import React, {useState} from "react";
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -130,7 +130,6 @@ export default function Login(){
     }
 
     return(
-        <SafeAreaProvider>
             <SafeAreaView className="flex-1 bg-[#292929]">
                 <KeyboardAvoidingView
                     style={{ flex: 1 }}
@@ -227,7 +226,7 @@ export default function Login(){
                            </Text>
                        </View>
 
-                        <View className="flex-row justify-center items-center mt-[300px]">
+                        <View className="flex-row justify-center items-center mt-[50px]">
                             <Text className="text-[16px] text-white font-bold">
                                 Dont have an account?{" "}
                             </Text>
@@ -252,6 +251,5 @@ export default function Login(){
                 </TouchableWithoutFeedback>
                 </KeyboardAvoidingView>
             </SafeAreaView>
-        </SafeAreaProvider>
     )
 }

@@ -1,4 +1,4 @@
-import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
+import {SafeAreaView} from "react-native-safe-area-context";
 import {
     Alert,
     Keyboard,
@@ -59,13 +59,14 @@ export default function Signup() {
                 );
                 setLoading(false);
                 return;
-            }
-            else if (password !== confirmPassword) {
+            } else if (password !== confirmPassword) {
                 setPwError("Passwords do not match");
                 Alert.alert(
                     "Passwords do not match",
                     "Please enter the same password in both fields."
                 );
+                setLoading(false);
+                return;
             }
             const response = await fetch(`${API_URL}/auth/register`, {
                 method: "POST",
@@ -86,7 +87,6 @@ export default function Signup() {
     }
     
     return(
-        <SafeAreaProvider>
             <SafeAreaView className="flex-1 bg-[#292929]">
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
@@ -94,106 +94,103 @@ export default function Signup() {
                 keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
             >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-
-                <View className=" ml-8 mt-10 ">
-                    <Pressable onPress={() => navigation.goBack()}>
-                        <FontAwesomeIcon
-                            icon={faArrowLeft as IconProp}
-                            size={24}
-                            style={{ color: "#C70039" }}
-                        />
-                    </Pressable>
-                </View>
-
-                <View className="flex items-center mt-[75px]">
-                    <Text className="text-white text-[40px] font-extrabold">Register</Text>
-                </View>
-
-                <View className="flex items-center mt-[90px]">
-                    <View>
-                        <TextInput
-                            className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
-                            placeholder="Email"
-                            placeholderTextColor="#9CA3AF"
-                            keyboardType="email-address"
-                            inputMode="email"
-                            textContentType="emailAddress"
-                            autoCapitalize="none"
-                            value={email}
-                            onChangeText={(t) => setEmail(t)}
-                        />
-
-                       <View>
-                       <TextInput className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 pr-10 text-white"
-                                   placeholder="Password"
-                                   placeholderTextColor="#9CA3AF"
-                                   autoCapitalize="none"
-                                   autoCorrect={false}
-                                   secureTextEntry={!showPassword}
-                                   autoComplete="password"
-                                   textContentType="newPassword"
-                                   returnKeyType="done"
-                                   value={password}
-                                   onChangeText={(t) =>{
-                                       setPassword(t);
-                                       setPwError(isStrongPassword(t) ? "" : "Min 8 chars, 1 uppercase, 1 number");
-                        }}
-                        />
-                           <TouchableOpacity
-                               className="absolute right-4 mt-[32px] h-5 w-6 items-center justify-center"
-                               onPress={() => setShowPassword(v => !v)}
-                               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                               activeOpacity={1}
-                           >
-                               <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="white" />
-                           </TouchableOpacity>
-                       </View>
-
-                        <View>
-                            <TextInput className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 pr-10 text-white"
-                                       placeholder="Confirm Password"
-                                       placeholderTextColor="#9CA3AF"
-                                       autoCapitalize="none"
-                                       autoCorrect={false}
-                                       secureTextEntry={!showConfirmPassword}
-                                       autoComplete="password"
-                                       textContentType="newPassword"
-                                       returnKeyType="done"
-                                       value={confirmPassword}
-                                       onChangeText={setConfirmPassword}
+                <View className="flex-1">
+                    <View className=" ml-8 mt-10 ">
+                        <Pressable onPress={() => navigation.goBack()}>
+                            <FontAwesomeIcon
+                                icon={faArrowLeft as IconProp}
+                                size={24}
+                                style={{ color: "#C70039" }}
                             />
+                        </Pressable>
+                    </View>
+
+                    <View className="flex items-center mt-[75px]">
+                        <Text className="text-white text-[40px] font-extrabold">Register</Text>
+                    </View>
+
+                    <View className="flex items-center mt-[90px]">
+                        <View>
+                            <TextInput
+                                className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
+                                placeholder="Email"
+                                placeholderTextColor="#9CA3AF"
+                                keyboardType="email-address"
+                                inputMode="email"
+                                textContentType="emailAddress"
+                                autoCapitalize="none"
+                                value={email}
+                                onChangeText={(t) => setEmail(t)}
+                            />
+
+                            <View>
+                                <TextInput
+                                    className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 pr-10 text-white"
+                                    placeholder="Password"
+                                    placeholderTextColor="#9CA3AF"
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    secureTextEntry={!showPassword}
+                                    autoComplete="password"
+                                    textContentType="newPassword"
+                                    returnKeyType="done"
+                                    value={password}
+                                    onChangeText={(t) => {
+                                        setPassword(t);
+                                        setPwError(isStrongPassword(t) ? "" : "Min 8 chars, 1 uppercase, 1 number");
+                                    }}
+                                />
+                                <TouchableOpacity
+                                    className="absolute right-4 mt-[32px] h-5 w-6 items-center justify-center"
+                                    onPress={() => setShowPassword(v => !v)}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    activeOpacity={1}
+                                >
+                                    <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="white" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View>
+                                <TextInput
+                                    className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 pr-10 text-white"
+                                    placeholder="Confirm Password"
+                                    placeholderTextColor="#9CA3AF"
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    secureTextEntry={!showConfirmPassword}
+                                    autoComplete="password"
+                                    textContentType="newPassword"
+                                    returnKeyType="done"
+                                    value={confirmPassword}
+                                    onChangeText={setConfirmPassword}
+                                />
+                                <TouchableOpacity
+                                    className="absolute right-4 mt-[32px] h-5 w-6 items-center justify-center"
+                                    onPress={() => setShowConfirmPassword(v => !v)}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    activeOpacity={1}
+                                >
+                                    <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="white" />
+                                </TouchableOpacity>
+                            </View>
+
+                            {pwError ? <Text style={{ color: "red" }}>{pwError}</Text> : null}
                             <TouchableOpacity
-                                className="absolute right-4 mt-[32px] h-5 w-6 items-center justify-center"
-                                onPress={() => setShowConfirmPassword(v => !v)}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                activeOpacity={1}
+                                className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${
+                                    loading ? "bg-gray-500" : "bg-[#900C27]"
+                                }`}
+                                onPress={handleSignup}
+                                disabled={loading}
                             >
-                                <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="white" />
+                                <Text className="flex text-white text-[16px] font-extrabold text-center py-4">
+                                    {loading ? "Registering..." : "Register"}
+                                </Text>
                             </TouchableOpacity>
                         </View>
-
-
-
-                     
-                        {pwError ? <Text style={{ color: "red" }}>{pwError}</Text> : null}
-                        <TouchableOpacity className={`w-[310px] h-[50px] rounded-full mt-5 px-5 ${
-                            loading 
-                                ? 'bg-gray-500' 
-                                : 'bg-[#900C27]'
-                        }`}
-                                          onPress={handleSignup}
-                                          disabled={loading}>
-                            <Text className="flex text-white text-[16px] font-extrabold text-center py-4">
-                            {loading ? "Registering..." : "Register"}
-                            </Text>
-                            
-                        </TouchableOpacity>
                     </View>
                 </View>
-
             </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
             </SafeAreaView>
-        </SafeAreaProvider>
     )
 }

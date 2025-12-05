@@ -10,7 +10,7 @@ import {
     TouchableWithoutFeedback,
     View
 } from 'react-native';
-import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context";
+import {SafeAreaView} from "react-native-safe-area-context";
 import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
 import {faArrowLeft} from "@fortawesome/free-solid-svg-icons";
 import {IconProp} from "@fortawesome/fontawesome-svg-core";
@@ -127,7 +127,6 @@ export default function ResetPassLogin() {
     }, [API_URL, code, confirmPassword, email, navigation, newPassword, isStrongPassword]);
 
     return (
-        <SafeAreaProvider>
             <SafeAreaView className="flex-1 bg-[#292929]">
                 <KeyboardAvoidingView
                     style={{ flex: 1 }}
@@ -267,7 +266,6 @@ export default function ResetPassLogin() {
                 </TouchableWithoutFeedback>
                 </KeyboardAvoidingView>
             </SafeAreaView>
-        </SafeAreaProvider>
     );
 }
 
