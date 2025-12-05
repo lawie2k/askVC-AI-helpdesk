@@ -1,5 +1,5 @@
 const cheerio = require('cheerio');
-const pdf = require('pdf-parse');
+const { PDFParse } = require('pdf-parse');
 
 /**
  * Extract URLs from text
@@ -43,12 +43,26 @@ async function fetchUrlContent(url, timeout = 10000) {
       setTimeout(() => reject(new Error('Request timeout')), timeout);
     });
 
+    // Special handling for Facebook URLs
+    const isFacebook = url.includes('facebook.com');
+    
     // Fetch the URL
     const fetchPromise = fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': isFacebook 
+          ? 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
+          : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        ...(isFacebook ? {
+          'Referer': 'https://www.facebook.com/',
+        } : {}),
       },
       redirect: 'follow',
     });
@@ -65,9 +79,20 @@ async function fetchUrlContent(url, timeout = 10000) {
     // Handle PDF files
     if (contentType.includes('application/pdf') || url.toLowerCase().endsWith('.pdf')) {
       const buffer = await response.arrayBuffer();
-      const data = await pdf(Buffer.from(buffer));
+      const pdfData = new Uint8Array(buffer);
+      const parser = new PDFParse(pdfData, {});
+      await parser.load();
+      const textResult = await parser.getText();
       
-      let content = data.text || '';
+      // Extract text from all pages
+      let content = '';
+      if (textResult && typeof textResult === 'object' && textResult.pages) {
+        content = textResult.pages.map(page => page.text || '').join('\n\n');
+      } else if (typeof textResult === 'string') {
+        content = textResult;
+      } else {
+        content = String(textResult || '');
+      }
       
       // Clean up the text
       content = content
@@ -81,12 +106,14 @@ async function fetchUrlContent(url, timeout = 10000) {
         content = content.substring(0, maxLength) + '... [content truncated]';
       }
 
+      const info = parser.getInfo();
+      
       console.log(`✅ Successfully fetched PDF content from ${url} (${content.length} characters)`);
       
       return {
         success: true,
         content: content,
-        title: data.info?.Title || url.split('/').pop() || 'PDF Document',
+        title: info?.Title || url.split('/').pop() || 'PDF Document',
         url: url
       };
     }
@@ -101,29 +128,89 @@ async function fetchUrlContent(url, timeout = 10000) {
     // Parse HTML with cheerio
     const $ = cheerio.load(html);
     
-    // Remove script and style elements
-    $('script, style, noscript, iframe, embed, object').remove();
+    // Extract title (works for both Facebook and regular pages)
+    let title = $('meta[property="og:title"]').attr('content') || 
+                $('title').text().trim() || 
+                $('h1').first().text().trim() || '';
     
-    // Extract title
-    const title = $('title').text().trim() || $('h1').first().text().trim() || '';
-    
-    // Extract main content
-    // Try to find main content areas first
-    let content = '';
-    
-    // Try semantic HTML5 elements first
-    const mainSelectors = ['main', 'article', '[role="main"]', '.content', '#content', '.main-content', '#main-content'];
-    for (const selector of mainSelectors) {
-      const mainContent = $(selector).first();
-      if (mainContent.length > 0) {
-        content = mainContent.text();
-        break;
+    // Special handling for Facebook
+    if (isFacebook) {
+      // Facebook uses meta tags and structured data
+      // Try to extract post content from meta tags
+      let content = '';
+      
+      // Try to get description from meta tags (often contains post content)
+      const metaDescription = $('meta[property="og:description"]').attr('content') || 
+                             $('meta[name="description"]').attr('content') || '';
+      
+      // Try to find post text in common Facebook selectors
+      const facebookSelectors = [
+        '[data-testid="post_message"]',
+        '.userContent',
+        '[data-ad-preview="message"]',
+        '.text_exposed_root',
+        'div[dir="auto"]',
+        '[role="article"]'
+      ];
+      
+      for (const selector of facebookSelectors) {
+        const elements = $(selector);
+        if (elements.length > 0) {
+          // Get text from first few posts
+          elements.slice(0, 10).each((i, el) => {
+            const text = $(el).text().trim();
+            if (text && text.length > 20 && !text.includes('Log in') && !text.includes('Sign up')) {
+              content += text + '\n\n';
+            }
+          });
+          if (content.length > 200) break;
+        }
       }
-    }
-    
-    // Fallback to body if no main content found
-    if (!content || content.trim().length < 100) {
-      content = $('body').text();
+      
+      // If we found content, use it
+      if (content.length > 50) {
+        content = content.trim();
+      } else if (metaDescription && metaDescription.length > 20) {
+        // Fallback to meta description
+        content = metaDescription;
+      } else {
+        // Last resort: try to extract any visible text
+        $('script, style, noscript, iframe, embed, object, header, footer, nav').remove();
+        const bodyText = $('body').text();
+        // Filter out login prompts
+        if (!bodyText.includes('Log Into Facebook') && !bodyText.includes('You must log in')) {
+          content = bodyText;
+        }
+      }
+      
+      // Clean up Facebook-specific text
+      content = content
+        .replace(/Like|Comment|Share|See more|See less|Follow|Log in|Sign up|Forgot account/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    } else {
+      // Regular HTML parsing for non-Facebook pages
+      // Remove script and style elements
+      $('script, style, noscript, iframe, embed, object').remove();
+      
+      // Extract main content
+      // Try to find main content areas first
+      let content = '';
+      
+      // Try semantic HTML5 elements first
+      const mainSelectors = ['main', 'article', '[role="main"]', '.content', '#content', '.main-content', '#main-content'];
+      for (const selector of mainSelectors) {
+        const mainContent = $(selector).first();
+        if (mainContent.length > 0) {
+          content = mainContent.text();
+          break;
+        }
+      }
+      
+      // Fallback to body if no main content found
+      if (!content || content.trim().length < 100) {
+        content = $('body').text();
+      }
     }
     
     // Clean up the text

@@ -407,6 +407,7 @@ and for the 3rd floor it is beside in AVR room
 - if the input is LJ or lj it should point to the professor lowel jay orcullo
 - the school director of University of Mindanao Tagum College is Dr. Evelyn P. Saludes 
 - When answering questions, search through both the database information AND the content from configured web sources below. Use information from web sources to supplement or answer questions when the database doesn't have the information.
+- When users ask about class schedules, announcements, or events (like "is there class tomorrow?" or "any announcements?"), check the Facebook page content from the web sources. Look for recent posts about class suspensions, schedule changes, or important announcements. Use dates mentioned in the posts to determine if they apply to the user's question.
 
 ${dbContext}${scannedUrlContext}${conversationContext}`;
 
