@@ -121,6 +121,9 @@ router.post("/ask", async (req, res) => {
     // Get user identifier for conversation memory
     const userId = getUserIdentifier(req);
     const lastConv = getLastConversation(userId);
+    
+    // Initialize imageUrls early (used in early returns)
+    const imageUrls = [];
 
     // ======================================================================
     // SPECIAL HANDLING: Class schedule / subject concerns
@@ -238,7 +241,7 @@ router.post("/ask", async (req, res) => {
     // PREPARE AI CONTEXT - Format database results for AI
     // ========================================================================
     let dbContext = "";
-    const imageUrls = []; // Collect image URLs from rooms and offices
+    // imageUrls already initialized above
     
     // Determine if question is specifically about rooms or offices
     const questionLower = question.toLowerCase();
@@ -655,7 +658,6 @@ async function getDepartmentHeadInfo(deptKey) {
         ],
         position: {
           contains: "head",
-          mode: "insensitive",
         },
       },
       select: {
