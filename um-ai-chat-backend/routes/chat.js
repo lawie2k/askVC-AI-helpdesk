@@ -19,6 +19,10 @@ const DEPARTMENT_HEAD_FALLBACKS = {
     name: "BSCS Department Head",
     email: "bscs.head@umindanao.edu.ph",
   },
+  BSCE: {
+    name: "BSCE Department Head",
+    email: "bsce.head@umindanao.edu.ph",
+  },
 };
 
 // ============================================================================
@@ -124,6 +128,59 @@ router.post("/ask", async (req, res) => {
     
     // Initialize imageUrls early (used in early returns)
     const imageUrls = [];
+
+    // ======================================================================
+    // SPECIAL HANDLING: Department head questions
+    // ======================================================================
+    const isDepartmentHeadQuestion = isDepartmentHeadQuery(question);
+    if (isDepartmentHeadQuestion) {
+      // Try to detect department from the question itself
+      let deptKey = extractDepartmentFromQuestion(question);
+      
+      // If not found, try last conversation answer/question
+      if (!deptKey && lastConv) {
+        deptKey =
+          extractDepartmentFromQuestion(lastConv.answer || "") ||
+          extractDepartmentFromQuestion(lastConv.question || "");
+      }
+      
+      if (deptKey) {
+        const head = await getDepartmentHeadInfo(deptKey);
+        if (head) {
+          const answer = `The ${deptKey} department head is ${head.name}${head.email && head.email !== "No email on record" ? ` (${head.email})` : ""}.`;
+          
+          saveConversation(userId, question, answer);
+          const authenticatedUserId = await getUserIdFromToken(req);
+          if (authenticatedUserId) {
+            try {
+              await prisma.historyChats.create({
+                data: {
+                  user_id: authenticatedUserId,
+                  question,
+                  answer,
+                },
+              });
+            } catch (dbErr) {
+              console.error("⚠️ Failed to save chat history (department head):", dbErr.message);
+            }
+          }
+          
+          return res.json({ 
+            answer,
+            images: imageUrls.length > 0 ? imageUrls : undefined,
+          });
+        } else {
+          return res.json({
+            answer: `I don't have the contact information for the ${deptKey} department head in my records. Please contact the department office directly.`,
+          });
+        }
+      } else {
+        // Ask which department
+        return res.json({
+          answer: "Which department are you asking about? (For example, BSIT, BSCS, or BSCE)",
+        });
+      }
+    }
 
     // ======================================================================
     // SPECIAL HANDLING: Class schedule / subject concerns
@@ -272,21 +329,58 @@ router.post("/ask", async (req, res) => {
             }
           }
 
+          // Give the AI a clearer, human-friendly summary for officers
+          if (result.table === "officers") {
+            const parts = [];
+            if (item.name) parts.push(`Name: ${item.name}`);
+            if (item.position) parts.push(`Position: ${item.position}`);
+            if (item.organization) parts.push(`Organization: ${item.organization}`);
+
+            if (parts.length > 0) {
+              dbContext += `- ${parts.join(" | ")}\n`;
+            }
+          }
+
           // Keep the raw JSON as fallback context so the AI still sees all fields
           dbContext += `- ${JSON.stringify(item, null, 2)}\n`;
           
           // Only keep the best match for images (highest relevance score)
           // Only include images from the relevant table type based on question
-          // IMPORTANT: Only show images if there's a strong match (relevance >= 80)
-          // This prevents showing random images for unrelated results
-          const MIN_RELEVANCE_FOR_IMAGE = 80;
+          // IMPORTANT: Only show images if:
+          // 1. Question is specifically about rooms/offices
+          // 2. Result is from a specific search (match_type indicates specific query)
+          // 3. Relevance score is very high (>= 90 for exact matches)
+          // 4. The room/office name is mentioned in the question
+          const MIN_RELEVANCE_FOR_IMAGE = 90; // Increased threshold - only very strong matches
           
           if (result.table === "rooms" && item.image_url) {
-            // Only include room images if question is clearly about rooms AND has high relevance
+            // Only include room images if:
+            // 1. Question is clearly about rooms
+            // 2. Result is from specific room search (not general search)
+            // 3. Has very high relevance (exact/close match)
+            // 4. Room name is mentioned in question
             if (isRoomQuestion) {
               const relevance = item.relevance_score || 0;
-              // Only consider images if relevance is high enough (strong match)
-              if (relevance >= MIN_RELEVANCE_FOR_IMAGE) {
+              const matchType = item.match_type || '';
+              const roomName = (item.name || '').toLowerCase();
+              const questionLower = question.toLowerCase();
+              
+              // Check if room name or key parts are mentioned in question
+              const nameMentioned = roomName && (
+                questionLower.includes(roomName) ||
+                questionLower.includes(roomName.replace(/\s+/g, ' ')) ||
+                questionLower.includes(roomName.replace(/\s+/g, '')) ||
+                // Check for key words from room name (e.g., "comlab" from "Com Lab V1")
+                roomName.split(/\s+/).some(word => word.length > 3 && questionLower.includes(word))
+              );
+              
+              // Only show image if:
+              // - From specific room query (room_query) with high relevance (>= 90) OR
+              // - Very high relevance (>= 95) AND name/keywords are mentioned
+              const isSpecificSearch = matchType === 'room_query';
+              const isStrongMatch = relevance >= 95 && nameMentioned;
+              
+              if ((isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) || isStrongMatch) {
                 if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
                   bestRoomMatch = {
                     url: item.image_url,
@@ -304,11 +398,31 @@ router.post("/ask", async (req, res) => {
             // for that top office. If the top office has no image_url, we
             // will NOT fall back to some other random office image.
             const relevance = item.relevance_score || 0;
+            const matchType = item.match_type || '';
+            const officeName = (item.name || '').toLowerCase();
+            const questionLower = question.toLowerCase();
+            
+            // Check if office name or key parts are mentioned in question
+            const nameMentioned = officeName && (
+              questionLower.includes(officeName) ||
+              questionLower.includes(officeName.replace(/\s+/g, ' ')) ||
+              questionLower.includes(officeName.replace(/\s+/g, '')) ||
+              // Check for key words from office name (e.g., "library" from "Main Library")
+              officeName.split(/\s+/).some(word => word.length > 3 && questionLower.includes(word))
+            );
+            
+            // Only show image if:
+            // - From specific office query (office_query) with high relevance (>= 90) OR
+            // - Very high relevance (>= 95) AND name/keywords are mentioned
+            const isSpecificSearch = matchType === 'office_query';
+            const isStrongMatch = relevance >= 95 && nameMentioned;
+            
             if (relevance > highestOfficeRelevance) {
               highestOfficeRelevance = relevance;
               bestOfficeMatch = null;
-              // Only show image if it's an office question AND has high relevance AND has image
-              if (isOfficeQuestion && item.image_url && relevance >= MIN_RELEVANCE_FOR_IMAGE) {
+              // Only show image if it's an office question AND has high relevance AND has image AND matches criteria
+              if (isOfficeQuestion && item.image_url && 
+                  ((isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) || isStrongMatch)) {
                 bestOfficeMatch = {
                   url: item.image_url,
                   name: item.name || "Image",
@@ -321,7 +435,7 @@ router.post("/ask", async (req, res) => {
               !bestOfficeMatch &&
               isOfficeQuestion &&
               item.image_url &&
-              relevance >= MIN_RELEVANCE_FOR_IMAGE
+              ((isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) || isStrongMatch)
             ) {
               // Tie-breaker: if multiple offices share the same top score,
               // take the first one that actually has an image and high relevance.
@@ -339,12 +453,22 @@ router.post("/ask", async (req, res) => {
       // Only add the best matches to imageUrls
       // If question is specifically about rooms, only return room images
       // If question is specifically about offices, only return office images
-      // Additional check: Only show images if we have a strong match (relevance >= 80)
+      // Additional check: Only show images if we have a very strong match (relevance >= 90)
       // This prevents showing random images for general questions or weak matches
-      if (isRoomQuestion && bestRoomMatch && bestRoomMatch.relevance_score >= 80) {
+      const MIN_RELEVANCE_FOR_IMAGE = 90;
+      if (isRoomQuestion && bestRoomMatch && bestRoomMatch.relevance_score >= MIN_RELEVANCE_FOR_IMAGE) {
+        console.log(`📸 Adding room image: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score})`);
         imageUrls.push(bestRoomMatch);
-      } else if (isOfficeQuestion && bestOfficeMatch && bestOfficeMatch.relevance_score >= 80) {
+      } else if (isOfficeQuestion && bestOfficeMatch && bestOfficeMatch.relevance_score >= MIN_RELEVANCE_FOR_IMAGE) {
+        console.log(`📸 Adding office image: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score})`);
         imageUrls.push(bestOfficeMatch);
+      } else {
+        if (isRoomQuestion && bestRoomMatch) {
+          console.log(`⚠️ Room image rejected: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score} < ${MIN_RELEVANCE_FOR_IMAGE})`);
+        }
+        if (isOfficeQuestion && bestOfficeMatch) {
+          console.log(`⚠️ Office image rejected: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score} < ${MIN_RELEVANCE_FOR_IMAGE})`);
+        }
       }
       const timeGuidance = await generateTimeAwareGuidance(dbResults);
       if (timeGuidance) {
@@ -410,6 +534,7 @@ and for the 3rd floor it is beside in AVR room
 - if the input is buddy or sir buddy it should point to the professor benjamin mahinay jr.
 - the school director of University of Mindanao Tagum College is Dr. Evelyn P. Saludes 
 - When answering questions about IT subjects, courses, or curriculum, use the information from the BSIT PDF document provided below. List the subjects clearly and provide course codes when available.
+- IMPORTANT: When users ask "who is the head of [department]" or "who is the [department] head", ONLY provide the person whose position explicitly indicates they are the department head (e.g., "Department Head", "Chair", "Director"). Do NOT assume someone is the head just because they are a professor in that department. If the database doesn't show a clear department head, say you don't have that information rather than guessing.
 
 ${dbContext}${pdfContext}${conversationContext}`;
 
@@ -664,12 +789,54 @@ function isClassScheduleConcern(text) {
   return (isPersonal || isConcern) && !isInfoQuestion;
 }
 
+function isDepartmentHeadQuery(question) {
+  if (!question) return false;
+  const q = question.toLowerCase();
+  
+  // Check if question is asking about department head
+  const headKeywords = ['head', 'chair', 'chairperson', 'director', 'leader', 'in charge'];
+  const questionPatterns = [
+    /who is (the )?(department )?head (of|for)/i,
+    /who (is|are) (the )?head (of|for)/i,
+    /(department )?head (of|for)/i,
+    /who leads/i,
+    /who (is|are) in charge (of|for)/i,
+    /(who|what) (is|are) (the )?(department )?head/i,
+  ];
+  
+  const hasHeadKeyword = headKeywords.some(keyword => q.includes(keyword));
+  const matchesPattern = questionPatterns.some(pattern => pattern.test(question));
+  
+  // Check if it's asking about a specific department/program
+  // This works for BSIT, BSCS, BSCE, IT, CS, CE, etc.
+  const hasDepartment = extractDepartmentFromQuestion(question) !== null;
+  
+  // Also check if question mentions department/program keywords even if extractDepartmentFromQuestion doesn't catch it
+  const hasDepartmentKeywords = /\b(department|program|dept)\b/i.test(question);
+  
+  // Return true if it has head keywords AND (has specific department OR mentions department/program)
+  return (hasHeadKeyword || matchesPattern) && (hasDepartment || hasDepartmentKeywords);
+}
+
 async function getDepartmentHeadInfo(deptKey) {
   const key = (deptKey || "").toUpperCase();
 
   try {
-    // Try to find a professor in this program/department whose position suggests "head"
-    const headProfessor = await prisma.professors.findFirst({
+    // Try to find a professor in this program/department whose position explicitly indicates "department head"
+    // Use strict matching - only positions that clearly indicate department head role
+    const headPositions = [
+      'department head',
+      'dept head',
+      'department chair',
+      'dept chair',
+      'chairperson',
+      'department director',
+      'dept director'
+    ];
+    
+    // First, try exact position matches (most specific)
+    // Use case-insensitive matching by checking each position
+    const allProfessors = await prisma.professors.findMany({
       where: {
         OR: [
           { program: key },
@@ -679,28 +846,41 @@ async function getDepartmentHeadInfo(deptKey) {
             },
           },
         ],
-        position: {
-          contains: "head",
-        },
       },
       select: {
         name: true,
         email: true,
+        position: true,
       },
     });
 
-    if (headProfessor) {
-      return {
-        name: headProfessor.name,
-        email: headProfessor.email || "No email on record",
-      };
+    // Filter for professors whose position matches head positions (case-insensitive)
+    for (const professor of allProfessors) {
+      if (professor.position) {
+        const positionLower = professor.position.toLowerCase();
+        for (const headPos of headPositions) {
+          if (positionLower.includes(headPos.toLowerCase())) {
+            console.log(`✅ Found ${key} department head: ${professor.name} (${professor.position})`);
+            return {
+              name: professor.name,
+              email: professor.email || "No email on record",
+            };
+          }
+        }
+      }
     }
+    
+    // If no exact match found, don't return any professor
+    // This prevents returning wrong professors who might have "head" in their position
+    // but aren't actually the department head
+    console.log(`⚠️ No department head found for ${key} in database`);
   } catch (err) {
     console.error("⚠️ Failed to load department head from professors:", err.message);
   }
 
   // Fallback to static config if no DB match
   if (DEPARTMENT_HEAD_FALLBACKS[key]) {
+    console.log(`⚠️ Using fallback for ${key} department head`);
     return DEPARTMENT_HEAD_FALLBACKS[key];
   }
 

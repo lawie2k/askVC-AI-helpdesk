@@ -17,9 +17,11 @@ async function searchDatabase(question) {
     const isPrograms = isProgramsQuestion(question);
     const isOffices = isOfficesQuestion(question);
     const isRooms = isRoomsQuestion(question);
+    const isOfficers = isOfficersQuestion(question);
 
 
     const targetDepartment = extractDepartmentFromQuestion(question);
+    const targetOrganization = extractOrganizationFromQuestion(question);
 
     // ========================================================================
     //  DEFINE WHICH DATABASE TABLES TO SEARCH
@@ -27,14 +29,15 @@ async function searchDatabase(question) {
     const tablesToSearch = [
       { name: "departments", priority: 1 },    // Search departments first
       { name: "professors", priority: 2 },     // Then professors
-      { name: "buildings", priority: 3 },      // Then buildings
-      { name: "rooms", priority: 4 },          // Then rooms
-      { name: "offices", priority: 5 },        // Then offices
-      { name: "rules", priority: 6 },          // Campus rules
-      { name: "vision_mission", priority: 7 }, // Vision & mission
-      { name: "announcements", priority: 8 },  // School events, enrollment, schedules
-      { name: "campus_info", priority: 9 },    // Services & other info
-      { name: "settings", priority: 10 }       // Finally settings
+      { name: "officers", priority: 3 },       // Then officers (student organizations)
+      { name: "buildings", priority: 4 },      // Then buildings
+      { name: "rooms", priority: 5 },          // Then rooms
+      { name: "offices", priority: 6 },        // Then offices
+      { name: "rules", priority: 7 },          // Campus rules
+      { name: "vision_mission", priority: 8 }, // Vision & mission
+      { name: "announcements", priority: 9 },  // School events, enrollment, schedules
+      { name: "campus_info", priority: 10 },    // Services & other info
+      { name: "settings", priority: 11 }       // Finally settings
     ];
 
     if (tablesToSearch.length === 0) {
@@ -179,6 +182,73 @@ async function searchDatabase(question) {
             (err, results) => {
               if (!err && results.length > 0) {
                 console.log(`   ✅ Found ${results.length} professors total`);
+                const scoredResults = results.map(result => ({
+                  ...result,
+                  relevance_score: 80
+                }));
+                searchResults.push({
+                  table: table,
+                  data: scoredResults,
+                  priority: tableInfo.priority
+                });
+              }
+
+              completedSearches++;
+              if (completedSearches === tablesToSearch.length) {
+                const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
+                resolve(finalResults);
+              }
+            }
+          );
+        }
+        return;
+      }
+
+      // ====================================================================
+      // OFFICERS SEARCH - When user asks about student officers
+      // ====================================================================
+      if (isOfficers && table === 'officers') {
+        console.log("👥 Searching OFFICERS table...");
+        
+        if (targetOrganization) {
+          console.log(`   → Filtering by organization: ${targetOrganization}`);
+          db.query(
+            `SELECT *, "officers_query" as match_type
+             FROM officers
+             WHERE organization = ?
+             ORDER BY position_order ASC, id ASC`,
+            [targetOrganization],
+            (err, results) => {
+              if (!err && results.length > 0) {
+                console.log(`   ✅ Found ${results.length} officers in ${targetOrganization}`);
+                const scoredResults = results.map(result => ({
+                  ...result,
+                  relevance_score: 100
+                }));
+                searchResults.push({
+                  table: table,
+                  data: scoredResults,
+                  priority: tableInfo.priority
+                });
+              }
+
+              completedSearches++;
+              if (completedSearches === tablesToSearch.length) {
+                const finalResults = searchResults.sort((a, b) => a.priority - b.priority);
+                resolve(finalResults);
+              }
+            }
+          );
+        } else {
+          console.log("   → Getting all officers (limited to 50)");
+          db.query(
+            `SELECT *, "officers_query" as match_type
+             FROM officers
+             ORDER BY organization ASC, position_order ASC, id ASC
+             LIMIT 50`,
+            (err, results) => {
+              if (!err && results.length > 0) {
+                console.log(`   ✅ Found ${results.length} officers total`);
                 const scoredResults = results.map(result => ({
                   ...result,
                   relevance_score: 80
@@ -764,6 +834,12 @@ function isRoomsQuestion(question) {
   return roomKeywords.some(k => q.includes(k)) || roomNumberPattern.test(q);
 }
 
+function isOfficersQuestion(question) {
+  const officerKeywords = ['officer', 'officers', 'president', 'vice president', 'secretary', 'treasurer', 'student leader', 'student leaders', 'student government', 'organization', 'organizations'];
+  const q = question.toLowerCase();
+  return officerKeywords.some(k => q.includes(k));
+}
+
 
 // ========================================================================
 // DATA EXTRACTION - Extract specific information from questions
@@ -790,6 +866,25 @@ function extractDepartmentFromQuestion(question) {
   return null;
 }
 
+function extractOrganizationFromQuestion(question) {
+  const q = question.toLowerCase();
+  
+  // Check for CODES
+  if (q.includes('codes')) {
+    return 'CODES';
+  }
+  // Check for CSIT
+  if (q.includes('csit')) {
+    return 'CSIT';
+  }
+  // Check for EESA
+  if (q.includes('eesa')) {
+    return 'EESA';
+  }
+  
+  return null;
+}
+
 // ========================================================================
 // DATABASE UTILITIES - Helper functions for database operations
 // ========================================================================
@@ -799,6 +894,7 @@ function getSearchableColumns(table) {
   const columnMap = {
     departments: "name, short_name",
     professors: "name, position, email, program",
+    officers: "name, position, organization",
     buildings: "name",
     rooms: "name, floor, type",
     offices: "name, floor, open_time, close_time, lunch_start, lunch_end",
