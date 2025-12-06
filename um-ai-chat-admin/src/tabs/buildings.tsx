@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from "react";
 import DataGrid from "../components/DataGrid";
 import {buildingAPI} from "../services/api";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 export default function Buildings() {
     const [buildings, setBuildings] = useState<any[]>([]);
@@ -11,6 +12,19 @@ export default function Buildings() {
     const [editingBuilding, setEditingBuilding] = useState<any>(null);
     const [editForm, setEditForm] = useState({
         name: ""
+    });
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        type: 'delete' | 'save' | 'edit';
+        title: string;
+        message: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        type: 'save',
+        title: '',
+        message: '',
+        onConfirm: () => {},
     });
 
     useEffect(() => {
@@ -55,24 +69,32 @@ export default function Buildings() {
     ];
 
     const addBuilding = async () => {
-        try {
-            const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
-            const required = ['name'];
-            if (!hasAllRequired(newBuilding as any, required)) {
-                alert('Please fill out all required fields.');
-                return;
-            }
-            setLoading(true);
-            await buildingAPI.create(newBuilding);
-            await loadBuildings();
-            setNewBuilding({
-                name: ""
-            });
-        } catch (error) {
-            console.error('Error adding building:', error);
-        } finally {
-            setLoading(false);
+        const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+        const required = ['name'];
+        if (!hasAllRequired(newBuilding as any, required)) {
+            alert('Please fill out all required fields.');
+            return;
         }
+        setConfirmModal({
+            isOpen: true,
+            type: 'save',
+            title: 'Save Building',
+            message: `Are you sure you want to save "${newBuilding.name}"?`,
+            onConfirm: async () => {
+                try {
+                    setLoading(true);
+                    await buildingAPI.create(newBuilding);
+                    await loadBuildings();
+                    setNewBuilding({
+                        name: ""
+                    });
+                } catch (error) {
+                    console.error('Error adding building:', error);
+                } finally {
+                    setLoading(false);
+                }
+            },
+        });
     };
 
     const startEdit = (building: any) => {
@@ -90,36 +112,51 @@ export default function Buildings() {
     };
 
     const saveEdit = async () => {
-        try {
-            const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
-            const required = ['name'];
-            if (!hasAllRequired(editForm as any, required)) {
-                alert('Please fill out all required fields.');
-                return;
-            }
-            setLoading(true);
-            await buildingAPI.update(editingBuilding.id, editForm);
-            await loadBuildings();
-            cancelEdit();
-        } catch (error) {
-            console.error('Error updating building:', error);
-        } finally {
-            setLoading(false);
+        const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+        const required = ['name'];
+        if (!hasAllRequired(editForm as any, required)) {
+            alert('Please fill out all required fields.');
+            return;
         }
+        setConfirmModal({
+            isOpen: true,
+            type: 'edit',
+            title: 'Update Building',
+            message: `Are you sure you want to update "${editForm.name}"?`,
+            onConfirm: async () => {
+                try {
+                    setLoading(true);
+                    await buildingAPI.update(editingBuilding.id, editForm);
+                    await loadBuildings();
+                    cancelEdit();
+                } catch (error) {
+                    console.error('Error updating building:', error);
+                } finally {
+                    setLoading(false);
+                }
+            },
+        });
     };
 
     const deleteBuilding = async (id: number) => {
-        if (window.confirm('Are you sure you want to delete this building?')) {
-            try {
-                setLoading(true);
-                await buildingAPI.delete(id);
-                await loadBuildings();
-            } catch (error) {
-                console.error('Error deleting building:', error);
-            } finally {
-                setLoading(false);
-            }
-        }
+        const building = buildings.find(b => b.id === id);
+        setConfirmModal({
+            isOpen: true,
+            type: 'delete',
+            title: 'Delete Building',
+            message: `Are you sure you want to delete "${building?.name || 'this building'}"? This action cannot be undone.`,
+            onConfirm: async () => {
+                try {
+                    setLoading(true);
+                    await buildingAPI.delete(id);
+                    await loadBuildings();
+                } catch (error) {
+                    console.error('Error deleting building:', error);
+                } finally {
+                    setLoading(false);
+                }
+            },
+        });
     }
 
     return (

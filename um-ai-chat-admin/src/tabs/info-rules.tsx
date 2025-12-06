@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from "react";
 import { rulesAPI, visionMissionAPI, campusInfoAPI } from "../services/api";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 const CATEGORY_SECTIONS = [
   {
@@ -37,6 +38,19 @@ export default function RulesAndInfo () {
   const [editingRule, setEditingRule] = useState<any>(null);
   const [editText, setEditText] = useState('');
   const [activeTab, setActiveTab] = useState<string>(CATEGORY_SECTIONS[0].value);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'delete' | 'save' | 'edit';
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    type: 'save',
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     loadAll();
@@ -78,21 +92,29 @@ export default function RulesAndInfo () {
       alert('Please enter details before adding.');
       return;
     }
-
-    try {
-      setLoading(true);
-      const api = getApiForCategory(category);
-      await api.create({
-        description: value,
-        admin_id: 1,
-      });
-      await loadAll();
-      setNewEntries((prev) => ({ ...prev, [category]: '' }));
-    } catch (error) {
-      console.error('Error adding entry:', error);
-    } finally {
-      setLoading(false);
-    }
+    const section = CATEGORY_SECTIONS.find(s => s.value === category);
+    setConfirmModal({
+      isOpen: true,
+      type: 'save',
+      title: `Save ${section?.label || 'Entry'}`,
+      message: `Are you sure you want to save this ${section?.label.toLowerCase() || 'entry'}?`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          const api = getApiForCategory(category);
+          await api.create({
+            description: value,
+            admin_id: 1,
+          });
+          await loadAll();
+          setNewEntries((prev) => ({ ...prev, [category]: '' }));
+        } catch (error) {
+          console.error('Error adding entry:', error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const handleStartEdit = (entry: any) => {
@@ -108,43 +130,57 @@ export default function RulesAndInfo () {
       alert('Please enter details before saving.');
       return;
     }
-
-    try {
-      setLoading(true);
-      const api = getApiForCategory(editingRule.category);
-      await api.update(editingRule.id, {
-        description: value,
-        admin_id: 1,
-      });
-      await loadAll();
-      setEditingRule(null);
-      setEditText('');
-      setNewEntries((prev) => ({ ...prev, [editingRule.category]: '' }));
-    } catch (error) {
-      console.error('Error updating entry:', error);
-    } finally {
-      setLoading(false);
-    }
+    const section = CATEGORY_SECTIONS.find(s => s.value === editingRule.category);
+    setConfirmModal({
+      isOpen: true,
+      type: 'edit',
+      title: `Update ${section?.label || 'Entry'}`,
+      message: `Are you sure you want to update this ${section?.label.toLowerCase() || 'entry'}?`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          const api = getApiForCategory(editingRule.category);
+          await api.update(editingRule.id, {
+            description: value,
+            admin_id: 1,
+          });
+          await loadAll();
+          setEditingRule(null);
+          setEditText('');
+          setNewEntries((prev) => ({ ...prev, [editingRule.category]: '' }));
+        } catch (error) {
+          console.error('Error updating entry:', error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const handleDelete = async (entry: any) => {
-    if (!window.confirm('Are you sure you want to delete this item?')) {
-      return;
-    }
-    try {
-      setLoading(true);
-      const api = getApiForCategory(entry.category);
-      await api.delete(entry.id);
-      await loadAll();
-      if (editingRule?.id === entry.id) {
-        setEditingRule(null);
-        setEditText('');
-      }
-    } catch (error) {
-      console.error('Error deleting entry:', error);
-    } finally {
-      setLoading(false);
-    }
+    const section = CATEGORY_SECTIONS.find(s => s.value === entry.category);
+    setConfirmModal({
+      isOpen: true,
+      type: 'delete',
+      title: `Delete ${section?.label || 'Entry'}`,
+      message: `Are you sure you want to delete this ${section?.label.toLowerCase() || 'entry'}? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          const api = getApiForCategory(entry.category);
+          await api.delete(entry.id);
+          await loadAll();
+          if (editingRule?.id === entry.id) {
+            setEditingRule(null);
+            setEditText('');
+          }
+        } catch (error) {
+          console.error('Error deleting entry:', error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const handleCancelEdit = () => {
@@ -280,6 +316,15 @@ export default function RulesAndInfo () {
             );
         })()}
       </div>
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.type === 'delete' ? 'Delete' : confirmModal.type === 'edit' ? 'Update' : 'Save'}
+      />
     </div>
   );
 }

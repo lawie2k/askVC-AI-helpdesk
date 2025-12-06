@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import DataGrid from "../components/DataGrid";
 import { roomAPI, buildingAPI, uploadAPI } from "../services/api";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 interface RoomForm {
   name: string;
@@ -31,6 +32,19 @@ export default function Rooms() {
   const [editRoomImage, setEditRoomImage] = useState<string>("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'delete' | 'save' | 'edit';
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    type: 'save',
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     loadRooms();
@@ -143,26 +157,33 @@ export default function Rooms() {
       alert("Please fill out all required fields.");
       return;
     }
-
-    try {
-      setLoading(true);
-      await roomAPI.create({
-        ...newRoom,
-        image_url: newRoomImage || null,
-      });
-      await loadRooms();
-      setNewRoom({
-        name: "",
-        building_id: "",
-        floor: "",
-        type: "Lecture",
-      });
-      setNewRoomImage("");
-    } catch (error) {
-      console.error("Error adding room:", error);
-    } finally {
-      setLoading(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      type: 'save',
+      title: 'Save Room',
+      message: `Are you sure you want to save "${newRoom.name}"?`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await roomAPI.create({
+            ...newRoom,
+            image_url: newRoomImage || null,
+          });
+          await loadRooms();
+          setNewRoom({
+            name: "",
+            building_id: "",
+            floor: "",
+            type: "Lecture",
+          });
+          setNewRoomImage("");
+        } catch (error) {
+          console.error("Error adding room:", error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const startEdit = (room: any) => {
@@ -193,32 +214,48 @@ export default function Rooms() {
       alert("Please fill out all required fields.");
       return;
     }
-    try {
-      setLoading(true);
-      await roomAPI.update(editingRoom.id, {
-        ...editForm,
-        image_url: editRoomImage || null,
-      });
-      await loadRooms();
-      cancelEdit();
-    } catch (error) {
-      console.error("Error updating room:", error);
-    } finally {
-      setLoading(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      type: 'edit',
+      title: 'Update Room',
+      message: `Are you sure you want to update "${editForm.name}"?`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await roomAPI.update(editingRoom.id, {
+            ...editForm,
+            image_url: editRoomImage || null,
+          });
+          await loadRooms();
+          cancelEdit();
+        } catch (error) {
+          console.error("Error updating room:", error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const deleteRoom = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this room?")) return;
-    try {
-      setLoading(true);
-      await roomAPI.delete(id);
-      await loadRooms();
-    } catch (error) {
-      console.error("Error deleting room:", error);
-    } finally {
-      setLoading(false);
-    }
+    const room = rooms.find(r => r.id === id);
+    setConfirmModal({
+      isOpen: true,
+      type: 'delete',
+      title: 'Delete Room',
+      message: `Are you sure you want to delete "${room?.name || 'this room'}"? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await roomAPI.delete(id);
+          await loadRooms();
+        } catch (error) {
+          console.error("Error deleting room:", error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const updateForm = (
@@ -419,6 +456,15 @@ export default function Rooms() {
           </div>
         </div>
       )}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.type === 'delete' ? 'Delete' : confirmModal.type === 'edit' ? 'Update' : 'Save'}
+      />
     </div>
   );
 }

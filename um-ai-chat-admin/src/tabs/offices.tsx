@@ -2,6 +2,7 @@
 import React, {useEffect, useMemo, useState} from "react";
 import DataGrid from "../components/DataGrid";
 import {officeAPI, buildingAPI, uploadAPI} from "../services/api";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 export default function offices() {
     const [offices, setOffices] = useState<any[]>([]);
@@ -31,6 +32,19 @@ export default function offices() {
     const [editOfficeImage, setEditOfficeImage] = useState<string>("");
     const [uploadingImage, setUploadingImage] = useState(false);
     const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        type: 'delete' | 'save' | 'edit';
+        title: string;
+        message: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        type: 'save',
+        title: '',
+        message: '',
+        onConfirm: () => {},
+    });
 
     useEffect(() => {
         loadOffices();
@@ -148,34 +162,42 @@ export default function offices() {
     };
 
     const addOffice = async () => {
-        try {
-            const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
-            const required = ['name', 'building_id', 'floor'];
-            if (!hasAllRequired(newOffice as any, required)) {
-                alert('Please fill out all required fields.');
-                return;
-            }
-            setLoading(true);
-            await officeAPI.create({
-                ...newOffice,
-                image_url: newOfficeImage || null,
-            });
-            await loadOffices();
-            setNewOffice({
-                name: "",
-                building_id: "",
-                floor: "",
-                open_time: "",
-                close_time: "",
-                lunch_start: "",
-                lunch_end: ""
-            });
-            setNewOfficeImage("");
-        } catch (error) {
-            console.error('Error adding office:', error);
-        } finally {
-            setLoading(false);
+        const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+        const required = ['name', 'building_id', 'floor'];
+        if (!hasAllRequired(newOffice as any, required)) {
+            alert('Please fill out all required fields.');
+            return;
         }
+        setConfirmModal({
+            isOpen: true,
+            type: 'save',
+            title: 'Save Office',
+            message: `Are you sure you want to save "${newOffice.name}"?`,
+            onConfirm: async () => {
+                try {
+                    setLoading(true);
+                    await officeAPI.create({
+                        ...newOffice,
+                        image_url: newOfficeImage || null,
+                    });
+                    await loadOffices();
+                    setNewOffice({
+                        name: "",
+                        building_id: "",
+                        floor: "",
+                        open_time: "",
+                        close_time: "",
+                        lunch_start: "",
+                        lunch_end: ""
+                    });
+                    setNewOfficeImage("");
+                } catch (error) {
+                    console.error('Error adding office:', error);
+                } finally {
+                    setLoading(false);
+                }
+            },
+        });
     };
 
     const startEdit = (office: any) => {
@@ -207,39 +229,54 @@ export default function offices() {
     };
 
     const saveEdit = async () => {
-        try {
-            const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
-            const required = ['name', 'building_id', 'floor'];
-            if (!hasAllRequired(editForm as any, required)) {
-                alert('Please fill out all required fields.');
-                return;
-            }
-            setLoading(true);
-            await officeAPI.update(editingOffice.id, {
-                ...editForm,
-                image_url: editOfficeImage || null,
-            });
-            await loadOffices();
-            cancelEdit();
-        } catch (error) {
-            console.error('Error updating office:', error);
-        } finally {
-            setLoading(false);
+        const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+        const required = ['name', 'building_id', 'floor'];
+        if (!hasAllRequired(editForm as any, required)) {
+            alert('Please fill out all required fields.');
+            return;
         }
+        setConfirmModal({
+            isOpen: true,
+            type: 'edit',
+            title: 'Update Office',
+            message: `Are you sure you want to update "${editForm.name}"?`,
+            onConfirm: async () => {
+                try {
+                    setLoading(true);
+                    await officeAPI.update(editingOffice.id, {
+                        ...editForm,
+                        image_url: editOfficeImage || null,
+                    });
+                    await loadOffices();
+                    cancelEdit();
+                } catch (error) {
+                    console.error('Error updating office:', error);
+                } finally {
+                    setLoading(false);
+                }
+            },
+        });
     };
 
     const deleteOffice = async (id: number) => {
-        if (window.confirm('Are you sure you want to delete this office?')) {
-            try {
-                setLoading(true);
-                await officeAPI.delete(id);
-                await loadOffices();
-            } catch (error) {
-                console.error('Error deleting office:', error);
-            } finally {
-                setLoading(false);
-            }
-        }
+        const office = offices.find(o => o.id === id);
+        setConfirmModal({
+            isOpen: true,
+            type: 'delete',
+            title: 'Delete Office',
+            message: `Are you sure you want to delete "${office?.name || 'this office'}"? This action cannot be undone.`,
+            onConfirm: async () => {
+                try {
+                    setLoading(true);
+                    await officeAPI.delete(id);
+                    await loadOffices();
+                } catch (error) {
+                    console.error('Error deleting office:', error);
+                } finally {
+                    setLoading(false);
+                }
+            },
+        });
     }
 
     return (
@@ -478,7 +515,15 @@ export default function offices() {
           </div>
         </div>
       )}
-        
+        <ConfirmationModal
+            isOpen={confirmModal.isOpen}
+            onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+            onConfirm={confirmModal.onConfirm}
+            title={confirmModal.title}
+            message={confirmModal.message}
+            type={confirmModal.type}
+            confirmText={confirmModal.type === 'delete' ? 'Delete' : confirmModal.type === 'edit' ? 'Update' : 'Save'}
+        />
       
    </div>
         </>

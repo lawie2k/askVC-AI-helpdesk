@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import DataGrid from "../components/DataGrid";
 import { officersAPI } from "../services/api";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 const ORGANIZATIONS = ["CSIT", "CODES","EESA"];
 
@@ -19,6 +20,19 @@ export default function OfficersTab() {
     name: "",
     position: "",
     organization: "",
+  });
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'delete' | 'save' | 'edit';
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    type: 'save',
+    title: '',
+    message: '',
+    onConfirm: () => {},
   });
 
   useEffect(() => {
@@ -97,21 +111,29 @@ export default function OfficersTab() {
       alert("Please fill out name, position, and organization.");
       return;
     }
-    try {
-      setLoading(true);
-      await officersAPI.create(values);
-      await loadOfficers();
-      setNewOfficer({
-        name: "",
-        position: "",
-        organization: "",
-      });
-    } catch (err) {
-      console.error("Error adding officer:", err);
-      alert("Failed to add officer.");
-    } finally {
-      setLoading(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      type: 'save',
+      title: 'Save Officer',
+      message: `Are you sure you want to save "${values.name}"?`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await officersAPI.create(values);
+          await loadOfficers();
+          setNewOfficer({
+            name: "",
+            position: "",
+            organization: "",
+          });
+        } catch (err) {
+          console.error("Error adding officer:", err);
+          alert("Failed to add officer.");
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const saveEdit = async () => {
@@ -124,31 +146,47 @@ export default function OfficersTab() {
       alert("Please fill out name, position, and organization.");
       return;
     }
-    try {
-      setLoading(true);
-      await officersAPI.update(editingOfficer.id, values);
-      await loadOfficers();
-      cancelEdit();
-    } catch (err) {
-      console.error("Error updating officer:", err);
-      alert("Failed to update officer.");
-    } finally {
-      setLoading(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      type: 'edit',
+      title: 'Update Officer',
+      message: `Are you sure you want to update "${values.name}"?`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await officersAPI.update(editingOfficer.id, values);
+          await loadOfficers();
+          cancelEdit();
+        } catch (err) {
+          console.error("Error updating officer:", err);
+          alert("Failed to update officer.");
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const deleteOfficer = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this officer?")) return;
-    try {
-      setLoading(true);
-      await officersAPI.delete(id);
-      await loadOfficers();
-    } catch (err) {
-      console.error("Error deleting officer:", err);
-      alert("Failed to delete officer.");
-    } finally {
-      setLoading(false);
-    }
+    const officer = officers.find(o => o.id === id);
+    setConfirmModal({
+      isOpen: true,
+      type: 'delete',
+      title: 'Delete Officer',
+      message: `Are you sure you want to delete "${officer?.name || 'this officer'}"? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await officersAPI.delete(id);
+          await loadOfficers();
+        } catch (err) {
+          console.error("Error deleting officer:", err);
+          alert("Failed to delete officer.");
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   return (
@@ -281,6 +319,15 @@ export default function OfficersTab() {
           </div>
         </div>
       </div>
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.type === 'delete' ? 'Delete' : confirmModal.type === 'edit' ? 'Update' : 'Save'}
+      />
     </>
   );
 }

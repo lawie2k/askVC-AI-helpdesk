@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from "react";
 import DataGrid from "../components/DataGrid";
 import { announcementsAPI } from "../services/api";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 export default function Announcement() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -13,6 +14,19 @@ export default function Announcement() {
   const [editForm, setEditForm] = useState({
     title: "",
     description: ""
+  });
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'delete' | 'save' | 'edit';
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    type: 'save',
+    title: '',
+    message: '',
+    onConfirm: () => {},
   });
 
   useEffect(() => {
@@ -63,26 +77,34 @@ export default function Announcement() {
   ];
 
   const addAnnouncement = async () => {
-    try {
-      const hasAllRequired = (values: Record<string, any>, required: string[]) => 
-        required.every((k) => String(values[k] ?? '').trim() !== '');
-      const required = ['title', 'description'];
-      if (!hasAllRequired(newAnnouncement as any, required)) {
-        alert('Please fill out all required fields.');
-        return;
-      }
-      setLoading(true);
-      await announcementsAPI.create(newAnnouncement);
-      await loadAnnouncements();
-      setNewAnnouncement({
-        title: "",
-        description: ""
-      });
-    } catch (error) {
-      console.error('Error adding announcement:', error);
-    } finally {
-      setLoading(false);
+    const hasAllRequired = (values: Record<string, any>, required: string[]) => 
+      required.every((k) => String(values[k] ?? '').trim() !== '');
+    const required = ['title', 'description'];
+    if (!hasAllRequired(newAnnouncement as any, required)) {
+      alert('Please fill out all required fields.');
+      return;
     }
+    setConfirmModal({
+      isOpen: true,
+      type: 'save',
+      title: 'Save Announcement',
+      message: `Are you sure you want to save "${newAnnouncement.title}"?`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await announcementsAPI.create(newAnnouncement);
+          await loadAnnouncements();
+          setNewAnnouncement({
+            title: "",
+            description: ""
+          });
+        } catch (error) {
+          console.error('Error adding announcement:', error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const updateAnnouncement = async (id: number, updatedData: any) => {
@@ -98,17 +120,24 @@ export default function Announcement() {
   };
   
   const deleteAnnouncement = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this announcement?')) {
-      try {
-        setLoading(true);
-        await announcementsAPI.delete(id);
-        await loadAnnouncements();
-      } catch (error) {
-        console.error('Error deleting announcement:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
+    const announcement = announcements.find(a => a.id === id);
+    setConfirmModal({
+      isOpen: true,
+      type: 'delete',
+      title: 'Delete Announcement',
+      message: `Are you sure you want to delete "${announcement?.title || 'this announcement'}"? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await announcementsAPI.delete(id);
+          await loadAnnouncements();
+        } catch (error) {
+          console.error('Error deleting announcement:', error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const startEdit = (announcement: any) => {
@@ -128,23 +157,31 @@ export default function Announcement() {
   };
 
   const saveEdit = async () => {
-    try {
-      const hasAllRequired = (values: Record<string, any>, required: string[]) => 
-        required.every((k) => String(values[k] ?? '').trim() !== '');
-      const required = ['title', 'description'];
-      if (!hasAllRequired(editForm as any, required)) {
-        alert('Please fill out all required fields.');
-        return;
-      }
-      setLoading(true);
-      await announcementsAPI.update(editingAnnouncement.id, editForm);
-      await loadAnnouncements();
-      cancelEdit();
-    } catch (error) {
-      console.error('Error updating announcement:', error);
-    } finally {
-      setLoading(false);
+    const hasAllRequired = (values: Record<string, any>, required: string[]) => 
+      required.every((k) => String(values[k] ?? '').trim() !== '');
+    const required = ['title', 'description'];
+    if (!hasAllRequired(editForm as any, required)) {
+      alert('Please fill out all required fields.');
+      return;
     }
+    setConfirmModal({
+      isOpen: true,
+      type: 'edit',
+      title: 'Update Announcement',
+      message: `Are you sure you want to update "${editForm.title}"?`,
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await announcementsAPI.update(editingAnnouncement.id, editForm);
+          await loadAnnouncements();
+          cancelEdit();
+        } catch (error) {
+          console.error('Error updating announcement:', error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   return (
@@ -231,6 +268,15 @@ export default function Announcement() {
           </div>
         </div>
       </div>
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.type === 'delete' ? 'Delete' : confirmModal.type === 'edit' ? 'Update' : 'Save'}
+      />
     </>
   );
 }

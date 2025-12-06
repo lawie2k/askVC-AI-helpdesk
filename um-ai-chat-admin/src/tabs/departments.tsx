@@ -2,6 +2,7 @@
 import React, {useEffect, useState} from "react";
 import DataGrid from "../components/DataGrid";
 import {departmentAPI} from "../services/api";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 export default function Departments() {
     const [departments, setDepartments] = useState<any[]>([]);
@@ -14,6 +15,19 @@ export default function Departments() {
     const [editForm, setEditForm] = useState({
         name: "",
         short_name: ""
+    });
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        type: 'delete' | 'save' | 'edit';
+        title: string;
+        message: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        type: 'save',
+        title: '',
+        message: '',
+        onConfirm: () => {},
     });
 
     useEffect(() => {
@@ -70,23 +84,31 @@ export default function Departments() {
     ];
 
     const addDepartment = async () => {
-        try {
-            if (!isNewValid) {
-                alert('Please fill out all required fields.');
-                return;
-            }
-            setLoading(true);
-            await departmentAPI.create(newDepartment);
-            await loadDepartments();
-            setNewDepartment({
-                name: "",
-                short_name: ""
-            });
-        } catch (error) {
-            console.error('Error adding department:', error);
-        } finally {
-            setLoading(false);
+        if (!isNewValid) {
+            alert('Please fill out all required fields.');
+            return;
         }
+        setConfirmModal({
+            isOpen: true,
+            type: 'save',
+            title: 'Save Department',
+            message: `Are you sure you want to save "${newDepartment.name}"?`,
+            onConfirm: async () => {
+                try {
+                    setLoading(true);
+                    await departmentAPI.create(newDepartment);
+                    await loadDepartments();
+                    setNewDepartment({
+                        name: "",
+                        short_name: ""
+                    });
+                } catch (error) {
+                    console.error('Error adding department:', error);
+                } finally {
+                    setLoading(false);
+                }
+            },
+        });
     };
 
     const startEdit = (department: any) => {
@@ -106,34 +128,49 @@ export default function Departments() {
     };
 
     const saveEdit = async () => {
-        try {
-            if (!isEditValid) {
-                alert('Please fill out all required fields.');
-                return;
-            }
-            setLoading(true);
-            await departmentAPI.update(editingDepartment.id, editForm);
-            await loadDepartments();
-            cancelEdit();
-        } catch (error) {
-            console.error('Error updating department:', error);
-        } finally {
-            setLoading(false);
+        if (!isEditValid) {
+            alert('Please fill out all required fields.');
+            return;
         }
+        setConfirmModal({
+            isOpen: true,
+            type: 'edit',
+            title: 'Update Department',
+            message: `Are you sure you want to update "${editForm.name}"?`,
+            onConfirm: async () => {
+                try {
+                    setLoading(true);
+                    await departmentAPI.update(editingDepartment.id, editForm);
+                    await loadDepartments();
+                    cancelEdit();
+                } catch (error) {
+                    console.error('Error updating department:', error);
+                } finally {
+                    setLoading(false);
+                }
+            },
+        });
     };
 
     const deleteDepartment = async (id: number) => {
-        if (window.confirm('Are you sure you want to delete this department?')) {
-            try {
-                setLoading(true);
-                await departmentAPI.delete(id);
-                await loadDepartments();
-            } catch (error) {
-                console.error('Error deleting department:', error);
-            } finally {
-                setLoading(false);
-            }
-        }
+        const department = departments.find(d => d.id === id);
+        setConfirmModal({
+            isOpen: true,
+            type: 'delete',
+            title: 'Delete Department',
+            message: `Are you sure you want to delete "${department?.name || 'this department'}"? This action cannot be undone.`,
+            onConfirm: async () => {
+                try {
+                    setLoading(true);
+                    await departmentAPI.delete(id);
+                    await loadDepartments();
+                } catch (error) {
+                    console.error('Error deleting department:', error);
+                } finally {
+                    setLoading(false);
+                }
+            },
+        });
     }
 
     return (
@@ -224,6 +261,15 @@ export default function Departments() {
         
       
    </div>
+        <ConfirmationModal
+            isOpen={confirmModal.isOpen}
+            onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+            onConfirm={confirmModal.onConfirm}
+            title={confirmModal.title}
+            message={confirmModal.message}
+            type={confirmModal.type}
+            confirmText={confirmModal.type === 'delete' ? 'Delete' : confirmModal.type === 'edit' ? 'Update' : 'Save'}
+        />
         </>
     )
 }

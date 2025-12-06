@@ -3,7 +3,7 @@ const { searchDatabase, extractDepartmentFromQuestion } = require("../services/a
 const AIService = require("../services/ai-service");
 const prisma = require("../config/prismaClient");
 const jwt = require("jsonwebtoken");
-const { fetchMultipleUrls } = require("../services/url-fetcher");
+const { fetchPdfContent } = require("../services/pdf-fetcher");
 
 const router = express.Router();
 const aiService = new AIService();
@@ -190,51 +190,37 @@ router.post("/ask", async (req, res) => {
     const dbResults = await searchDatabase(question);
 
     // ========================================================================
-    // SCANNED URLS - Fetch content from pre-configured URLs
+    // PDF FETCHING - Fetch IT subjects PDF if question is about IT subjects
     // ========================================================================
-    let scannedUrlContext = "";
-    try {
-      // Get all active scanned URLs from database
-      const scannedUrls = await prisma.scanned_urls.findMany({
-        where: { is_active: true },
-        orderBy: { created_at: 'desc' },
-      });
+    let pdfContext = "";
+    const questionLower = question.toLowerCase();
+    // Check if question is about subjects/courses AND IT/BSIT
+    const hasSubjectKeywords = questionLower.includes('subject') || questionLower.includes('subjects') || 
+                               questionLower.includes('course') || questionLower.includes('courses') ||
+                               questionLower.includes('curriculum') || questionLower.includes('offerings');
+    const hasITKeywords = questionLower.includes('bsit') || 
+                         questionLower.includes('information technology') ||
+                         (questionLower.includes(' it ') || questionLower.endsWith(' it') || 
+                          questionLower.startsWith('it ') || questionLower.includes(' it?')) ||
+                         extractDepartmentFromQuestion(question) === 'BSIT';
+    const isITSubjectsQuestion = hasSubjectKeywords && hasITKeywords;
 
-      if (scannedUrls.length > 0) {
-        console.log(`🌐 Found ${scannedUrls.length} active scanned URL(s), fetching content...`);
-        const urlList = scannedUrls.map(su => su.url);
-        const urlResults = await fetchMultipleUrls(urlList);
+    if (isITSubjectsQuestion) {
+      try {
+        console.log('📄 Question is about IT subjects, fetching PDF...');
+        const bsitPdfUrl = "https://umindanao.edu.ph/files/eriao/bsit.pdf";
+        const pdfResult = await fetchPdfContent(bsitPdfUrl);
         
-        const successfulFetches = urlResults.filter(r => r.success);
-        if (successfulFetches.length > 0) {
-          scannedUrlContext = "\n\nContent from configured web sources:\n";
-          successfulFetches.forEach((result, index) => {
-            // Find the corresponding scanned URL record for title/description
-            const scannedUrlRecord = scannedUrls.find(su => su.url === result.url);
-            scannedUrlContext += `\n[Source ${index + 1}]\n`;
-            if (scannedUrlRecord?.title) {
-              scannedUrlContext += `Title: ${scannedUrlRecord.title}\n`;
-            } else if (result.title) {
-              scannedUrlContext += `Title: ${result.title}\n`;
-            }
-            scannedUrlContext += `URL: ${result.url}\n`;
-            if (scannedUrlRecord?.description) {
-              scannedUrlContext += `Description: ${scannedUrlRecord.description}\n`;
-            }
-            if (result.content) {
-              scannedUrlContext += `Content: ${result.content}\n`;
-            }
-          });
-          console.log(`✅ Successfully fetched content from ${successfulFetches.length} scanned URL(s)`);
+        if (pdfResult.success && pdfResult.content) {
+          pdfContext = `\n\nBSIT Course Offerings (from PDF):\n${pdfResult.content}\n`;
+          console.log('✅ Successfully fetched IT subjects from PDF');
         } else {
-          console.log('⚠️ Failed to fetch content from any scanned URLs');
+          console.log('⚠️ Failed to fetch PDF content:', pdfResult.error);
         }
-      } else {
-        console.log('📝 No active scanned URLs configured');
+      } catch (pdfErr) {
+        console.error('⚠️ Error fetching PDF:', pdfErr.message);
+        // Don't fail the request if PDF fetching fails
       }
-    } catch (urlErr) {
-      console.error('⚠️ Error fetching scanned URLs:', urlErr.message);
-      // Don't fail the request if URL fetching fails
     }
 
     // ========================================================================
@@ -244,10 +230,12 @@ router.post("/ask", async (req, res) => {
     // imageUrls already initialized above
     
     // Determine if question is specifically about rooms or offices
-    const questionLower = question.toLowerCase();
-    const isRoomQuestion =
+    // Exclude CR/comfort room/restroom from being treated as room questions
+    const isCRQuestion = /\b(cr|comfort room|comfortroom|restroom|restrooms|toilet|toilets|bathroom|bathrooms)\b/i.test(question);
+    const isRoomQuestion = !isCRQuestion && (
       /\b(room|rooms|classroom|comlab|laboratory|lab)\b/i.test(question) ||
-      /\b(room\s*)?\d{3,4}\b/i.test(question);
+      /\b(room\s*)?\d{3,4}\b/i.test(question)
+    );
     const isOfficeQuestion =
       /\b(office|offices|sao|student affairs|registrar|cashier|clinic|library|faculty)\b/i.test(
         question
@@ -289,17 +277,24 @@ router.post("/ask", async (req, res) => {
           
           // Only keep the best match for images (highest relevance score)
           // Only include images from the relevant table type based on question
+          // IMPORTANT: Only show images if there's a strong match (relevance >= 80)
+          // This prevents showing random images for unrelated results
+          const MIN_RELEVANCE_FOR_IMAGE = 80;
+          
           if (result.table === "rooms" && item.image_url) {
-            // Only include room images if question is clearly about rooms
+            // Only include room images if question is clearly about rooms AND has high relevance
             if (isRoomQuestion) {
               const relevance = item.relevance_score || 0;
-              if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
-                bestRoomMatch = {
-                  url: item.image_url,
-                  name: item.name || "Image",
-                  type: "room",
-                  relevance_score: relevance
-                };
+              // Only consider images if relevance is high enough (strong match)
+              if (relevance >= MIN_RELEVANCE_FOR_IMAGE) {
+                if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
+                  bestRoomMatch = {
+                    url: item.image_url,
+                    name: item.name || "Image",
+                    type: "room",
+                    relevance_score: relevance
+                  };
+                }
               }
             }
           }
@@ -312,7 +307,8 @@ router.post("/ask", async (req, res) => {
             if (relevance > highestOfficeRelevance) {
               highestOfficeRelevance = relevance;
               bestOfficeMatch = null;
-              if (isOfficeQuestion && item.image_url) {
+              // Only show image if it's an office question AND has high relevance AND has image
+              if (isOfficeQuestion && item.image_url && relevance >= MIN_RELEVANCE_FOR_IMAGE) {
                 bestOfficeMatch = {
                   url: item.image_url,
                   name: item.name || "Image",
@@ -324,10 +320,11 @@ router.post("/ask", async (req, res) => {
               relevance === highestOfficeRelevance &&
               !bestOfficeMatch &&
               isOfficeQuestion &&
-              item.image_url
+              item.image_url &&
+              relevance >= MIN_RELEVANCE_FOR_IMAGE
             ) {
               // Tie-breaker: if multiple offices share the same top score,
-              // take the first one that actually has an image.
+              // take the first one that actually has an image and high relevance.
               bestOfficeMatch = {
                 url: item.image_url,
                 name: item.name || "Image",
@@ -342,9 +339,11 @@ router.post("/ask", async (req, res) => {
       // Only add the best matches to imageUrls
       // If question is specifically about rooms, only return room images
       // If question is specifically about offices, only return office images
-      if (isRoomQuestion && bestRoomMatch) {
+      // Additional check: Only show images if we have a strong match (relevance >= 80)
+      // This prevents showing random images for general questions or weak matches
+      if (isRoomQuestion && bestRoomMatch && bestRoomMatch.relevance_score >= 80) {
         imageUrls.push(bestRoomMatch);
-      } else if (isOfficeQuestion && bestOfficeMatch) {
+      } else if (isOfficeQuestion && bestOfficeMatch && bestOfficeMatch.relevance_score >= 80) {
         imageUrls.push(bestOfficeMatch);
       }
       const timeGuidance = await generateTimeAwareGuidance(dbResults);
@@ -408,11 +407,11 @@ and for the 3rd floor it is beside in AVR room
 - if the input is comlab 1,2 or 3 it is same with Com Lab 1,2 or 3
 - if the input is Audio Visual room it is same with AVR or room AVR
 - if the input is LJ or lj it should point to the professor lowel jay orcullo
+- if the input is buddy or sir buddy it should point to the professor benjamin mahinay jr.
 - the school director of University of Mindanao Tagum College is Dr. Evelyn P. Saludes 
-- When answering questions, search through both the database information AND the content from configured web sources below. Use information from web sources to supplement or answer questions when the database doesn't have the information.
-- When users ask about class schedules, announcements, or events (like "is there class tomorrow?" or "any announcements?"), check the Facebook page content from the web sources. Look for recent posts about class suspensions, schedule changes, or important announcements. Use dates mentioned in the posts to determine if they apply to the user's question.
+- When answering questions about IT subjects, courses, or curriculum, use the information from the BSIT PDF document provided below. List the subjects clearly and provide course codes when available.
 
-${dbContext}${scannedUrlContext}${conversationContext}`;
+${dbContext}${pdfContext}${conversationContext}`;
 
     // Try AI service (with timeout protection)
     if (aiService.isAvailable()) {
