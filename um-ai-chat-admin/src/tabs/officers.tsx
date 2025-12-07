@@ -117,21 +117,21 @@ export default function OfficersTab() {
       title: 'Save Officer',
       message: `Are you sure you want to save "${values.name}"?`,
       onConfirm: async () => {
-        try {
-          setLoading(true);
-          await officersAPI.create(values);
-          await loadOfficers();
-          setNewOfficer({
-            name: "",
-            position: "",
-            organization: "",
-          });
-        } catch (err) {
-          console.error("Error adding officer:", err);
-          alert("Failed to add officer.");
-        } finally {
-          setLoading(false);
-        }
+    try {
+      setLoading(true);
+      await officersAPI.create(values);
+      await loadOfficers();
+      setNewOfficer({
+        name: "",
+        position: "",
+        organization: "",
+      });
+    } catch (err) {
+      console.error("Error adding officer:", err);
+      alert("Failed to add officer.");
+    } finally {
+      setLoading(false);
+    }
       },
     });
   };
@@ -152,17 +152,17 @@ export default function OfficersTab() {
       title: 'Update Officer',
       message: `Are you sure you want to update "${values.name}"?`,
       onConfirm: async () => {
-        try {
-          setLoading(true);
-          await officersAPI.update(editingOfficer.id, values);
-          await loadOfficers();
-          cancelEdit();
-        } catch (err) {
-          console.error("Error updating officer:", err);
-          alert("Failed to update officer.");
-        } finally {
-          setLoading(false);
-        }
+    try {
+      setLoading(true);
+      await officersAPI.update(editingOfficer.id, values);
+      await loadOfficers();
+      cancelEdit();
+    } catch (err) {
+      console.error("Error updating officer:", err);
+      alert("Failed to update officer.");
+    } finally {
+      setLoading(false);
+    }
       },
     });
   };
@@ -175,16 +175,16 @@ export default function OfficersTab() {
       title: 'Delete Officer',
       message: `Are you sure you want to delete "${officer?.name || 'this officer'}"? This action cannot be undone.`,
       onConfirm: async () => {
-        try {
-          setLoading(true);
-          await officersAPI.delete(id);
-          await loadOfficers();
-        } catch (err) {
-          console.error("Error deleting officer:", err);
-          alert("Failed to delete officer.");
-        } finally {
-          setLoading(false);
-        }
+    try {
+      setLoading(true);
+      await officersAPI.delete(id);
+      await loadOfficers();
+    } catch (err) {
+      console.error("Error deleting officer:", err);
+      alert("Failed to delete officer.");
+    } finally {
+      setLoading(false);
+    }
       },
     });
   };

@@ -69,12 +69,12 @@ export default function Buildings() {
     ];
 
     const addBuilding = async () => {
-        const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
-        const required = ['name'];
-        if (!hasAllRequired(newBuilding as any, required)) {
-            alert('Please fill out all required fields.');
-            return;
-        }
+            const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+            const required = ['name'];
+            if (!hasAllRequired(newBuilding as any, required)) {
+                alert('Please fill out all required fields.');
+                return;
+            }
         setConfirmModal({
             isOpen: true,
             type: 'save',
@@ -82,17 +82,17 @@ export default function Buildings() {
             message: `Are you sure you want to save "${newBuilding.name}"?`,
             onConfirm: async () => {
                 try {
-                    setLoading(true);
-                    await buildingAPI.create(newBuilding);
-                    await loadBuildings();
-                    setNewBuilding({
-                        name: ""
-                    });
-                } catch (error) {
-                    console.error('Error adding building:', error);
-                } finally {
-                    setLoading(false);
-                }
+            setLoading(true);
+            await buildingAPI.create(newBuilding);
+            await loadBuildings();
+            setNewBuilding({
+                name: ""
+            });
+        } catch (error) {
+            console.error('Error adding building:', error);
+        } finally {
+            setLoading(false);
+        }
             },
         });
     };
@@ -112,12 +112,12 @@ export default function Buildings() {
     };
 
     const saveEdit = async () => {
-        const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
-        const required = ['name'];
-        if (!hasAllRequired(editForm as any, required)) {
-            alert('Please fill out all required fields.');
-            return;
-        }
+            const hasAllRequired = (values: Record<string, any>, required: string[]) => required.every((k) => String(values[k] ?? '').trim() !== '');
+            const required = ['name'];
+            if (!hasAllRequired(editForm as any, required)) {
+                alert('Please fill out all required fields.');
+                return;
+            }
         setConfirmModal({
             isOpen: true,
             type: 'edit',
@@ -125,15 +125,15 @@ export default function Buildings() {
             message: `Are you sure you want to update "${editForm.name}"?`,
             onConfirm: async () => {
                 try {
-                    setLoading(true);
-                    await buildingAPI.update(editingBuilding.id, editForm);
-                    await loadBuildings();
-                    cancelEdit();
-                } catch (error) {
-                    console.error('Error updating building:', error);
-                } finally {
-                    setLoading(false);
-                }
+            setLoading(true);
+            await buildingAPI.update(editingBuilding.id, editForm);
+            await loadBuildings();
+            cancelEdit();
+        } catch (error) {
+            console.error('Error updating building:', error);
+        } finally {
+            setLoading(false);
+        }
             },
         });
     };
@@ -146,15 +146,15 @@ export default function Buildings() {
             title: 'Delete Building',
             message: `Are you sure you want to delete "${building?.name || 'this building'}"? This action cannot be undone.`,
             onConfirm: async () => {
-                try {
-                    setLoading(true);
-                    await buildingAPI.delete(id);
-                    await loadBuildings();
-                } catch (error) {
-                    console.error('Error deleting building:', error);
-                } finally {
-                    setLoading(false);
-                }
+            try {
+                setLoading(true);
+                await buildingAPI.delete(id);
+                await loadBuildings();
+            } catch (error) {
+                console.error('Error deleting building:', error);
+            } finally {
+                setLoading(false);
+            }
             },
         });
     }

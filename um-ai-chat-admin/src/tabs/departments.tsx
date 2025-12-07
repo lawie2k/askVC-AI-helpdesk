@@ -84,10 +84,10 @@ export default function Departments() {
     ];
 
     const addDepartment = async () => {
-        if (!isNewValid) {
-            alert('Please fill out all required fields.');
-            return;
-        }
+            if (!isNewValid) {
+                alert('Please fill out all required fields.');
+                return;
+            }
         setConfirmModal({
             isOpen: true,
             type: 'save',
@@ -95,18 +95,18 @@ export default function Departments() {
             message: `Are you sure you want to save "${newDepartment.name}"?`,
             onConfirm: async () => {
                 try {
-                    setLoading(true);
-                    await departmentAPI.create(newDepartment);
-                    await loadDepartments();
-                    setNewDepartment({
-                        name: "",
-                        short_name: ""
-                    });
-                } catch (error) {
-                    console.error('Error adding department:', error);
-                } finally {
-                    setLoading(false);
-                }
+            setLoading(true);
+            await departmentAPI.create(newDepartment);
+            await loadDepartments();
+            setNewDepartment({
+                name: "",
+                short_name: ""
+            });
+        } catch (error) {
+            console.error('Error adding department:', error);
+        } finally {
+            setLoading(false);
+        }
             },
         });
     };
@@ -128,10 +128,10 @@ export default function Departments() {
     };
 
     const saveEdit = async () => {
-        if (!isEditValid) {
-            alert('Please fill out all required fields.');
-            return;
-        }
+            if (!isEditValid) {
+                alert('Please fill out all required fields.');
+                return;
+            }
         setConfirmModal({
             isOpen: true,
             type: 'edit',
@@ -139,15 +139,15 @@ export default function Departments() {
             message: `Are you sure you want to update "${editForm.name}"?`,
             onConfirm: async () => {
                 try {
-                    setLoading(true);
-                    await departmentAPI.update(editingDepartment.id, editForm);
-                    await loadDepartments();
-                    cancelEdit();
-                } catch (error) {
-                    console.error('Error updating department:', error);
-                } finally {
-                    setLoading(false);
-                }
+            setLoading(true);
+            await departmentAPI.update(editingDepartment.id, editForm);
+            await loadDepartments();
+            cancelEdit();
+        } catch (error) {
+            console.error('Error updating department:', error);
+        } finally {
+            setLoading(false);
+        }
             },
         });
     };
@@ -160,15 +160,15 @@ export default function Departments() {
             title: 'Delete Department',
             message: `Are you sure you want to delete "${department?.name || 'this department'}"? This action cannot be undone.`,
             onConfirm: async () => {
-                try {
-                    setLoading(true);
-                    await departmentAPI.delete(id);
-                    await loadDepartments();
-                } catch (error) {
-                    console.error('Error deleting department:', error);
-                } finally {
-                    setLoading(false);
-                }
+            try {
+                setLoading(true);
+                await departmentAPI.delete(id);
+                await loadDepartments();
+            } catch (error) {
+                console.error('Error deleting department:', error);
+            } finally {
+                setLoading(false);
+            }
             },
         });
     }

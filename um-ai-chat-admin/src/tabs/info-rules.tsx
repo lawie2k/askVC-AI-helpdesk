@@ -99,20 +99,20 @@ export default function RulesAndInfo () {
       title: `Save ${section?.label || 'Entry'}`,
       message: `Are you sure you want to save this ${section?.label.toLowerCase() || 'entry'}?`,
       onConfirm: async () => {
-        try {
-          setLoading(true);
-          const api = getApiForCategory(category);
-          await api.create({
-            description: value,
-            admin_id: 1,
-          });
-          await loadAll();
-          setNewEntries((prev) => ({ ...prev, [category]: '' }));
-        } catch (error) {
-          console.error('Error adding entry:', error);
-        } finally {
-          setLoading(false);
-        }
+    try {
+      setLoading(true);
+      const api = getApiForCategory(category);
+      await api.create({
+        description: value,
+        admin_id: 1,
+      });
+      await loadAll();
+      setNewEntries((prev) => ({ ...prev, [category]: '' }));
+    } catch (error) {
+      console.error('Error adding entry:', error);
+    } finally {
+      setLoading(false);
+    }
       },
     });
   };
@@ -137,22 +137,22 @@ export default function RulesAndInfo () {
       title: `Update ${section?.label || 'Entry'}`,
       message: `Are you sure you want to update this ${section?.label.toLowerCase() || 'entry'}?`,
       onConfirm: async () => {
-        try {
-          setLoading(true);
-          const api = getApiForCategory(editingRule.category);
-          await api.update(editingRule.id, {
-            description: value,
-            admin_id: 1,
-          });
-          await loadAll();
-          setEditingRule(null);
-          setEditText('');
-          setNewEntries((prev) => ({ ...prev, [editingRule.category]: '' }));
-        } catch (error) {
-          console.error('Error updating entry:', error);
-        } finally {
-          setLoading(false);
-        }
+    try {
+      setLoading(true);
+      const api = getApiForCategory(editingRule.category);
+      await api.update(editingRule.id, {
+        description: value,
+        admin_id: 1,
+      });
+      await loadAll();
+      setEditingRule(null);
+      setEditText('');
+      setNewEntries((prev) => ({ ...prev, [editingRule.category]: '' }));
+    } catch (error) {
+      console.error('Error updating entry:', error);
+    } finally {
+      setLoading(false);
+    }
       },
     });
   };
@@ -165,20 +165,20 @@ export default function RulesAndInfo () {
       title: `Delete ${section?.label || 'Entry'}`,
       message: `Are you sure you want to delete this ${section?.label.toLowerCase() || 'entry'}? This action cannot be undone.`,
       onConfirm: async () => {
-        try {
-          setLoading(true);
-          const api = getApiForCategory(entry.category);
-          await api.delete(entry.id);
-          await loadAll();
-          if (editingRule?.id === entry.id) {
-            setEditingRule(null);
-            setEditText('');
-          }
-        } catch (error) {
-          console.error('Error deleting entry:', error);
-        } finally {
-          setLoading(false);
-        }
+    try {
+      setLoading(true);
+      const api = getApiForCategory(entry.category);
+      await api.delete(entry.id);
+      await loadAll();
+      if (editingRule?.id === entry.id) {
+        setEditingRule(null);
+        setEditText('');
+      }
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+    } finally {
+      setLoading(false);
+    }
       },
     });
   };

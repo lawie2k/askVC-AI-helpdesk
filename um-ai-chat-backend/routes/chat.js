@@ -353,13 +353,16 @@ router.post("/ask", async (req, res) => {
           // 4. The room/office name is mentioned in the question
           const MIN_RELEVANCE_FOR_IMAGE = 90; // Increased threshold - only very strong matches
           
-          if (result.table === "rooms" && item.image_url) {
+          if (result.table === "rooms") {
+            // Log when room is found
+            console.log(`🔍 Room found in search: "${item.name}" (ID: ${item.id}, Image: ${item.image_url ? '✅' : '❌'}, Relevance: ${item.relevance_score || 'N/A'})`);
+            
             // Only include room images if:
             // 1. Question is clearly about rooms
             // 2. Result is from specific room search (not general search)
             // 3. Has very high relevance (exact/close match)
             // 4. Room name is mentioned in question
-            if (isRoomQuestion) {
+            if (isRoomQuestion && item.image_url) {
               const relevance = item.relevance_score || 0;
               const matchType = item.match_type || '';
               const roomName = (item.name || '').toLowerCase();
@@ -399,13 +402,18 @@ router.post("/ask", async (req, res) => {
               if (isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) {
                 // For specific searches, we trust the search logic - if it found the room with high relevance, show the image
                 if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
-                  console.log(`📸 Adding room image for specific search: ${item.name} (relevance: ${relevance}, match_type: ${matchType})`);
-                  bestRoomMatch = {
-                    url: item.image_url,
-                    name: item.name || "Image",
-                    type: "room",
-                    relevance_score: relevance
-                  };
+                  // Double-check image_url is valid
+                  if (item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
+                    console.log(`📸 Adding room image for specific search: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, image_url: ${item.image_url.substring(0, 50)}...)`);
+                    bestRoomMatch = {
+                      url: item.image_url.trim(),
+                      name: item.name || "Image",
+                      type: "room",
+                      relevance_score: relevance
+                    };
+                  } else {
+                    console.log(`⚠️ Room found but image_url is invalid: ${item.name} (image_url: "${item.image_url}")`);
+                  }
                 }
               } else if (isStrongMatch) {
                 // For general searches, require name to be mentioned
@@ -513,11 +521,21 @@ router.post("/ask", async (req, res) => {
       // This prevents showing random images for general questions or weak matches
       const MIN_RELEVANCE_FOR_IMAGE = 90;
       if (isRoomQuestion && bestRoomMatch && bestRoomMatch.relevance_score >= MIN_RELEVANCE_FOR_IMAGE) {
-        console.log(`📸 Adding room image: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score})`);
-        imageUrls.push(bestRoomMatch);
+        // Double-check that the image URL is valid before adding
+        if (bestRoomMatch.url && bestRoomMatch.url.trim() !== '') {
+          console.log(`📸 Adding room image: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score}, URL: ${bestRoomMatch.url.substring(0, 50)}...)`);
+          imageUrls.push(bestRoomMatch);
+        } else {
+          console.log(`⚠️ Room image rejected: ${bestRoomMatch.name} has no valid image_url`);
+        }
       } else if (isOfficeQuestion && bestOfficeMatch && bestOfficeMatch.relevance_score >= MIN_RELEVANCE_FOR_IMAGE) {
-        console.log(`📸 Adding office image: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score})`);
-        imageUrls.push(bestOfficeMatch);
+        // Double-check that the image URL is valid before adding
+        if (bestOfficeMatch.url && bestOfficeMatch.url.trim() !== '') {
+          console.log(`📸 Adding office image: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score}, URL: ${bestOfficeMatch.url.substring(0, 50)}...)`);
+          imageUrls.push(bestOfficeMatch);
+        } else {
+          console.log(`⚠️ Office image rejected: ${bestOfficeMatch.name} has no valid image_url`);
+        }
       } else {
         if (isRoomQuestion && bestRoomMatch) {
           console.log(`⚠️ Room image rejected: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score} < ${MIN_RELEVANCE_FOR_IMAGE})`);

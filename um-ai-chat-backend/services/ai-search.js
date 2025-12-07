@@ -370,17 +370,19 @@ async function searchDatabase(question) {
         }
         
         // Check for letter-number patterns (e.g., "RV1", "RV2", "RV3", "AV1", "B2")
+        // This should catch "RV2", "rv2", "RV 2", "rv 2", etc.
         if (!roomIdentifier) {
           const letterNumberMatch = q.match(/\b([a-z]{1,4})\s*(\d+)\b/i);
           if (letterNumberMatch) {
-            // Match patterns like "RV1", "RV 1", "rv1", etc.
+            // Match patterns like "RV1", "RV 1", "rv1", "RV2", "RV 2", "rv2", etc.
             const letters = letterNumberMatch[1].toLowerCase();
             const number = letterNumberMatch[2];
             roomIdentifier = `${letters}${number}`.toLowerCase();
-            // Also try with space: "rv 1" → "rv1"
+            // Also try with space: "rv 1" → "rv1", "rv 2" → "rv2"
             const altIdentifier = `${letters} ${number}`.toLowerCase();
             // Store both formats for matching
             comlabAltIdentifier = altIdentifier;
+            console.log(`   🔍 Detected letter-number pattern: "${roomIdentifier}" (also trying "${altIdentifier}")`);
           }
         }
         
@@ -426,17 +428,26 @@ async function searchDatabase(question) {
           // Search for rooms that match the identifier in their name or type
           // plus a special alternate form for Com Lab V1/V2/V3 or letter-number patterns
           if (comlabAltIdentifier) {
-            query += ` WHERE (LOWER(r.name) LIKE ? OR LOWER(r.type) LIKE ? OR LOWER(r.name) LIKE ?)`;
-            queryParams.push(`%${roomIdentifier}%`, `%${roomIdentifier}%`, `%${comlabAltIdentifier}%`);
+            // For letter-number patterns (like RV2), search for both "rv2" and "rv 2"
+            // Also search for the pattern without spaces in the database name
+            query += ` WHERE (LOWER(r.name) LIKE ? OR LOWER(r.type) LIKE ? OR LOWER(r.name) LIKE ? OR LOWER(REPLACE(r.name, ' ', '')) LIKE ?)`;
+            queryParams.push(`%${roomIdentifier}%`, `%${roomIdentifier}%`, `%${comlabAltIdentifier}%`, `%${roomIdentifier.replace(/\s+/g, '')}%`);
           } else {
-            query += ` WHERE LOWER(r.name) LIKE ? OR LOWER(r.type) LIKE ?`;
-            queryParams.push(`%${roomIdentifier}%`, `%${roomIdentifier}%`);
+            // For other patterns, also try without spaces and with different variations
+            // This helps find rooms like "RV2" when searching for "rv2" or "RV 2"
+            const identifierNoSpaces = roomIdentifier.replace(/\s+/g, '');
+            query += ` WHERE (LOWER(r.name) LIKE ? OR LOWER(r.type) LIKE ? OR LOWER(REPLACE(r.name, ' ', '')) LIKE ? OR LOWER(REPLACE(r.name, ' ', '')) = ?)`;
+            queryParams.push(`%${roomIdentifier}%`, `%${roomIdentifier}%`, `%${identifierNoSpaces}%`, identifierNoSpaces);
           }
         }
         
         db.query(query, queryParams, (err, results) => {
           if (!err && results.length > 0) {
             console.log(`   ✅ Found ${results.length} rooms`);
+            // Log details about found rooms
+            results.forEach((room) => {
+              console.log(`      - "${room.name}" (ID: ${room.id}, Image: ${room.image_url ? '✅' : '❌'}, Relevance: ${room.relevance_score || 'N/A'})`);
+            });
             
             // Score results: exact match gets highest score, partial match gets lower
             const scoredResults = results.map(result => {
@@ -453,21 +464,24 @@ async function searchDatabase(question) {
                 const identifierNumber = normalizedIdentifier.replace(/[^0-9]/g, '');
                 const roomNameNumber = normalizedRoomName.replace(/[^0-9]/g, '');
                 
+                // Remove all spaces for comparison
+                const identifierNoSpaces = normalizedIdentifier.replace(/\s+/g, '').toLowerCase();
+                const roomNameNoSpaces = normalizedRoomName.replace(/\s+/g, '').toLowerCase();
+                
+                // Extract letters and numbers separately
+                const identifierLetters = normalizedIdentifier.replace(/[^a-z]/g, '').toLowerCase();
+                const identifierNum = normalizedIdentifier.replace(/[^0-9]/g, '');
+                const roomNameLetters = normalizedRoomName.replace(/[^a-z]/g, '').toLowerCase();
+                const roomNameNum = normalizedRoomName.replace(/[^0-9]/g, '');
+                
                 // Exact match (handles "comlab 1" vs "comlab1" vs "ComLab 1", "RV1" vs "rv1" vs "RV 1")
                 if (normalizedRoomName === normalizedIdentifier || 
-                    normalizedRoomName.replace(/\s/g, '') === normalizedIdentifier.replace(/\s/g, '') ||
-                    normalizedRoomName.replace(/\s+/g, '') === normalizedIdentifier.replace(/\s+/g, '')) {
+                    roomNameNoSpaces === identifierNoSpaces) {
                   score = 100; // Perfect exact match
                 }
-                // Letter-number pattern match (e.g., "RV1" matches "RV 1" or "rv1")
-                else if (/^[a-z]+\d+$/i.test(normalizedIdentifier)) {
-                  // Extract letters and number from identifier
-                  const identifierLetters = normalizedIdentifier.replace(/[0-9]/g, '').toLowerCase();
-                  const identifierNum = normalizedIdentifier.replace(/[^0-9]/g, '');
-                  const roomNameLetters = normalizedRoomName.replace(/[0-9]/g, '').toLowerCase();
-                  const roomNameNum = normalizedRoomName.replace(/[^0-9]/g, '');
-                  
-                  // If letters and numbers match (e.g., "RV1" matches "RV 1" or "rv1")
+                // Letter-number pattern match (e.g., "RV1" matches "RV 1" or "rv1", "RV2" matches "RV 2" or "rv2")
+                else if (/^[a-z]+\d+$/i.test(identifierNoSpaces)) {
+                  // If letters and numbers match exactly (e.g., "RV2" matches "RV 2" or "rv2")
                   if (identifierLetters === roomNameLetters && identifierNum === roomNameNum) {
                     score = 100; // Perfect match for letter-number patterns
                   } else if (identifierNum === roomNameNum && 
@@ -543,6 +557,7 @@ async function searchDatabase(question) {
             // Generic case: user asked for a specific room/identifier (e.g. "ComLab 5" or
             // "Room 999") that does not exist in the database. Make this explicit so the
             // AI does not guess another room.
+            console.log(`   ⚠️ No room found matching "${roomIdentifier}"`);
             searchResults.push({
               table: table,
               data: [

@@ -77,13 +77,13 @@ export default function Announcement() {
   ];
 
   const addAnnouncement = async () => {
-    const hasAllRequired = (values: Record<string, any>, required: string[]) => 
-      required.every((k) => String(values[k] ?? '').trim() !== '');
-    const required = ['title', 'description'];
-    if (!hasAllRequired(newAnnouncement as any, required)) {
-      alert('Please fill out all required fields.');
-      return;
-    }
+      const hasAllRequired = (values: Record<string, any>, required: string[]) => 
+        required.every((k) => String(values[k] ?? '').trim() !== '');
+      const required = ['title', 'description'];
+      if (!hasAllRequired(newAnnouncement as any, required)) {
+        alert('Please fill out all required fields.');
+        return;
+      }
     setConfirmModal({
       isOpen: true,
       type: 'save',
@@ -91,18 +91,18 @@ export default function Announcement() {
       message: `Are you sure you want to save "${newAnnouncement.title}"?`,
       onConfirm: async () => {
         try {
-          setLoading(true);
-          await announcementsAPI.create(newAnnouncement);
-          await loadAnnouncements();
-          setNewAnnouncement({
-            title: "",
-            description: ""
-          });
-        } catch (error) {
-          console.error('Error adding announcement:', error);
-        } finally {
-          setLoading(false);
-        }
+      setLoading(true);
+      await announcementsAPI.create(newAnnouncement);
+      await loadAnnouncements();
+      setNewAnnouncement({
+        title: "",
+        description: ""
+      });
+    } catch (error) {
+      console.error('Error adding announcement:', error);
+    } finally {
+      setLoading(false);
+    }
       },
     });
   };
@@ -127,15 +127,15 @@ export default function Announcement() {
       title: 'Delete Announcement',
       message: `Are you sure you want to delete "${announcement?.title || 'this announcement'}"? This action cannot be undone.`,
       onConfirm: async () => {
-        try {
-          setLoading(true);
-          await announcementsAPI.delete(id);
-          await loadAnnouncements();
-        } catch (error) {
-          console.error('Error deleting announcement:', error);
-        } finally {
-          setLoading(false);
-        }
+      try {
+        setLoading(true);
+        await announcementsAPI.delete(id);
+        await loadAnnouncements();
+      } catch (error) {
+        console.error('Error deleting announcement:', error);
+      } finally {
+        setLoading(false);
+      }
       },
     });
   };
@@ -157,13 +157,13 @@ export default function Announcement() {
   };
 
   const saveEdit = async () => {
-    const hasAllRequired = (values: Record<string, any>, required: string[]) => 
-      required.every((k) => String(values[k] ?? '').trim() !== '');
-    const required = ['title', 'description'];
-    if (!hasAllRequired(editForm as any, required)) {
-      alert('Please fill out all required fields.');
-      return;
-    }
+      const hasAllRequired = (values: Record<string, any>, required: string[]) => 
+        required.every((k) => String(values[k] ?? '').trim() !== '');
+      const required = ['title', 'description'];
+      if (!hasAllRequired(editForm as any, required)) {
+        alert('Please fill out all required fields.');
+        return;
+      }
     setConfirmModal({
       isOpen: true,
       type: 'edit',
@@ -171,15 +171,15 @@ export default function Announcement() {
       message: `Are you sure you want to update "${editForm.title}"?`,
       onConfirm: async () => {
         try {
-          setLoading(true);
-          await announcementsAPI.update(editingAnnouncement.id, editForm);
-          await loadAnnouncements();
-          cancelEdit();
-        } catch (error) {
-          console.error('Error updating announcement:', error);
-        } finally {
-          setLoading(false);
-        }
+      setLoading(true);
+      await announcementsAPI.update(editingAnnouncement.id, editForm);
+      await loadAnnouncements();
+      cancelEdit();
+    } catch (error) {
+      console.error('Error updating announcement:', error);
+    } finally {
+      setLoading(false);
+    }
       },
     });
   };

@@ -163,25 +163,25 @@ export default function Rooms() {
       title: 'Save Room',
       message: `Are you sure you want to save "${newRoom.name}"?`,
       onConfirm: async () => {
-        try {
-          setLoading(true);
-          await roomAPI.create({
-            ...newRoom,
-            image_url: newRoomImage || null,
-          });
-          await loadRooms();
-          setNewRoom({
-            name: "",
-            building_id: "",
-            floor: "",
-            type: "Lecture",
-          });
-          setNewRoomImage("");
-        } catch (error) {
-          console.error("Error adding room:", error);
-        } finally {
-          setLoading(false);
-        }
+    try {
+      setLoading(true);
+      await roomAPI.create({
+        ...newRoom,
+        image_url: newRoomImage || null,
+      });
+      await loadRooms();
+      setNewRoom({
+        name: "",
+        building_id: "",
+        floor: "",
+        type: "Lecture",
+      });
+      setNewRoomImage("");
+    } catch (error) {
+      console.error("Error adding room:", error);
+    } finally {
+      setLoading(false);
+    }
       },
     });
   };
@@ -220,19 +220,19 @@ export default function Rooms() {
       title: 'Update Room',
       message: `Are you sure you want to update "${editForm.name}"?`,
       onConfirm: async () => {
-        try {
-          setLoading(true);
-          await roomAPI.update(editingRoom.id, {
-            ...editForm,
-            image_url: editRoomImage || null,
-          });
-          await loadRooms();
-          cancelEdit();
-        } catch (error) {
-          console.error("Error updating room:", error);
-        } finally {
-          setLoading(false);
-        }
+    try {
+      setLoading(true);
+      await roomAPI.update(editingRoom.id, {
+        ...editForm,
+        image_url: editRoomImage || null,
+      });
+      await loadRooms();
+      cancelEdit();
+    } catch (error) {
+      console.error("Error updating room:", error);
+    } finally {
+      setLoading(false);
+    }
       },
     });
   };
@@ -245,15 +245,15 @@ export default function Rooms() {
       title: 'Delete Room',
       message: `Are you sure you want to delete "${room?.name || 'this room'}"? This action cannot be undone.`,
       onConfirm: async () => {
-        try {
-          setLoading(true);
-          await roomAPI.delete(id);
-          await loadRooms();
-        } catch (error) {
-          console.error("Error deleting room:", error);
-        } finally {
-          setLoading(false);
-        }
+    try {
+      setLoading(true);
+      await roomAPI.delete(id);
+      await loadRooms();
+    } catch (error) {
+      console.error("Error deleting room:", error);
+    } finally {
+      setLoading(false);
+    }
       },
     });
   };
