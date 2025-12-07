@@ -294,7 +294,7 @@ router.post("/ask", async (req, res) => {
       /\b(room\s*)?\d{3,4}\b/i.test(question)
     );
     const isOfficeQuestion =
-      /\b(office|offices|sao|student affairs|registrar|cashier|clinic|library|faculty)\b/i.test(
+      /\b(office|offices|sao|student affairs|registrar|cashier|clinic|library|faculty|guidance)\b/i.test(
         question
       );
     
@@ -370,18 +370,36 @@ router.post("/ask", async (req, res) => {
                 questionLower.includes(roomName) ||
                 questionLower.includes(roomName.replace(/\s+/g, ' ')) ||
                 questionLower.includes(roomName.replace(/\s+/g, '')) ||
+                // For letter-number patterns (e.g., "RV1" vs "RV 1" vs "rv1")
+                (() => {
+                  // Extract letters and numbers from room name
+                  const roomLetters = roomName.replace(/[^a-z]/g, '').toLowerCase();
+                  const roomNumbers = roomName.replace(/[^0-9]/g, '');
+                  // Extract letters and numbers from question
+                  const questionLetters = questionLower.replace(/[^a-z]/g, '').toLowerCase();
+                  const questionNumbers = questionLower.replace(/[^0-9]/g, '');
+                  // Check if letters and numbers match (handles "RV1" vs "RV 1" vs "rv1")
+                  if (roomLetters && roomNumbers && questionLetters.includes(roomLetters) && questionNumbers.includes(roomNumbers)) {
+                    return true;
+                  }
+                  return false;
+                })() ||
                 // Check for key words from room name (e.g., "comlab" from "Com Lab V1")
                 roomName.split(/\s+/).some(word => word.length > 3 && questionLower.includes(word))
               );
               
               // Only show image if:
-              // - From specific room query (room_query) with high relevance (>= 90) OR
+              // - From specific room query (room_query) with high relevance (>= 90) - always show for specific searches
               // - Very high relevance (>= 95) AND name/keywords are mentioned
               const isSpecificSearch = matchType === 'room_query';
               const isStrongMatch = relevance >= 95 && nameMentioned;
               
-              if ((isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) || isStrongMatch) {
+              // For specific room queries (room_query), if relevance is high enough, show the image
+              // This handles cases like "RV1", "RV2" where the user is asking about a specific room
+              if (isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) {
+                // For specific searches, we trust the search logic - if it found the room with high relevance, show the image
                 if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
+                  console.log(`📸 Adding room image for specific search: ${item.name} (relevance: ${relevance}, match_type: ${matchType})`);
                   bestRoomMatch = {
                     url: item.image_url,
                     name: item.name || "Image",
@@ -389,6 +407,19 @@ router.post("/ask", async (req, res) => {
                     relevance_score: relevance
                   };
                 }
+              } else if (isStrongMatch) {
+                // For general searches, require name to be mentioned
+                if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
+                  console.log(`📸 Adding room image for strong match: ${item.name} (relevance: ${relevance}, name mentioned: ${nameMentioned})`);
+                  bestRoomMatch = {
+                    url: item.image_url,
+                    name: item.name || "Image",
+                    type: "room",
+                    relevance_score: relevance
+                  };
+                }
+              } else {
+                console.log(`⚠️ Room image rejected: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned})`);
               }
             }
           }
@@ -407,12 +438,12 @@ router.post("/ask", async (req, res) => {
               questionLower.includes(officeName) ||
               questionLower.includes(officeName.replace(/\s+/g, ' ')) ||
               questionLower.includes(officeName.replace(/\s+/g, '')) ||
-              // Check for key words from office name (e.g., "library" from "Main Library")
+              // Check for key words from office name (e.g., "library" from "Main Library", "guidance" from "Guidance Office")
               officeName.split(/\s+/).some(word => word.length > 3 && questionLower.includes(word))
             );
             
             // Only show image if:
-            // - From specific office query (office_query) with high relevance (>= 90) OR
+            // - From specific office query (office_query) with high relevance (>= 90) - always show for specific searches
             // - Very high relevance (>= 95) AND name/keywords are mentioned
             const isSpecificSearch = matchType === 'office_query';
             const isStrongMatch = relevance >= 95 && nameMentioned;
@@ -420,9 +451,49 @@ router.post("/ask", async (req, res) => {
             if (relevance > highestOfficeRelevance) {
               highestOfficeRelevance = relevance;
               bestOfficeMatch = null;
-              // Only show image if it's an office question AND has high relevance AND has image AND matches criteria
-              if (isOfficeQuestion && item.image_url && 
-                  ((isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) || isStrongMatch)) {
+              // For specific office queries (office_query), if relevance is high enough, show the image
+              // This handles cases like "guidance office" where the user is asking about a specific office
+              if (isOfficeQuestion && item.image_url) {
+                if (isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) {
+                  // For specific searches, we trust the search logic - if it found the office with high relevance, show the image
+                  console.log(`📸 Adding office image for specific search: ${item.name} (relevance: ${relevance}, match_type: ${matchType})`);
+                  bestOfficeMatch = {
+                    url: item.image_url,
+                    name: item.name || "Image",
+                    type: "office",
+                    relevance_score: relevance
+                  };
+                } else if (isStrongMatch) {
+                  // For general searches, require name to be mentioned
+                  console.log(`📸 Adding office image for strong match: ${item.name} (relevance: ${relevance}, name mentioned: ${nameMentioned})`);
+                  bestOfficeMatch = {
+                    url: item.image_url,
+                    name: item.name || "Image",
+                    type: "office",
+                    relevance_score: relevance
+                  };
+                } else {
+                  console.log(`⚠️ Office image rejected: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned})`);
+                }
+              }
+            } else if (
+              relevance === highestOfficeRelevance &&
+              !bestOfficeMatch &&
+              isOfficeQuestion &&
+              item.image_url
+            ) {
+              // Tie-breaker: if multiple offices share the same top score,
+              // take the first one that actually has an image and high relevance.
+              if (isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) {
+                console.log(`📸 Adding office image for tie-breaker (specific search): ${item.name} (relevance: ${relevance})`);
+                bestOfficeMatch = {
+                  url: item.image_url,
+                  name: item.name || "Image",
+                  type: "office",
+                  relevance_score: relevance
+                };
+              } else if (isStrongMatch) {
+                console.log(`📸 Adding office image for tie-breaker (strong match): ${item.name} (relevance: ${relevance})`);
                 bestOfficeMatch = {
                   url: item.image_url,
                   name: item.name || "Image",
@@ -430,21 +501,6 @@ router.post("/ask", async (req, res) => {
                   relevance_score: relevance
                 };
               }
-            } else if (
-              relevance === highestOfficeRelevance &&
-              !bestOfficeMatch &&
-              isOfficeQuestion &&
-              item.image_url &&
-              ((isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) || isStrongMatch)
-            ) {
-              // Tie-breaker: if multiple offices share the same top score,
-              // take the first one that actually has an image and high relevance.
-              bestOfficeMatch = {
-                url: item.image_url,
-                name: item.name || "Image",
-                type: "office",
-                relevance_score: relevance
-              };
             }
           }
         });
@@ -508,7 +564,10 @@ IMPORTANT INSTRUCTIONS:
 - Don't answer questions that are not related to UM Visayan Campus topics
 - After answering, suggest simple smart follow-ups when helpful, like "Do you want directions from your building?" or "Do you want to see office hours?" (keep it to 1 follow-up line)
 - When the user is asking about a specific person (for example a professor), do NOT ask them what their classes are. If you want to add a follow-up for a person, keep it simple like "Do you want more info about him?" or "Do you want more info about her?" instead of asking about their classes.
-- If the database includes image_url for rooms or offices, images will be automatically shown to the user - you don't need to mention them in your response
+- CRITICAL: If the database includes image_url for rooms or offices, images will be automatically displayed to the user. You MUST NOT mention images, URLs, links, or any web addresses in your response.
+- NEVER write URLs, links, or image addresses in your text. The system handles images automatically.
+- DO NOT say things like "here is the image", "see the image at [URL]", "check this link", or any variation. Just answer the question normally as if images don't exist in your response.
+- If you see image_url in the database context, ignore it completely in your response. Just provide the information about the room or office without mentioning images or URLs.
 - answer art laurence siojo, erhyl dhee toraja, george sangil, willge mahinay if
  question is about who is the developer of this app or project
 - Remember the previous conversation context when the user asks follow-up questions like "where is it?" or "tell me more"
@@ -542,8 +601,17 @@ ${dbContext}${pdfContext}${conversationContext}`;
     if (aiService.isAvailable()) {
       try {
         console.log('🤖 Generating AI response...');
-        const answer = await aiService.generateResponse(systemPrompt, question);
+        let answer = await aiService.generateResponse(systemPrompt, question);
         console.log('✅ AI response generated successfully');
+        
+        // Remove any URLs from the answer text (images are handled separately)
+        // This prevents the AI from including image URLs or any links in the response
+        answer = answer.replace(/https?:\/\/[^\s]+/gi, '').trim();
+        // Remove common URL patterns and phrases that mention images/links
+        answer = answer.replace(/(here is|see|view|check|link|url|image at|picture at)[\s:]*https?:\/\/[^\s]+/gi, '').trim();
+        answer = answer.replace(/\[.*?\]\(https?:\/\/[^\)]+\)/gi, '').trim(); // Remove markdown links
+        // Clean up any double spaces or empty sentences
+        answer = answer.replace(/\s+/g, ' ').trim();
         
         // Save this conversation for next time (in-memory for backward compatibility)
         saveConversation(userId, question, answer);

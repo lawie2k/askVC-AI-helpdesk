@@ -369,6 +369,21 @@ async function searchDatabase(question) {
           comlabAltIdentifier = `com lab v${comlabMatch[1]}`.toLowerCase();
         }
         
+        // Check for letter-number patterns (e.g., "RV1", "RV2", "RV3", "AV1", "B2")
+        if (!roomIdentifier) {
+          const letterNumberMatch = q.match(/\b([a-z]{1,4})\s*(\d+)\b/i);
+          if (letterNumberMatch) {
+            // Match patterns like "RV1", "RV 1", "rv1", etc.
+            const letters = letterNumberMatch[1].toLowerCase();
+            const number = letterNumberMatch[2];
+            roomIdentifier = `${letters}${number}`.toLowerCase();
+            // Also try with space: "rv 1" → "rv1"
+            const altIdentifier = `${letters} ${number}`.toLowerCase();
+            // Store both formats for matching
+            comlabAltIdentifier = altIdentifier;
+          }
+        }
+        
         // Check for "room" with number (e.g., "room 301", "room301")
         if (!roomIdentifier) {
           const roomNumberMatch = q.match(/\broom\s*(\d{3,4})\b/i);
@@ -409,7 +424,7 @@ async function searchDatabase(question) {
         const queryParams = [];
         if (roomIdentifier) {
           // Search for rooms that match the identifier in their name or type
-          // plus a special alternate form for Com Lab V1/V2/V3
+          // plus a special alternate form for Com Lab V1/V2/V3 or letter-number patterns
           if (comlabAltIdentifier) {
             query += ` WHERE (LOWER(r.name) LIKE ? OR LOWER(r.type) LIKE ? OR LOWER(r.name) LIKE ?)`;
             queryParams.push(`%${roomIdentifier}%`, `%${roomIdentifier}%`, `%${comlabAltIdentifier}%`);
@@ -438,10 +453,27 @@ async function searchDatabase(question) {
                 const identifierNumber = normalizedIdentifier.replace(/[^0-9]/g, '');
                 const roomNameNumber = normalizedRoomName.replace(/[^0-9]/g, '');
                 
-                // Exact match (handles "comlab 1" vs "comlab1" vs "ComLab 1")
+                // Exact match (handles "comlab 1" vs "comlab1" vs "ComLab 1", "RV1" vs "rv1" vs "RV 1")
                 if (normalizedRoomName === normalizedIdentifier || 
-                    normalizedRoomName.replace(/\s/g, '') === normalizedIdentifier.replace(/\s/g, '')) {
+                    normalizedRoomName.replace(/\s/g, '') === normalizedIdentifier.replace(/\s/g, '') ||
+                    normalizedRoomName.replace(/\s+/g, '') === normalizedIdentifier.replace(/\s+/g, '')) {
                   score = 100; // Perfect exact match
+                }
+                // Letter-number pattern match (e.g., "RV1" matches "RV 1" or "rv1")
+                else if (/^[a-z]+\d+$/i.test(normalizedIdentifier)) {
+                  // Extract letters and number from identifier
+                  const identifierLetters = normalizedIdentifier.replace(/[0-9]/g, '').toLowerCase();
+                  const identifierNum = normalizedIdentifier.replace(/[^0-9]/g, '');
+                  const roomNameLetters = normalizedRoomName.replace(/[0-9]/g, '').toLowerCase();
+                  const roomNameNum = normalizedRoomName.replace(/[^0-9]/g, '');
+                  
+                  // If letters and numbers match (e.g., "RV1" matches "RV 1" or "rv1")
+                  if (identifierLetters === roomNameLetters && identifierNum === roomNameNum) {
+                    score = 100; // Perfect match for letter-number patterns
+                  } else if (identifierNum === roomNameNum && 
+                            (roomNameLetters.includes(identifierLetters) || identifierLetters.includes(roomNameLetters))) {
+                    score = 95; // Same number, similar letters
+                  }
                 }
                 // Same number match (e.g., "comlab 1" matches "ComLab 1" or "comlab1")
                 else if (identifierNumber && roomNameNumber === identifierNumber) {
@@ -554,6 +586,7 @@ async function searchDatabase(question) {
           { keywords: ['clinic', 'health', 'medical'], name: 'clinic' },
           { keywords: ['osa', 'office of student affairs'], name: 'osa' },
           { keywords: ['dean', "dean's office"], name: 'dean' },
+          { keywords: ['guidance', 'guidance office', 'guidance counselor'], name: 'guidance' },
           // RAC office (e.g. "RAC office", "where is the RAC office")
           { keywords: ['rac', 'rac office'], name: 'rac' },
         ];
@@ -821,7 +854,7 @@ function isProgramsQuestion(question) {
 
 
 function isOfficesQuestion(question) {
-  const officeKeywords = ['office', 'offices', 'sao', 'student affairs', 'registrar', 'cashier', 'clinic', 'library', 'faculty'];
+  const officeKeywords = ['office', 'offices', 'sao', 'student affairs', 'registrar', 'cashier', 'clinic', 'library', 'faculty', 'guidance'];
   const q = question.toLowerCase();
   return officeKeywords.some(k => q.includes(k));
 }
@@ -831,7 +864,9 @@ function isRoomsQuestion(question) {
   const q = question.toLowerCase();
   // Also check for room numbers (e.g., "room 301", "301")
   const roomNumberPattern = /\b(room\s*)?\d{3,4}\b/i;
-  return roomKeywords.some(k => q.includes(k)) || roomNumberPattern.test(q);
+  // Check for letter-number patterns (e.g., "RV1", "RV2", "AV1")
+  const letterNumberPattern = /\b[a-z]{1,4}\s*\d+\b/i;
+  return roomKeywords.some(k => q.includes(k)) || roomNumberPattern.test(q) || letterNumberPattern.test(q);
 }
 
 function isOfficersQuestion(question) {
