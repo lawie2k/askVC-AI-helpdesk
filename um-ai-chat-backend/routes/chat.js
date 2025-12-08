@@ -416,16 +416,16 @@ router.post("/ask", async (req, res) => {
               
               // Only show image if there's a very strong, specific match
               if (isSpecificMatch || isStrongMatch) {
-                if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
+              if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
                   // Double-check image_url is valid
                   if (item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
                     console.log(`📸 Adding room image: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned})`);
-                    bestRoomMatch = {
+                bestRoomMatch = {
                       url: item.image_url.trim(),
-                      name: item.name || "Image",
-                      type: "room",
-                      relevance_score: relevance
-                    };
+                  name: item.name || "Image",
+                  type: "room",
+                  relevance_score: relevance
+                };
                   } else {
                     console.log(`⚠️ Room found but image_url is invalid: ${item.name} (image_url: "${item.image_url}")`);
                   }
@@ -506,7 +506,7 @@ router.post("/ask", async (req, res) => {
         // Double-check that the image URL is valid before adding
         if (bestRoomMatch.url && bestRoomMatch.url.trim() !== '') {
           console.log(`✅ Final: Adding room image: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score})`);
-          imageUrls.push(bestRoomMatch);
+        imageUrls.push(bestRoomMatch);
         } else {
           console.log(`⚠️ Final: Room image rejected: ${bestRoomMatch.name} has no valid image_url`);
         }
@@ -514,7 +514,7 @@ router.post("/ask", async (req, res) => {
         // Double-check that the image URL is valid before adding
         if (bestOfficeMatch.url && bestOfficeMatch.url.trim() !== '') {
           console.log(`✅ Final: Adding office image: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score})`);
-          imageUrls.push(bestOfficeMatch);
+        imageUrls.push(bestOfficeMatch);
         } else {
           console.log(`⚠️ Final: Office image rejected: ${bestOfficeMatch.name} has no valid image_url`);
         }
@@ -957,10 +957,10 @@ async function getDepartmentHeadInfo(deptKey) {
         for (const headPos of headPositions) {
           if (positionLower.includes(headPos.toLowerCase())) {
             console.log(`✅ Found ${key} department head: ${professor.name} (${professor.position})`);
-            return {
+      return {
               name: professor.name,
               email: professor.email || "No email on record",
-            };
+      };
           }
         }
       }

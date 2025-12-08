@@ -188,7 +188,7 @@ export default function MainChat() {
 
                 <View className="absolute bottom-4 left-0 right-0 items-center pointer-events-none">
                     <Text className="text-white text-[12px] text-center">
-                        © 2025 All Rights Reserved. By Art laurence Siojo
+                        © 2025 All Rights Reserved. By askVC Team
                     </Text>
                 </View>
             </View>

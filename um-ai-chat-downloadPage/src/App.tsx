@@ -85,7 +85,7 @@ function App() {
           {[
             {
               title: 'Smart Conversations',
-              desc: 'Natural language chat interface that understands your questions about faculty and university life.',
+              desc: 'Natural language chat interface that understands your questions about faculty, departments, and campus facilities.',
               icon: '💬',
             },
             {
