@@ -1,0 +1,4 @@
+# Exclude APK from Vercel deployment (too large - 115MB)
+# APK will be hosted on Google Drive instead
+public/askVC.apk
+

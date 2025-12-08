@@ -38,7 +38,9 @@
         "resizeMode": "contain",
         "backgroundColor": "#900C27"
       },
-      "package": "com.lawie.umaichat"
+      "package": "com.lawie.umaichat",
+      "enableProguardInReleaseBuild": true,
+      "enableShrinkResourcesInReleaseBuild": true
     },
     "web": {
       "favicon": "./assets/favicon.png"

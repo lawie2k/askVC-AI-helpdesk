@@ -9,19 +9,26 @@ function App() {
     }
   };
 
-  const handleDownload = () => {
-    // Change this path to your APK file location
-    // Option 1: If APK is in public folder, use: '/askVC.apk'
-    // Option 2: If hosted elsewhere, use full URL: 'https://yourdomain.com/path/to/askVC.apk'
-    const apkUrl = '/askVC.apk';
+  const handleDownload = async () => {
+    // Google Drive direct download link
+    // File ID: 1f_rv_2CzXF2oKGBxPQTyKKDWksO4IV2C
+    const apkUrl = import.meta.env.VITE_APK_URL || 'https://drive.google.com/uc?export=download&id=1f_rv_2CzXF2oKGBxPQTyKKDWksO4IV2C';
     
-    // Create a temporary anchor element to trigger download
-    const link = document.createElement('a');
-    link.href = apkUrl;
-    link.download = 'askVC.apk'; // Suggested filename
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      // For Google Drive, we'll open directly (Drive handles the download)
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a');
+      link.href = apkUrl;
+      link.download = 'askVC.apk';
+      link.target = '_blank'; // Open in new tab for Google Drive
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      // If download fails, show user-friendly error
+      alert('Unable to download APK. Please try again or contact support.');
+      console.error('Download error:', error);
+    }
   };
 
   return (
