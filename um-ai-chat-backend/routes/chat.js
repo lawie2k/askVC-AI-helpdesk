@@ -344,24 +344,14 @@ router.post("/ask", async (req, res) => {
           // Keep the raw JSON as fallback context so the AI still sees all fields
           dbContext += `- ${JSON.stringify(item, null, 2)}\n`;
           
-          // Only keep the best match for images (highest relevance score)
-          // Only include images from the relevant table type based on question
-          // IMPORTANT: Only show images if:
-          // 1. Question is specifically about rooms/offices
-          // 2. Result is from a specific search (match_type indicates specific query)
-          // 3. Relevance score is very high (>= 90 for exact matches)
-          // 4. The room/office name is mentioned in the question
-          const MIN_RELEVANCE_FOR_IMAGE = 90; // Increased threshold - only very strong matches
+    
+          const MIN_RELEVANCE_FOR_IMAGE = 90;
           
           if (result.table === "rooms") {
             // Log when room is found
             console.log(`🔍 Room found in search: "${item.name}" (ID: ${item.id}, Image: ${item.image_url ? '✅' : '❌'}, Relevance: ${item.relevance_score || 'N/A'})`);
             
-            // Only include room images if:
-            // 1. Question is clearly about rooms
-            // 2. Result is from specific room search (not general search)
-            // 3. Has very high relevance (exact/close match)
-            // 4. Room name is mentioned in question
+   
             if (isRoomQuestion && item.image_url) {
               const relevance = item.relevance_score || 0;
               const matchType = item.match_type || '';
@@ -582,6 +572,7 @@ and for the 3rd floor it is beside in AVR room
 - if the input is LJ or lj it should point to the professor lowel jay orcullo
 - if the input is buddy or sir buddy it should point to the professor benjamin mahinay jr.
 - the school director of University of Mindanao Tagum College is Dr. Evelyn P. Saludes 
+- ICT or the information and communication technology office is located behind the LIC building
 - When answering questions about IT subjects, courses, or curriculum, use the information from the BSIT PDF document provided below. List the subjects clearly and provide course codes when available.
 - IMPORTANT: When users ask "who is the head of [department]" or "who is the [department] head", ONLY provide the person whose position explicitly indicates they are the department head (e.g., "Department Head", "Chair", "Director"). Do NOT assume someone is the head just because they are a professor in that department. If the database doesn't show a clear department head, say you don't have that information rather than guessing.
 
