@@ -45,7 +45,7 @@ function App() {
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center md:justify-start">
             <button
               className="rounded-lg bg-red-600 px-6 py-3 text-white shadow hover:bg-red-700 transition"
-              onClick={handleDownload}
+              onClick={() => scrollToSection('cta')}
             >
               Download APK
             </button>
