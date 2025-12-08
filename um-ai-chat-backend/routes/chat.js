@@ -392,19 +392,19 @@ router.post("/ask", async (req, res) => {
               );
               
               // Only show image if:
-              // - From specific room query (room_query) with high relevance (>= 90) - always show for specific searches
-              // - Very high relevance (>= 95) AND name/keywords are mentioned
+              // - From specific room query (room_query) with very high relevance (>= 95) AND name mentioned
+              // - Very high relevance (>= 98) AND name/keywords are mentioned (for general searches)
               const isSpecificSearch = matchType === 'room_query';
-              const isStrongMatch = relevance >= 95 && nameMentioned;
+              // Stricter requirements: even specific searches need name mentioned and very high relevance
+              const isSpecificMatch = isSpecificSearch && relevance >= 95 && nameMentioned;
+              const isStrongMatch = relevance >= 98 && nameMentioned;
               
-              // For specific room queries (room_query), if relevance is high enough, show the image
-              // This handles cases like "RV1", "RV2" where the user is asking about a specific room
-              if (isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) {
-                // For specific searches, we trust the search logic - if it found the room with high relevance, show the image
+              // Only show image if there's a very strong, specific match
+              if (isSpecificMatch || isStrongMatch) {
                 if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
                   // Double-check image_url is valid
                   if (item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
-                    console.log(`📸 Adding room image for specific search: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, image_url: ${item.image_url.substring(0, 50)}...)`);
+                    console.log(`📸 Adding room image: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned})`);
                     bestRoomMatch = {
                       url: item.image_url.trim(),
                       name: item.name || "Image",
@@ -415,19 +415,8 @@ router.post("/ask", async (req, res) => {
                     console.log(`⚠️ Room found but image_url is invalid: ${item.name} (image_url: "${item.image_url}")`);
                   }
                 }
-              } else if (isStrongMatch) {
-                // For general searches, require name to be mentioned
-                if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
-                  console.log(`📸 Adding room image for strong match: ${item.name} (relevance: ${relevance}, name mentioned: ${nameMentioned})`);
-                  bestRoomMatch = {
-                    url: item.image_url,
-                    name: item.name || "Image",
-                    type: "room",
-                    relevance_score: relevance
-                  };
-                }
               } else {
-                console.log(`⚠️ Room image rejected: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned})`);
+                console.log(`⚠️ Room image rejected: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned}, specific: ${isSpecificSearch})`);
               }
             }
           }
@@ -451,97 +440,80 @@ router.post("/ask", async (req, res) => {
             );
             
             // Only show image if:
-            // - From specific office query (office_query) with high relevance (>= 90) - always show for specific searches
-            // - Very high relevance (>= 95) AND name/keywords are mentioned
+            // - From specific office query (office_query) with very high relevance (>= 95) AND name mentioned
+            // - Very high relevance (>= 98) AND name/keywords are mentioned (for general searches)
             const isSpecificSearch = matchType === 'office_query';
-            const isStrongMatch = relevance >= 95 && nameMentioned;
+            // Stricter requirements: even specific searches need name mentioned and very high relevance
+            const isSpecificMatch = isSpecificSearch && relevance >= 95 && nameMentioned;
+            const isStrongMatch = relevance >= 98 && nameMentioned;
             
             if (relevance > highestOfficeRelevance) {
               highestOfficeRelevance = relevance;
               bestOfficeMatch = null;
-              // For specific office queries (office_query), if relevance is high enough, show the image
-              // This handles cases like "guidance office" where the user is asking about a specific office
-              if (isOfficeQuestion && item.image_url) {
-                if (isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) {
-                  // For specific searches, we trust the search logic - if it found the office with high relevance, show the image
-                  console.log(`📸 Adding office image for specific search: ${item.name} (relevance: ${relevance}, match_type: ${matchType})`);
-                  bestOfficeMatch = {
-                    url: item.image_url,
-                    name: item.name || "Image",
-                    type: "office",
-                    relevance_score: relevance
-                  };
-                } else if (isStrongMatch) {
-                  // For general searches, require name to be mentioned
-                  console.log(`📸 Adding office image for strong match: ${item.name} (relevance: ${relevance}, name mentioned: ${nameMentioned})`);
-                  bestOfficeMatch = {
-                    url: item.image_url,
-                    name: item.name || "Image",
-                    type: "office",
-                    relevance_score: relevance
-                  };
-                } else {
-                  console.log(`⚠️ Office image rejected: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned})`);
-                }
+              // Only show image if there's a very strong, specific match
+              if (isOfficeQuestion && item.image_url && (isSpecificMatch || isStrongMatch)) {
+                console.log(`📸 Adding office image: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned})`);
+                bestOfficeMatch = {
+                  url: item.image_url.trim(),
+                  name: item.name || "Image",
+                  type: "office",
+                  relevance_score: relevance
+                };
+              } else if (isOfficeQuestion && item.image_url) {
+                console.log(`⚠️ Office image rejected: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned}, specific: ${isSpecificSearch})`);
               }
             } else if (
               relevance === highestOfficeRelevance &&
               !bestOfficeMatch &&
               isOfficeQuestion &&
-              item.image_url
+              item.image_url &&
+              (isSpecificMatch || isStrongMatch)
             ) {
               // Tie-breaker: if multiple offices share the same top score,
-              // take the first one that actually has an image and high relevance.
-              if (isSpecificSearch && relevance >= MIN_RELEVANCE_FOR_IMAGE) {
-                console.log(`📸 Adding office image for tie-breaker (specific search): ${item.name} (relevance: ${relevance})`);
-                bestOfficeMatch = {
-                  url: item.image_url,
-                  name: item.name || "Image",
-                  type: "office",
-                  relevance_score: relevance
-                };
-              } else if (isStrongMatch) {
-                console.log(`📸 Adding office image for tie-breaker (strong match): ${item.name} (relevance: ${relevance})`);
-                bestOfficeMatch = {
-                  url: item.image_url,
-                  name: item.name || "Image",
-                  type: "office",
-                  relevance_score: relevance
-                };
-              }
+              // take the first one that actually has an image and very high relevance with name mentioned
+              console.log(`📸 Adding office image for tie-breaker: ${item.name} (relevance: ${relevance})`);
+              bestOfficeMatch = {
+                url: item.image_url.trim(),
+                name: item.name || "Image",
+                type: "office",
+                relevance_score: relevance
+              };
             }
           }
         });
       });
       
       // Only add the best matches to imageUrls
-      // If question is specifically about rooms, only return room images
-      // If question is specifically about offices, only return office images
-      // Additional check: Only show images if we have a very strong match (relevance >= 90)
-      // This prevents showing random images for general questions or weak matches
-      const MIN_RELEVANCE_FOR_IMAGE = 90;
+      // CRITICAL: Only show images for very strong, specific matches
+      // This prevents showing random images when AI can't provide a good answer
+      const MIN_RELEVANCE_FOR_IMAGE = 95; // Increased from 90 to 95 - only very strong matches
       if (isRoomQuestion && bestRoomMatch && bestRoomMatch.relevance_score >= MIN_RELEVANCE_FOR_IMAGE) {
         // Double-check that the image URL is valid before adding
         if (bestRoomMatch.url && bestRoomMatch.url.trim() !== '') {
-          console.log(`📸 Adding room image: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score}, URL: ${bestRoomMatch.url.substring(0, 50)}...)`);
+          console.log(`✅ Final: Adding room image: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score})`);
           imageUrls.push(bestRoomMatch);
         } else {
-          console.log(`⚠️ Room image rejected: ${bestRoomMatch.name} has no valid image_url`);
+          console.log(`⚠️ Final: Room image rejected: ${bestRoomMatch.name} has no valid image_url`);
         }
       } else if (isOfficeQuestion && bestOfficeMatch && bestOfficeMatch.relevance_score >= MIN_RELEVANCE_FOR_IMAGE) {
         // Double-check that the image URL is valid before adding
         if (bestOfficeMatch.url && bestOfficeMatch.url.trim() !== '') {
-          console.log(`📸 Adding office image: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score}, URL: ${bestOfficeMatch.url.substring(0, 50)}...)`);
+          console.log(`✅ Final: Adding office image: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score})`);
           imageUrls.push(bestOfficeMatch);
         } else {
-          console.log(`⚠️ Office image rejected: ${bestOfficeMatch.name} has no valid image_url`);
+          console.log(`⚠️ Final: Office image rejected: ${bestOfficeMatch.name} has no valid image_url`);
         }
       } else {
         if (isRoomQuestion && bestRoomMatch) {
-          console.log(`⚠️ Room image rejected: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score} < ${MIN_RELEVANCE_FOR_IMAGE})`);
+          console.log(`⚠️ Final: Room image rejected: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score} < ${MIN_RELEVANCE_FOR_IMAGE})`);
         }
         if (isOfficeQuestion && bestOfficeMatch) {
-          console.log(`⚠️ Office image rejected: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score} < ${MIN_RELEVANCE_FOR_IMAGE})`);
+          console.log(`⚠️ Final: Office image rejected: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score} < ${MIN_RELEVANCE_FOR_IMAGE})`);
+        }
+        // Clear imageUrls if no strong match - don't show random images
+        if (imageUrls.length > 0) {
+          console.log(`⚠️ Clearing ${imageUrls.length} image(s) - no strong match found`);
+          imageUrls.length = 0;
         }
       }
       const timeGuidance = await generateTimeAwareGuidance(dbResults);
@@ -630,6 +602,27 @@ ${dbContext}${pdfContext}${conversationContext}`;
         answer = answer.replace(/\[.*?\]\(https?:\/\/[^\)]+\)/gi, '').trim(); // Remove markdown links
         // Clean up any double spaces or empty sentences
         answer = answer.replace(/\s+/g, ' ').trim();
+        
+        // If the AI response indicates it doesn't have the information, don't show images
+        // This prevents showing random images when the AI can't answer properly
+        const lowQualityIndicators = [
+          "i don't have",
+          "i don't know",
+          "no information",
+          "not available",
+          "unavailable",
+          "can't find",
+          "couldn't find",
+          "don't have that",
+          "sorry, i don't"
+        ];
+        const answerLower = answer.toLowerCase();
+        const isLowQualityAnswer = lowQualityIndicators.some(indicator => answerLower.includes(indicator));
+        
+        if (isLowQualityAnswer) {
+          console.log(`⚠️ Low quality answer detected - clearing images to avoid showing random pictures`);
+          imageUrls.length = 0; // Clear all images if answer quality is low
+        }
         
         // Save this conversation for next time (in-memory for backward compatibility)
         saveConversation(userId, question, answer);
