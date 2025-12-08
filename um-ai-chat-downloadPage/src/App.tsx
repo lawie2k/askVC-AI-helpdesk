@@ -9,6 +9,21 @@ function App() {
     }
   };
 
+  const handleDownload = () => {
+    // Change this path to your APK file location
+    // Option 1: If APK is in public folder, use: '/askVC.apk'
+    // Option 2: If hosted elsewhere, use full URL: 'https://yourdomain.com/path/to/askVC.apk'
+    const apkUrl = '/askVC.apk';
+    
+    // Create a temporary anchor element to trigger download
+    const link = document.createElement('a');
+    link.href = apkUrl;
+    link.download = 'askVC.apk'; // Suggested filename
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-[#0b0c10] text-white">
       {/* Hero */}
@@ -23,7 +38,7 @@ function App() {
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center md:justify-start">
             <button
               className="rounded-lg bg-red-600 px-6 py-3 text-white shadow hover:bg-red-700 transition"
-              onClick={() => scrollToSection('cta')}
+              onClick={handleDownload}
             >
               Download APK
             </button>
@@ -106,7 +121,10 @@ function App() {
           <p className="mb-8 max-w-2xl text-slate-300">
             Download askVC now and start exploring your university with AI-powered assistance at your fingertips.
           </p>
-          <button className="mb-4 flex items-center gap-2 rounded-xl bg-red-600 px-8 py-4 text-lg font-semibold text-white shadow-[0_20px_40px_rgba(255,0,0,0.25)] hover:bg-red-700 transition">
+          <button 
+            onClick={handleDownload}
+            className="mb-4 flex items-center gap-2 rounded-xl bg-red-600 px-8 py-4 text-lg font-semibold text-white shadow-[0_20px_40px_rgba(255,0,0,0.25)] hover:bg-red-700 transition"
+          >
             <span>⬇</span> Download APK
           </button>
           <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -122,7 +140,7 @@ function App() {
           <div className="font-semibold text-white text-[24px]">
             ask<span className="text-[#900C27]">VC</span>
           </div>
-          <div>© 2025 All Rights Reserved. By Art Laurence Siojo</div>
+          <div>© 2025 All Rights Reserved. By askVC Team</div>
         </div>
       </footer>
     </div>

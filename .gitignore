@@ -109,3 +109,6 @@ um-ai-chat-backend/.env
 # Generic envs (optional)
 .env
 *.env
+
+# APK files (too large for GitHub)
+*.apk
