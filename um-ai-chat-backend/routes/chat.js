@@ -307,7 +307,44 @@ router.post("/ask", async (req, res) => {
       let bestOfficeMatch = null;
       let highestOfficeRelevance = -Infinity;
       
+      // Group officers by organization for cleaner display
+      const officersByOrg = {};
+      const otherResults = [];
+      
       dbResults.forEach((result) => {
+        if (result.table === "officers") {
+          result.data.forEach((item) => {
+            const org = item.organization || "Other";
+            if (!officersByOrg[org]) {
+              officersByOrg[org] = [];
+            }
+            officersByOrg[org].push(item);
+          });
+        } else {
+          otherResults.push(result);
+        }
+      });
+      
+      // Format officers by organization first
+      if (Object.keys(officersByOrg).length > 0) {
+        dbContext += `\nStudent Officers:\n`;
+        Object.keys(officersByOrg).sort().forEach((org) => {
+          dbContext += `\n${org}:\n`;
+          officersByOrg[org].forEach((item) => {
+            const officerInfo = [];
+            if (item.name) officerInfo.push(item.name);
+            if (item.position) officerInfo.push(`- ${item.position}`);
+            
+            if (officerInfo.length > 0) {
+              dbContext += `  ${officerInfo.join(' ')}\n`;
+            }
+          });
+        });
+        dbContext += `\n`;
+      }
+      
+      // Format other results
+      otherResults.forEach((result) => {
         dbContext += `\nFrom ${result.table} table:\n`;
         result.data.forEach((item) => {
           // Give the AI a clearer, human-friendly summary for professors
@@ -329,19 +366,7 @@ router.post("/ask", async (req, res) => {
             }
           }
 
-          // Give the AI a clearer, human-friendly summary for officers
-          if (result.table === "officers") {
-            const parts = [];
-            if (item.name) parts.push(`Name: ${item.name}`);
-            if (item.position) parts.push(`Position: ${item.position}`);
-            if (item.organization) parts.push(`Organization: ${item.organization}`);
-
-            if (parts.length > 0) {
-              dbContext += `- ${parts.join(" | ")}\n`;
-            }
-          }
-
-          // Keep the raw JSON as fallback context so the AI still sees all fields
+          // Keep the raw JSON as fallback context for other tables
           dbContext += `- ${JSON.stringify(item, null, 2)}\n`;
           
     
@@ -575,6 +600,7 @@ and for the 3rd floor it is beside in AVR room
 - ICT or the information and communication technology office is located behind the LIC building
 - When answering questions about IT subjects, courses, or curriculum, use the information from the BSIT PDF document provided below. List the subjects clearly and provide course codes when available.
 - IMPORTANT: When users ask "who is the head of [department]" or "who is the [department] head", ONLY provide the person whose position explicitly indicates they are the department head (e.g., "Department Head", "Chair", "Director"). Do NOT assume someone is the head just because they are a professor in that department. If the database doesn't show a clear department head, say you don't have that information rather than guessing.
+- When displaying officers, format them neatly by organization. List officers in a clean, organized way grouped by their organization (e.g., CODES, CSIT, EESA). Use clear formatting with names and positions, like "John Doe - President" under each organization heading.
 
 ${dbContext}${pdfContext}${conversationContext}`;
 
