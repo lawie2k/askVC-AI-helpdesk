@@ -7,7 +7,8 @@ import {
     faUsers,
     faUserTie,
     faBullhorn,
-    faCommentDots
+    faCommentDots,
+    faKey
 } from "@fortawesome/free-solid-svg-icons";
 import React from "react";
 import {NavLink} from "react-router-dom";
@@ -137,6 +138,16 @@ export default function Sidebar() {
                         onClick={() => setActive("feedback")}>
                         <FontAwesomeIcon icon={faCommentDots} />
                         <span className="ml-2 truncate">Feedback</span>
+                    </NavLink>
+
+                </div>
+                <div className="text-white pt-5">
+                    <NavLink
+                        to="/ChangePassword"
+                        className={`flex items-center text-lg xl:text-xl 2xl:text-[28px] font-extrabold w-full xl:w-[230px] 2xl:w-[250px] text-left px-3 py-2 rounded-xl ${active === "changepassword" ? "bg-[#900C27]" : "hover:bg-[#4a4a4a]"}`}
+                        onClick={() => setActive("changepassword")}>
+                        <FontAwesomeIcon icon={faKey} />
+                        <span className="ml-2 truncate">Change Password</span>
                     </NavLink>
 
                 </div>

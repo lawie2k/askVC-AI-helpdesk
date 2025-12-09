@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/prismaClient");
 const { sendPasswordResetEmail } = require("../services/email-service");
+const { authenticateAdmin } = require("./middleware/adminAuth");
 const crypto = require("crypto");
 require("dotenv").config();
 
@@ -298,6 +299,49 @@ router.post("/admin/logout", async (req, res) => {
         });
     } catch (e) {
         return res.status(500).json({ error: "Unexpected error" });
+    }
+})
+
+router.post("/admin/change-password", authenticateAdmin, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const adminId = req.admin.id;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: "Current password and new password are required" });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({ error: "New password must be at least 8 characters long" });
+        }
+
+        const admin = await prisma.admins.findUnique({
+            where: { id: adminId },
+        });
+
+        if (!admin) {
+            return res.status(404).json({ error: "Admin not found" });
+        }
+
+        // Verify current password
+        const passwordMatch = await bcrypt.compare(currentPassword, admin.password_hashed);
+        if (!passwordMatch) {
+            return res.status(401).json({ error: "Current password is incorrect" });
+        }
+
+        // Hash new password
+        const hashedNewPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+        // Update password
+        await prisma.admins.update({
+            where: { id: adminId },
+            data: { password_hashed: hashedNewPassword },
+        });
+
+        return res.status(200).json({ message: "Password changed successfully" });
+    } catch (e) {
+        console.error("Error changing password:", e);
+        return res.status(500).json({ error: "Unable to change password" });
     }
 })
 

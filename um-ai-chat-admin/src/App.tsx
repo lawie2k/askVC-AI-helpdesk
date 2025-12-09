@@ -14,6 +14,7 @@ import Reports from "./tabs/reports";
 import Logs from "./tabs/logs";
 import Announcement from "./tabs/announcement";
 import FeedbackTab from "./tabs/feedback";
+import ChangePassword from "./tabs/change-password";
 import Signup from "./signup";
 
 export default function App() {
@@ -37,6 +38,7 @@ export default function App() {
                     <Route path="Logs" element={<Logs/>}/>
                     <Route path="Announcement" element={<Announcement/>}/>
                     <Route path="Feedback" element={<FeedbackTab/>}/>
+                    <Route path="ChangePassword" element={<ChangePassword/>}/>
 
                 </Route>
             </Routes>
