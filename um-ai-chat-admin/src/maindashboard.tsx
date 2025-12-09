@@ -1,7 +1,7 @@
 import Sidebar from "./tabs/sidebar"
 import {NavLink, Outlet, useNavigate} from "react-router-dom";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faRightFromBracket} from "@fortawesome/free-solid-svg-icons";
+import {faRightFromBracket, faKey} from "@fortawesome/free-solid-svg-icons";
 import React from "react";
 import { useMobileDetection } from "./utils/mobileDetection";
 import MobileRestriction from "./components/MobileRestriction";
@@ -41,6 +41,13 @@ export default function MainDashboard() {
 
                     </div>
                     <div className="flex gap-5 items-center">
+                        <button
+                            className={`text-[28px] font-extrabold w-auto text-left px-3 py-2 rounded-xl hover:bg-[#4a4a4a]`}
+                            onClick={() => navigate("/ChangePassword")}
+                            title="Change Password"
+                        >
+                            <FontAwesomeIcon icon={faKey} />
+                        </button>
                         <button
                             className={`text-[28px] font-extrabold w-auto text-left px-3 py-2 rounded-xl hover:bg-[#4a4a4a]`}
                             onClick={handleLogout}
