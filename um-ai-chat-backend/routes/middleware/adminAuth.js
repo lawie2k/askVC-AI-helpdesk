@@ -12,7 +12,7 @@ function authenticateAdmin(req, res, next) {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-not-for-prod');
     const adminId = decoded?.sub || decoded?.id; // support both shapes
     if (!adminId) return res.status(401).json({ error: 'Invalid token payload' });
 

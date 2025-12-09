@@ -370,7 +370,8 @@ router.post("/ask", async (req, res) => {
           dbContext += `- ${JSON.stringify(item, null, 2)}\n`;
           
     
-          const MIN_RELEVANCE_FOR_IMAGE = 90;
+        // Allow images to show with strong-but-not-extreme matches
+        const MIN_RELEVANCE_FOR_IMAGE = 85;
           
           if (result.table === "rooms") {
             // Log when room is found
@@ -406,13 +407,13 @@ router.post("/ask", async (req, res) => {
                 roomName.split(/\s+/).some(word => word.length > 3 && questionLower.includes(word))
               );
               
-              // Only show image if:
-              // - From specific room query (room_query) with very high relevance (>= 95) AND name mentioned
-              // - Very high relevance (>= 98) AND name/keywords are mentioned (for general searches)
+          // Only show image if:
+          // - From specific room query (room_query) with strong relevance (>= 85) AND name mentioned
+          // - Strong general match (>= 90) AND name/keywords are mentioned
               const isSpecificSearch = matchType === 'room_query';
-              // Stricter requirements: even specific searches need name mentioned and very high relevance
-              const isSpecificMatch = isSpecificSearch && relevance >= 95 && nameMentioned;
-              const isStrongMatch = relevance >= 98 && nameMentioned;
+          // Stricter requirements: even specific searches need name mentioned and strong relevance
+          const isSpecificMatch = isSpecificSearch && relevance >= 85 && nameMentioned;
+          const isStrongMatch = relevance >= 90 && nameMentioned;
               
               // Only show image if there's a very strong, specific match
               if (isSpecificMatch || isStrongMatch) {
@@ -501,7 +502,7 @@ router.post("/ask", async (req, res) => {
       // Only add the best matches to imageUrls
       // CRITICAL: Only show images for very strong, specific matches
       // This prevents showing random images when AI can't provide a good answer
-      const MIN_RELEVANCE_FOR_IMAGE = 95; // Increased from 90 to 95 - only very strong matches
+      const MIN_RELEVANCE_FOR_IMAGE = 85; // allow strong (not extreme) matches to show images
       if (isRoomQuestion && bestRoomMatch && bestRoomMatch.relevance_score >= MIN_RELEVANCE_FOR_IMAGE) {
         // Double-check that the image URL is valid before adding
         if (bestRoomMatch.url && bestRoomMatch.url.trim() !== '') {
