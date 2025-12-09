@@ -370,8 +370,8 @@ router.post("/ask", async (req, res) => {
           dbContext += `- ${JSON.stringify(item, null, 2)}\n`;
           
     
-        // Allow images to show with strong-but-not-extreme matches
-        const MIN_RELEVANCE_FOR_IMAGE = 85;
+        // Require high-confidence matches before showing images
+        const MIN_RELEVANCE_FOR_IMAGE = 90;
           
           if (result.table === "rooms") {
             // Log when room is found
@@ -407,26 +407,29 @@ router.post("/ask", async (req, res) => {
                 roomName.split(/\s+/).some(word => word.length > 3 && questionLower.includes(word))
               );
               
-          // Only show image if:
-          // - From specific room query (room_query) with strong relevance (>= 85) AND name mentioned
-          // - Strong general match (>= 90) AND name/keywords are mentioned
+              // Prefer exact name mentions: if the room name is clearly mentioned, treat it as a perfect match
+              const nameForceMatch = isRoomQuestion && nameMentioned && item.image_url;
+
+              // Only show image if:
+              // - From specific room query (room_query) with very high relevance (>= 95) AND name mentioned
+              // - Very high relevance (>= 98) AND name/keywords are mentioned (for general searches)
               const isSpecificSearch = matchType === 'room_query';
-          // Stricter requirements: even specific searches need name mentioned and strong relevance
-          const isSpecificMatch = isSpecificSearch && relevance >= 85 && nameMentioned;
-          const isStrongMatch = relevance >= 90 && nameMentioned;
+              const isSpecificMatch = isSpecificSearch && relevance >= 95 && nameMentioned;
+              const isStrongMatch = relevance >= 98 && nameMentioned;
               
               // Only show image if there's a very strong, specific match
-              if (isSpecificMatch || isStrongMatch) {
-              if (!bestRoomMatch || relevance > (bestRoomMatch.relevance_score || 0)) {
+              if (nameForceMatch || isSpecificMatch || isStrongMatch) {
+                const chosenRelevance = nameForceMatch ? Math.max(relevance, 100) : relevance;
+                if (!bestRoomMatch || chosenRelevance > (bestRoomMatch.relevance_score || 0)) {
                   // Double-check image_url is valid
                   if (item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
-                    console.log(`📸 Adding room image: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned})`);
-                bestRoomMatch = {
+                    console.log(`📸 Adding room image: ${item.name} (relevance: ${chosenRelevance}, match_type: ${matchType}, name mentioned: ${nameMentioned}, forced: ${nameForceMatch})`);
+                    bestRoomMatch = {
                       url: item.image_url.trim(),
-                  name: item.name || "Image",
-                  type: "room",
-                  relevance_score: relevance
-                };
+                      name: item.name || "Image",
+                      type: "room",
+                      relevance_score: chosenRelevance
+                    };
                   } else {
                     console.log(`⚠️ Room found but image_url is invalid: ${item.name} (image_url: "${item.image_url}")`);
                   }
@@ -502,7 +505,7 @@ router.post("/ask", async (req, res) => {
       // Only add the best matches to imageUrls
       // CRITICAL: Only show images for very strong, specific matches
       // This prevents showing random images when AI can't provide a good answer
-      const MIN_RELEVANCE_FOR_IMAGE = 85; // allow strong (not extreme) matches to show images
+      const MIN_RELEVANCE_FOR_IMAGE = 95; // only very strong matches
       if (isRoomQuestion && bestRoomMatch && bestRoomMatch.relevance_score >= MIN_RELEVANCE_FOR_IMAGE) {
         // Double-check that the image URL is valid before adding
         if (bestRoomMatch.url && bestRoomMatch.url.trim() !== '') {
