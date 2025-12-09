@@ -10,9 +10,9 @@ function App() {
   };
 
   const handleDownload = async () => {
-    // Google Drive direct download link
-    // File ID: 1f_rv_2CzXF2oKGBxPQTyKKDWksO4IV2C
-    const apkUrl = import.meta.env.VITE_APK_URL || 'https://drive.google.com/uc?export=download&id=1f_rv_2CzXF2oKGBxPQTyKKDWksO4IV2C';
+    // Google Drive direct download link (new file)
+    // File ID: 1RaqapLB766fqmHrtEJsXPyKfapxgQTb2
+    const apkUrl = import.meta.env.VITE_APK_URL || 'https://drive.google.com/uc?export=download&id=1RaqapLB766fqmHrtEJsXPyKfapxgQTb2';
     
     try {
       // For Google Drive, we'll open directly (Drive handles the download)
