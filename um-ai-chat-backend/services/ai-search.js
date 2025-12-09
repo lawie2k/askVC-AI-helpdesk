@@ -412,6 +412,18 @@ async function searchDatabase(question) {
           }
         }
 
+        // Check for generic room names (e.g., "collaboration room", "meeting room", "study room")
+        // This should catch room names that don't match the specific patterns above
+        if (!roomIdentifier) {
+          // Look for patterns like "X room" where X is a descriptive word
+          const genericRoomMatch = q.match(/\b([a-z]+)\s+room\b/i);
+          if (genericRoomMatch && genericRoomMatch[1] && genericRoomMatch[1].length > 3) {
+            // Extract the descriptive word (e.g., "collaboration" from "collaboration room")
+            roomIdentifier = genericRoomMatch[1].toLowerCase();
+            console.log(`   🔍 Detected generic room name: "${roomIdentifier}"`);
+          }
+        }
+
         // If we have a room type but still no identifier, use the type as identifier
         if (!roomIdentifier && roomType) {
           roomIdentifier = roomType;
