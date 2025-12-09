@@ -149,7 +149,7 @@ export default function Login(){
                            <Text className="text-white text-[20px] font-bold text-start">Login</Text>
                            <TextInput
                                className="w-[310px] h-[50px] bg-[#3C3C3C] rounded-full mt-5 px-5 text-white"
-                               placeholder="Email"
+                               placeholder="umindanao.edu.ph"
                                placeholderTextColor="#9CA3AF"
                                keyboardType="email-address"
                                inputMode="email"
