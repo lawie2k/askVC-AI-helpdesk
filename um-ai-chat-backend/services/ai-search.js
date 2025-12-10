@@ -626,6 +626,7 @@ async function searchDatabase(question) {
           }
         }
         
+        // Build search terms; for clinic, include common aliases like "health services"
         let query = `
           SELECT o.*, b.name as building_name, "office_query" as match_type 
           FROM offices o 
@@ -633,10 +634,19 @@ async function searchDatabase(question) {
         `;
         
         const queryParams = [];
+        const searchTerms = [];
         if (officeIdentifier) {
-          // Search for offices that match the identifier in their name
-          query += ` WHERE LOWER(o.name) LIKE ?`;
-          queryParams.push(`%${officeIdentifier}%`);
+          if (officeIdentifier === 'clinic') {
+            searchTerms.push('clinic', 'health services', 'center of health services', 'health service', 'medical');
+          } else {
+            searchTerms.push(officeIdentifier);
+          }
+        }
+
+        if (searchTerms.length > 0) {
+          const whereClauses = searchTerms.map(() => `LOWER(o.name) LIKE ?`).join(' OR ');
+          query += ` WHERE (${whereClauses})`;
+          searchTerms.forEach(term => queryParams.push(`%${term}%`));
         }
         
         db.query(query, queryParams, (err, results) => {
@@ -648,26 +658,26 @@ async function searchDatabase(question) {
               const officeNameLower = (result.name || '').toLowerCase().trim();
               let score = 50; // Base score for partial match
               
-              if (officeIdentifier) {
-                const normalizedIdentifier = officeIdentifier.toLowerCase().trim();
+              if (searchTerms.length > 0) {
                 const normalizedOfficeName = officeNameLower.replace(/\s+/g, ' ').trim();
-                
-                // Exact match (e.g., "library" matches "Library" or "Library Office")
-                if (normalizedOfficeName === normalizedIdentifier || 
-                    normalizedOfficeName === `${normalizedIdentifier} office` ||
-                    normalizedOfficeName === `${normalizedIdentifier} room`) {
-                  score = 100; // Perfect exact match
-                }
-                // Contains the identifier as a word (e.g., "library" in "Main Library")
-                else if (normalizedOfficeName.includes(normalizedIdentifier) && 
-                         (normalizedOfficeName.startsWith(normalizedIdentifier) || 
-                          normalizedOfficeName.includes(` ${normalizedIdentifier} `) ||
-                          normalizedOfficeName.includes(` ${normalizedIdentifier}`))) {
-                  score = 95; // Very close match
-                }
-                // Partial match
-                else if (normalizedOfficeName.includes(normalizedIdentifier)) {
-                  score = 75; // Partial match
+                for (const term of searchTerms) {
+                  const normalizedIdentifier = term.toLowerCase().trim();
+                  // Exact match variants
+                  if (normalizedOfficeName === normalizedIdentifier || 
+                      normalizedOfficeName === `${normalizedIdentifier} office` ||
+                      normalizedOfficeName === `${normalizedIdentifier} room`) {
+                    score = 100;
+                    break;
+                  }
+                  // Contains the identifier as a word
+                  if (normalizedOfficeName.includes(normalizedIdentifier) && 
+                      (normalizedOfficeName.startsWith(normalizedIdentifier) || 
+                       normalizedOfficeName.includes(` ${normalizedIdentifier} `) ||
+                       normalizedOfficeName.includes(` ${normalizedIdentifier}`))) {
+                    score = Math.max(score, 95);
+                  } else if (normalizedOfficeName.includes(normalizedIdentifier)) {
+                    score = Math.max(score, 75);
+                  }
                 }
               } else {
                 // No specific identifier, give all results same score
