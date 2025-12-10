@@ -435,6 +435,7 @@ router.post("/ask", async (req, res) => {
                       type: "room",
                       relevance_score: chosenRelevance
                     };
+                    console.log('✅ Selected room candidate:', bestRoomMatch);
                   } else {
                     console.log(`⚠️ Room found but image_url is invalid: ${item.name} (image_url: "${item.image_url}")`);
                   }
