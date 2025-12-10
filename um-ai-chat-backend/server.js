@@ -53,6 +53,7 @@ app.listen(PORT, () => {
   console.log(`🤖 AI Service: Initialized`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Database URL: ${process.env.DATABASE_URL ? 'Set' : 'NOT SET'}`);
+  console.log(`🛠️ Build marker: rv2-image-debug`);
 });
 
 module.exports = app;
