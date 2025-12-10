@@ -406,6 +406,11 @@ router.post("/ask", async (req, res) => {
                 // Check for key words from room name (e.g., "comlab" from "Com Lab V1")
                 roomName.split(/\s+/).some(word => word.length > 3 && questionLower.includes(word))
               );
+
+              // Debug trace for RV2 matching and image selection
+              if (/rv2\b/i.test(roomName) || /\brv\s*2\b/i.test(questionLower)) {
+                console.log(`🐛 RV2 debug -> name: ${item.name}, relevance: ${relevance}, matchType: ${matchType}, nameMentioned: ${nameMentioned}, image_url: ${item.image_url}`);
+              }
               
               // Prefer exact name mentions: if the room name is clearly mentioned, treat it as a perfect match
               const nameForceMatch = isRoomQuestion && nameMentioned && item.image_url;
