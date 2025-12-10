@@ -486,6 +486,15 @@ async function searchDatabase(question) {
                 const roomNameLetters = normalizedRoomName.replace(/[^a-z]/g, '').toLowerCase();
                 const roomNameNum = normalizedRoomName.replace(/[^0-9]/g, '');
                 
+                // Special handling for COM LAB variants (e.g., "comlab v3", "comlab 3", "com lab v3")
+                if (identifierLetters.includes('comlab')) {
+                  const idNoV = normalizedIdentifier.replace(/v(?=\d)/ig, '').replace(/\s+/g, '');
+                  const roomNoV = normalizedRoomName.replace(/v(?=\d)/ig, '').replace(/\s+/g, '');
+                  if (idNoV === roomNoV || roomNoV.includes(idNoV)) {
+                    score = 100;
+                  }
+                }
+
                 // Exact match (handles "comlab 1" vs "comlab1" vs "ComLab 1", "RV1" vs "rv1" vs "RV 1")
                 if (normalizedRoomName === normalizedIdentifier || 
                     roomNameNoSpaces === identifierNoSpaces) {
@@ -657,23 +666,40 @@ async function searchDatabase(question) {
             const scoredResults = results.map(result => {
               const officeNameLower = (result.name || '').toLowerCase().trim();
               let score = 50; // Base score for partial match
-              
+
               if (searchTerms.length > 0) {
                 const normalizedOfficeName = officeNameLower.replace(/\s+/g, ' ').trim();
+                // Build a simple acronym from significant words (skip very short words like "of")
+                const acronym = normalizedOfficeName
+                  .split(/\s+/)
+                  .filter(w => w.length > 1)
+                  .map(w => w[0])
+                  .join('')
+                  .toLowerCase();
+
                 for (const term of searchTerms) {
                   const normalizedIdentifier = term.toLowerCase().trim();
                   // Exact match variants
-                  if (normalizedOfficeName === normalizedIdentifier || 
-                      normalizedOfficeName === `${normalizedIdentifier} office` ||
-                      normalizedOfficeName === `${normalizedIdentifier} room`) {
+                  if (
+                    normalizedOfficeName === normalizedIdentifier ||
+                    normalizedOfficeName === `${normalizedIdentifier} office` ||
+                    normalizedOfficeName === `${normalizedIdentifier} room`
+                  ) {
                     score = 100;
                     break;
                   }
+                  // Acronym match (e.g., "OSA" for "Office of Student Affairs")
+                  if (acronym && normalizedIdentifier && acronym.includes(normalizedIdentifier)) {
+                    score = Math.max(score, 100);
+                    continue;
+                  }
                   // Contains the identifier as a word
-                  if (normalizedOfficeName.includes(normalizedIdentifier) && 
-                      (normalizedOfficeName.startsWith(normalizedIdentifier) || 
-                       normalizedOfficeName.includes(` ${normalizedIdentifier} `) ||
-                       normalizedOfficeName.includes(` ${normalizedIdentifier}`))) {
+                  if (
+                    normalizedOfficeName.includes(normalizedIdentifier) &&
+                    (normalizedOfficeName.startsWith(normalizedIdentifier) ||
+                      normalizedOfficeName.includes(` ${normalizedIdentifier} `) ||
+                      normalizedOfficeName.includes(` ${normalizedIdentifier}`))
+                  ) {
                     score = Math.max(score, 95);
                   } else if (normalizedOfficeName.includes(normalizedIdentifier)) {
                     score = Math.max(score, 75);
@@ -683,7 +709,7 @@ async function searchDatabase(question) {
                 // No specific identifier, give all results same score
                 score = 50;
               }
-              
+
               return {
                 ...result,
                 relevance_score: score
