@@ -407,6 +407,19 @@ router.post("/ask", async (req, res) => {
                 roomName.split(/\s+/).some(word => word.length > 3 && questionLower.includes(word))
               );
 
+              // Special-case RV2: if the room name is RV2 and it has an image, force select it
+              const isRV2 = roomName && roomName.replace(/\s+/g, '') === 'rv2';
+              if (isRV2 && item.image_url) {
+                const forced = {
+                  url: item.image_url.trim(),
+                  name: item.name || 'Image',
+                  type: 'room',
+                  relevance_score: 100
+                };
+                console.log(`🛠️ RV2 force add: ${JSON.stringify(forced)}`);
+                bestRoomMatch = forced;
+              }
+
               // Debug trace for RV2 matching and image selection
               if (/rv2\b/i.test(roomName) || /\brv\s*2\b/i.test(questionLower)) {
                 console.log(`🐛 RV2 debug -> name: ${item.name}, relevance: ${relevance}, matchType: ${matchType}, nameMentioned: ${nameMentioned}, image_url: ${item.image_url}`);
