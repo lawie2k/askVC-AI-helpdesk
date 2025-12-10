@@ -407,6 +407,18 @@ router.post("/ask", async (req, res) => {
                 roomName.split(/\s+/).some(word => word.length > 3 && questionLower.includes(word))
               );
 
+              // Hard override: if the room name is mentioned and the DB row has image_url, always select it
+              if (nameMentioned && item.image_url) {
+                const forced = {
+                  url: item.image_url.trim(),
+                  name: item.name || "Image",
+                  type: "room",
+                  relevance_score: 999 // ensure it passes final gate
+                };
+                console.log(`🛠️ Force-select room image: ${item.name} -> ${forced.url}`);
+                bestRoomMatch = forced;
+              }
+
               // Special-case RV2: if the room name is RV2 and it has an image, force select it
               const isRV2 = roomName && roomName.replace(/\s+/g, '') === 'rv2';
               if (isRV2 && item.image_url) {
