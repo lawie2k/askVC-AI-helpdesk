@@ -346,6 +346,9 @@ router.post("/ask", async (req, res) => {
       // Format other results
       otherResults.forEach((result) => {
         dbContext += `\nFrom ${result.table} table:\n`;
+        // Track any RV2 image we encounter for a final fallback
+        let rv2Fallback = null;
+
         result.data.forEach((item) => {
           // Give the AI a clearer, human-friendly summary for professors
           if (result.table === "professors") {
@@ -430,6 +433,7 @@ router.post("/ask", async (req, res) => {
                 };
                 console.log(`🛠️ RV2 force add: ${JSON.stringify(forced)}`);
                 bestRoomMatch = forced;
+                rv2Fallback = forced;
               }
 
               // Debug trace for RV2 matching and image selection
@@ -531,6 +535,12 @@ router.post("/ask", async (req, res) => {
             }
           }
         });
+
+        // Final fallback: if we saw RV2 with an image but didn't select it yet, add it
+        if (rv2Fallback && (!bestRoomMatch || bestRoomMatch.name !== rv2Fallback.name)) {
+          console.log(`✅ Final fallback: adding RV2 image: ${rv2Fallback.url}`);
+          imageUrls.push(rv2Fallback);
+        }
       });
       
       // Always include room image if we selected one (hard override to avoid missed matches)
