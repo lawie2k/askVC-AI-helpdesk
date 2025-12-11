@@ -348,6 +348,7 @@ router.post("/ask", async (req, res) => {
         dbContext += `\nFrom ${result.table} table:\n`;
         // Track any RV2 image we encounter for a final fallback
         let rv2Fallback = null;
+        let rv2ImageUrl = null;
 
         result.data.forEach((item) => {
           // Give the AI a clearer, human-friendly summary for professors
@@ -434,6 +435,7 @@ router.post("/ask", async (req, res) => {
                 console.log(`🛠️ RV2 force add: ${JSON.stringify(forced)}`);
                 bestRoomMatch = forced;
                 rv2Fallback = forced;
+                rv2ImageUrl = forced.url;
               }
 
               // Debug trace for RV2 matching and image selection
@@ -561,6 +563,12 @@ router.post("/ask", async (req, res) => {
           console.log(`⚠️ Clearing ${imageUrls.length} image(s) - no selection made`);
           imageUrls.length = 0;
         }
+      }
+
+      // Absolute override for RV2: if we ever saw an RV2 image URL, append it to images
+      if (rv2ImageUrl) {
+        console.log(`✅ Absolute override: appending RV2 image ${rv2ImageUrl}`);
+        imageUrls.push({ url: rv2ImageUrl, name: 'RV2', type: 'room', relevance_score: 1000 });
       }
       const timeGuidance = await generateTimeAwareGuidance(dbResults);
       if (timeGuidance) {
