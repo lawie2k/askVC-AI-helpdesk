@@ -533,36 +533,22 @@ router.post("/ask", async (req, res) => {
         });
       });
       
-      // Only add the best matches to imageUrls
-      // CRITICAL: Only show images for very strong, specific matches
-      // This prevents showing random images when AI can't provide a good answer
-      const MIN_RELEVANCE_FOR_IMAGE = 95; // only very strong matches
-      if (isRoomQuestion && bestRoomMatch && bestRoomMatch.relevance_score >= MIN_RELEVANCE_FOR_IMAGE) {
-        // Double-check that the image URL is valid before adding
-        if (bestRoomMatch.url && bestRoomMatch.url.trim() !== '') {
-          console.log(`✅ Final: Adding room image: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score})`);
+      // Always include room image if we selected one (hard override to avoid missed matches)
+      if (isRoomQuestion && bestRoomMatch && bestRoomMatch.url) {
+        console.log(`✅ Final (force): Adding room image: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score})`);
         imageUrls.push(bestRoomMatch);
-        } else {
-          console.log(`⚠️ Final: Room image rejected: ${bestRoomMatch.name} has no valid image_url`);
-        }
-      } else if (isOfficeQuestion && bestOfficeMatch && bestOfficeMatch.relevance_score >= MIN_RELEVANCE_FOR_IMAGE) {
-        // Double-check that the image URL is valid before adding
-        if (bestOfficeMatch.url && bestOfficeMatch.url.trim() !== '') {
-          console.log(`✅ Final: Adding office image: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score})`);
+      } else if (isOfficeQuestion && bestOfficeMatch && bestOfficeMatch.url) {
+        console.log(`✅ Final: Adding office image: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score})`);
         imageUrls.push(bestOfficeMatch);
-        } else {
-          console.log(`⚠️ Final: Office image rejected: ${bestOfficeMatch.name} has no valid image_url`);
-        }
       } else {
         if (isRoomQuestion && bestRoomMatch) {
-          console.log(`⚠️ Final: Room image rejected: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score} < ${MIN_RELEVANCE_FOR_IMAGE})`);
+          console.log(`⚠️ Final: Room image rejected (no url or not selected): ${bestRoomMatch.name}`);
         }
         if (isOfficeQuestion && bestOfficeMatch) {
-          console.log(`⚠️ Final: Office image rejected: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score} < ${MIN_RELEVANCE_FOR_IMAGE})`);
+          console.log(`⚠️ Final: Office image rejected (no url or not selected): ${bestOfficeMatch.name}`);
         }
-        // Clear imageUrls if no strong match - don't show random images
         if (imageUrls.length > 0) {
-          console.log(`⚠️ Clearing ${imageUrls.length} image(s) - no strong match found`);
+          console.log(`⚠️ Clearing ${imageUrls.length} image(s) - no selection made`);
           imageUrls.length = 0;
         }
       }
