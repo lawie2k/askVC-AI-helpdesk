@@ -666,7 +666,7 @@ async function searchDatabase(question) {
             const scoredResults = results.map(result => {
               const officeNameLower = (result.name || '').toLowerCase().trim();
               let score = 50; // Base score for partial match
-
+              
               if (searchTerms.length > 0) {
                 const normalizedOfficeName = officeNameLower.replace(/\s+/g, ' ').trim();
                 // Build a simple acronym from significant words (skip very short words like "of")
@@ -692,12 +692,12 @@ async function searchDatabase(question) {
                   if (acronym && normalizedIdentifier && acronym.includes(normalizedIdentifier)) {
                     score = Math.max(score, 100);
                     continue;
-                  }
+                }
                   // Contains the identifier as a word
                   if (
                     normalizedOfficeName.includes(normalizedIdentifier) &&
-                    (normalizedOfficeName.startsWith(normalizedIdentifier) ||
-                      normalizedOfficeName.includes(` ${normalizedIdentifier} `) ||
+                         (normalizedOfficeName.startsWith(normalizedIdentifier) || 
+                          normalizedOfficeName.includes(` ${normalizedIdentifier} `) ||
                       normalizedOfficeName.includes(` ${normalizedIdentifier}`))
                   ) {
                     score = Math.max(score, 95);
@@ -709,7 +709,7 @@ async function searchDatabase(question) {
                 // No specific identifier, give all results same score
                 score = 50;
               }
-
+              
               return {
                 ...result,
                 relevance_score: score
