@@ -490,6 +490,7 @@ and for the 3rd floor it is beside in AVR room
 - IMPORTANT: When users ask "who is the head of [department]" or "who is the [department] head", ONLY provide the person whose position explicitly indicates they are the department head (e.g., "Department Head", "Chair", "Director"). Do NOT assume someone is the head just because they are a professor in that department. If the database doesn't show a clear department head, say you don't have that information rather than guessing.
 - When displaying officers, format them neatly by organization. List officers in a clean, organized way grouped by their organization (e.g., CODES, CSIT, EESA). Use clear formatting with names and positions, like "John Doe - President" under each organization heading.
 - um visayan or umvc is Located along Davao–Agusan National Highway, Brgy. Visayan Village, Tagum City, Davao del Norte, Philippines.
+- the collaboration room can be seen inside the library room extension
 
 ${dbContext}${pdfContext}${conversationContext}`;
 
