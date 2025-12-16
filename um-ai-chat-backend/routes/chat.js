@@ -224,9 +224,38 @@ router.post("/ask", async (req, res) => {
       });
     }
 
+    // ============================================================================
+    // ROOM NAME PREPROCESSING - Handle abbreviations like r301 -> room 301
+    // ============================================================================
+    function preprocessRoomAbbreviations(question) {
+      let processedQuestion = question;
+
+      // Common room abbreviations: r301 -> room 301, r302 -> room 302, etc.
+      const roomAbbreviations = [
+        { abbr: /\br(\d{3,4})\b/gi, replace: 'room $1' },  // r301 -> room 301
+        { abbr: /\brv(\d+)\b/gi, replace: 'rv $1' },       // rv2 -> rv 2
+        { abbr: /\bcomlab\s*v?(\d+)\b/gi, replace: 'com lab v$1' }, // comlab1 -> com lab v1
+        { abbr: /\bcomlab(\d+)\b/gi, replace: 'com lab v$1' },      // comlab1 -> com lab v1
+      ];
+
+      roomAbbreviations.forEach(({ abbr, replace }) => {
+        processedQuestion = processedQuestion.replace(abbr, replace);
+      });
+
+      // Log if we made changes
+      if (processedQuestion !== question) {
+        console.log(`🔄 Preprocessed room query: "${question}" -> "${processedQuestion}"`);
+      }
+
+      return processedQuestion;
+    }
+
+    // Apply room abbreviation preprocessing
+    const processedQuestion = preprocessRoomAbbreviations(question);
+
     // Search database for relevant info
     console.log('🔍 Searching database for relevant information...');
-    const dbResults = await searchDatabase(question);
+    const dbResults = await searchDatabase(processedQuestion);
 
     // Fetch IT subjects PDF if they're asking about BSIT courses
     let pdfContext = "";
@@ -270,8 +299,10 @@ router.post("/ask", async (req, res) => {
     // Exclude CR/comfort room/restroom from being treated as room questions
     const isCRQuestion = /\b(cr|comfort room|comfortroom|restroom|restrooms|toilet|toilets|bathroom|bathrooms)\b/i.test(question);
     const isRoomQuestion = !isCRQuestion && (
-      /\b(room|rooms|classroom|comlab|laboratory|lab)\b/i.test(question) ||
-      /\b(room\s*)?\d{3,4}\b/i.test(question)
+      /\b(room|rooms|classroom|comlab|laboratory|lab|rv|avr)\b/i.test(question) ||
+      /\b(room\s*)?\d{3,4}\b/i.test(question) ||
+      /\brv\s*\d+\b/i.test(question) ||
+      /\bavr\b/i.test(question)
     );
     const isOfficeQuestion =
       /\b(office|offices|sao|student affairs|registrar|cashier|clinic|library|faculty|guidance)\b/i.test(
