@@ -8,8 +8,7 @@ const { fetchPdfContent } = require("../services/pdf-fetcher");
 const router = express.Router();
 const aiService = new AIService();
 
-// Department head info used for class schedule/subject concerns.
-// We prefer dynamic lookup from the professors table; these are just fallbacks.
+// Fallback department heads if we can't find them in the DB
 const DEPARTMENT_HEAD_FALLBACKS = {
   BSIT: {
     name: "BSIT Department Head",
@@ -25,13 +24,11 @@ const DEPARTMENT_HEAD_FALLBACKS = {
   },
 };
 
-// ============================================================================
-// CONVERSATION MEMORY - Store last Q&A per user session
-// ============================================================================
+// Keep track of user's last question/answer for context
 const conversationMemory = new Map(); // key: userIdentifier, value: { question, answer }
 
 function getUserIdentifier(req) {
-  // Use IP address as identifier (or could use user ID if authenticated)
+  // Use IP as user ID for now
   return req.ip || req.connection.remoteAddress || 'anonymous';
 }
 
@@ -41,60 +38,55 @@ function getLastConversation(userId) {
 
 function saveConversation(userId, question, answer) {
   conversationMemory.set(userId, { question, answer });
-  // Optional: limit memory size to prevent memory leaks
+  // Keep memory size down
   if (conversationMemory.size > 1000) {
     const firstKey = conversationMemory.keys().next().value;
     conversationMemory.delete(firstKey);
   }
 }
 
-// Check for inappropriate/racist content
+// Block racist or inappropriate questions
 function containsInappropriateContent(question) {
   const lowerQuestion = question.toLowerCase();
-  
-  // Common racist slurs and inappropriate terms (basic list - can be expanded)
+
   const inappropriateTerms = [
     'n-word', 'n word', // avoiding explicit terms
     'racist', 'racism',
-    // Add more terms as needed
   ];
-  
-  // Check for hate speech patterns
+
   const hatePatterns = [
     /all\s+\w+\s+are/i,
     /\w+\s+should\s+die/i,
     /\w+\s+are\s+inferior/i,
   ];
-  
-  // Check against inappropriate terms
+
   for (const term of inappropriateTerms) {
     if (lowerQuestion.includes(term)) {
       return true;
     }
   }
-  
-  // Check against hate patterns
+
   for (const pattern of hatePatterns) {
     if (pattern.test(question)) {
       return true;
     }
   }
-  
+
   return false;
 }
 
-// Helper to extract user ID from token (optional auth)
+// Get user ID from JWT token if logged in
 async function getUserIdFromToken(req) {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) return null;
-    
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
     const userId = decoded?.sub || decoded?.id;
-    
+
     if (!userId) return null;
-    
-    // Verify user exists and update last_active_at for DAU tracking
+
+    // Update user's last active time
     const user = await prisma.users.update({
       where: { id: Number(userId) },
       data: { last_active_at: new Date() },
@@ -103,20 +95,16 @@ async function getUserIdFromToken(req) {
 
     return user?.id ?? null;
   } catch (error) {
-    return null; // Invalid token, but don't block the request
+    return null; // Bad token, but keep going
   }
 }
 
-// ============================================================================
-// AI CHAT ENDPOINT - Main AI functionality for users
-// ============================================================================
-
-// combines database search with AI processing
+// Main chat endpoint - handles AI questions
 router.post("/ask", async (req, res) => {
   const { question } = req.body;
   console.log(`🤖 AI Chat request: "${question}"`);
 
-  // Check for inappropriate/racist content before processing
+  // Block racist stuff
   if (containsInappropriateContent(question)) {
     return res.json({ answer: "we dont tolorate racism here" });
   }
@@ -129,15 +117,13 @@ router.post("/ask", async (req, res) => {
     // Initialize imageUrls early (used in early returns)
     const imageUrls = [];
 
-    // ======================================================================
-    // SPECIAL HANDLING: Department head questions
-    // ======================================================================
+    // Handle department head questions
     const isDepartmentHeadQuestion = isDepartmentHeadQuery(question);
     if (isDepartmentHeadQuestion) {
-      // Try to detect department from the question itself
+      // Figure out which department they're asking about
       let deptKey = extractDepartmentFromQuestion(question);
-      
-      // If not found, try last conversation answer/question
+
+      // Check previous conversation if we don't know
       if (!deptKey && lastConv) {
         deptKey =
           extractDepartmentFromQuestion(lastConv.answer || "") ||
@@ -148,7 +134,7 @@ router.post("/ask", async (req, res) => {
         const head = await getDepartmentHeadInfo(deptKey);
         if (head) {
           const answer = `The ${deptKey} department head is ${head.name}${head.email && head.email !== "No email on record" ? ` (${head.email})` : ""}.`;
-          
+
           saveConversation(userId, question, answer);
           const authenticatedUserId = await getUserIdFromToken(req);
           if (authenticatedUserId) {
@@ -182,15 +168,13 @@ router.post("/ask", async (req, res) => {
       }
     }
 
-    // ======================================================================
-    // SPECIAL HANDLING: Class schedule / subject concerns
-    // ======================================================================
+    // Handle class schedule or subject problems
     const maybeClassConcern = isClassScheduleConcern(question);
     if (maybeClassConcern) {
-      // Try to detect department from the question itself
+      // Figure out which department
       let deptKey = extractDepartmentFromQuestion(question);
 
-      // If not found, try last conversation answer/question
+      // Check previous conversation
       if (!deptKey && lastConv) {
         deptKey =
           extractDepartmentFromQuestion(lastConv.answer || "") ||
@@ -198,7 +182,7 @@ router.post("/ask", async (req, res) => {
       }
 
       if (!deptKey) {
-        // Ask follow-up for their department
+        // Ask what department they're in
         return res.json({
           answer:
             "For concerns about your class schedule or subjects, it's best to talk directly to your department head. What is your department (for example, BSIT or BSCS)?",
@@ -215,7 +199,7 @@ router.post("/ask", async (req, res) => {
 
       const answer = `For concerns about your class schedule or subjects, please go to your ${deptKey} department head. Their contact is ${head.name} (${head.email}).`;
 
-      // Save simple conversation context so follow-ups still work
+      // Save for context
       saveConversation(userId, question, answer);
 
       // Also save to history if user is authenticated
@@ -240,24 +224,20 @@ router.post("/ask", async (req, res) => {
       });
     }
 
-    // ========================================================================
-    // DATABASE SEARCH - Find relevant information
-    // ========================================================================
+    // Search database for relevant info
     console.log('🔍 Searching database for relevant information...');
     const dbResults = await searchDatabase(question);
 
-    // ========================================================================
-    // PDF FETCHING - Fetch IT subjects PDF if question is about IT subjects
-    // ========================================================================
+    // Fetch IT subjects PDF if they're asking about BSIT courses
     let pdfContext = "";
     const questionLower = question.toLowerCase();
-    // Check if question is about subjects/courses AND IT/BSIT
-    const hasSubjectKeywords = questionLower.includes('subject') || questionLower.includes('subjects') || 
+
+    const hasSubjectKeywords = questionLower.includes('subject') || questionLower.includes('subjects') ||
                                questionLower.includes('course') || questionLower.includes('courses') ||
                                questionLower.includes('curriculum') || questionLower.includes('offerings');
-    const hasITKeywords = questionLower.includes('bsit') || 
+    const hasITKeywords = questionLower.includes('bsit') ||
                          questionLower.includes('information technology') ||
-                         (questionLower.includes(' it ') || questionLower.endsWith(' it') || 
+                         (questionLower.includes(' it ') || questionLower.endsWith(' it') ||
                           questionLower.startsWith('it ') || questionLower.includes(' it?')) ||
                          extractDepartmentFromQuestion(question) === 'BSIT';
     const isITSubjectsQuestion = hasSubjectKeywords && hasITKeywords;
@@ -267,7 +247,7 @@ router.post("/ask", async (req, res) => {
         console.log('📄 Question is about IT subjects, fetching PDF...');
         const bsitPdfUrl = "https://umindanao.edu.ph/files/eriao/bsit.pdf";
         const pdfResult = await fetchPdfContent(bsitPdfUrl);
-        
+
         if (pdfResult.success && pdfResult.content) {
           pdfContext = `\n\nBSIT Course Offerings (from PDF):\n${pdfResult.content}\n`;
           console.log('✅ Successfully fetched IT subjects from PDF');
@@ -276,7 +256,7 @@ router.post("/ask", async (req, res) => {
         }
       } catch (pdfErr) {
         console.error('⚠️ Error fetching PDF:', pdfErr.message);
-        // Don't fail the request if PDF fetching fails
+        // Keep going even if PDF fails
       }
     }
 
@@ -302,10 +282,9 @@ router.post("/ask", async (req, res) => {
       console.log(`📊 Found ${dbResults.length} relevant database results`);
       dbContext = "\n\nRelevant information from UM Visayan Campus database:\n";
       
-      // Track the best match for images (highest relevance score)
+      // Track the best match for images
       let bestRoomMatch = null;
       let bestOfficeMatch = null;
-      let highestOfficeRelevance = -Infinity;
       
       // Group officers by organization for cleaner display
       const officersByOrg = {};
@@ -346,8 +325,6 @@ router.post("/ask", async (req, res) => {
       // Format other results
       otherResults.forEach((result) => {
         dbContext += `\nFrom ${result.table} table:\n`;
-        // Track any RV2 image we encounter for a final fallback
-        let rv2Fallback = null;
 
         result.data.forEach((item) => {
           // Give the AI a clearer, human-friendly summary for professors
@@ -373,194 +350,46 @@ router.post("/ask", async (req, res) => {
           dbContext += `- ${JSON.stringify(item, null, 2)}\n`;
           
     
-        // Require high-confidence matches before showing images
-        const MIN_RELEVANCE_FOR_IMAGE = 90;
           
           if (result.table === "rooms") {
             // Log when room is found
             console.log(`🔍 Room found in search: "${item.name}" (ID: ${item.id}, Image: ${item.image_url ? '✅' : '❌'}, Relevance: ${item.relevance_score || 'N/A'})`);
-            
-   
-            if (isRoomQuestion && item.image_url) {
-              const relevance = item.relevance_score || 0;
-              const matchType = item.match_type || '';
-              const roomName = (item.name || '').toLowerCase();
-              const questionLower = question.toLowerCase();
-              
-              // Check if room name or key parts are mentioned in question
-              const nameMentioned = roomName && (
-                questionLower.includes(roomName) ||
-                questionLower.includes(roomName.replace(/\s+/g, ' ')) ||
-                questionLower.includes(roomName.replace(/\s+/g, '')) ||
-                // For letter-number patterns (e.g., "RV1" vs "RV 1" vs "rv1")
-                (() => {
-                  // Extract letters and numbers from room name
-                  const roomLetters = roomName.replace(/[^a-z]/g, '').toLowerCase();
-                  const roomNumbers = roomName.replace(/[^0-9]/g, '');
-                  // Extract letters and numbers from question
-                  const questionLetters = questionLower.replace(/[^a-z]/g, '').toLowerCase();
-                  const questionNumbers = questionLower.replace(/[^0-9]/g, '');
-                  // Check if letters and numbers match (handles "RV1" vs "RV 1" vs "rv1")
-                  if (roomLetters && roomNumbers && questionLetters.includes(roomLetters) && questionNumbers.includes(roomNumbers)) {
-                    return true;
-                  }
-                  return false;
-                })() ||
-                // Check for key words from room name (e.g., "comlab" from "Com Lab V1")
-                roomName.split(/\s+/).some(word => word.length > 3 && questionLower.includes(word))
-              );
 
-              // Hard override: if the room name is mentioned and the DB row has image_url, always select it
-              if (nameMentioned && item.image_url) {
-                const forced = {
-                  url: item.image_url.trim(),
-                  name: item.name || "Image",
-                  type: "room",
-                  relevance_score: 999 // ensure it passes final gate
-                };
-                console.log(`🛠️ Force-select room image: ${item.name} -> ${forced.url}`);
-                bestRoomMatch = forced;
-              }
-
-              // Special-case RV2: if the room name is RV2 and it has an image, force select it
-              const isRV2 = roomName && roomName.replace(/\s+/g, '') === 'rv2';
-              if (isRV2 && item.image_url) {
-                const forced = {
-                  url: item.image_url.trim(),
-                  name: item.name || 'Image',
-                  type: 'room',
-                  relevance_score: 100
-                };
-                console.log(`🛠️ RV2 force add: ${JSON.stringify(forced)}`);
-                bestRoomMatch = forced;
-                rv2Fallback = forced;
-              }
-
-              // Debug trace for RV2 matching and image selection
-              if (/rv2\b/i.test(roomName) || /\brv\s*2\b/i.test(questionLower)) {
-                console.log(`🐛 RV2 debug -> name: ${item.name}, relevance: ${relevance}, matchType: ${matchType}, nameMentioned: ${nameMentioned}, image_url: ${item.image_url}`);
-              }
-              
-              // Prefer exact name mentions: if the room name is clearly mentioned, treat it as a perfect match
-              const nameForceMatch = isRoomQuestion && nameMentioned && item.image_url;
-
-              // Only show image if:
-              // - From specific room query (room_query) with very high relevance (>= 95) AND name mentioned
-              // - Very high relevance (>= 98) AND name/keywords are mentioned (for general searches)
-              const isSpecificSearch = matchType === 'room_query';
-              const isSpecificMatch = isSpecificSearch && relevance >= 95 && nameMentioned;
-              const isStrongMatch = relevance >= 98 && nameMentioned;
-              
-              // Only show image if there's a very strong, specific match
-              if (nameForceMatch || isSpecificMatch || isStrongMatch) {
-                const chosenRelevance = nameForceMatch ? Math.max(relevance, 100) : relevance;
-                if (!bestRoomMatch || chosenRelevance > (bestRoomMatch.relevance_score || 0)) {
-                  // Double-check image_url is valid
-                  if (item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
-                    console.log(`📸 Adding room image: ${item.name} (relevance: ${chosenRelevance}, match_type: ${matchType}, name mentioned: ${nameMentioned}, forced: ${nameForceMatch})`);
-                    bestRoomMatch = {
-                      url: item.image_url.trim(),
-                      name: item.name || "Image",
-                      type: "room",
-                      relevance_score: chosenRelevance
-                    };
-                    console.log('✅ Selected room candidate:', bestRoomMatch);
-                  } else {
-                    console.log(`⚠️ Room found but image_url is invalid: ${item.name} (image_url: "${item.image_url}")`);
-                  }
-                }
-              } else {
-                console.log(`⚠️ Room image rejected: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned}, specific: ${isSpecificSearch})`);
-              }
+            // Simple logic: if it's a room question and room has valid image, show it
+            if (isRoomQuestion && item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
+              console.log(`📸 Adding room image: ${item.name}`);
+              bestRoomMatch = {
+                url: item.image_url.trim(),
+                name: item.name || "Image",
+                type: "room",
+                relevance_score: 100
+              };
             }
           }
           
           if (result.table === "offices") {
-            // Track highest scoring OFFICE overall, and only allow an image
-            // for that top office. If the top office has no image_url, we
-            // will NOT fall back to some other random office image.
-            const relevance = item.relevance_score || 0;
-            const matchType = item.match_type || '';
-            const officeName = (item.name || '').toLowerCase();
-            const questionLower = question.toLowerCase();
-            
-            // Check if office name or key parts are mentioned in question
-            const nameMentioned = officeName && (
-              questionLower.includes(officeName) ||
-              questionLower.includes(officeName.replace(/\s+/g, ' ')) ||
-              questionLower.includes(officeName.replace(/\s+/g, '')) ||
-              // Check for key words from office name (e.g., "library" from "Main Library", "guidance" from "Guidance Office")
-              officeName.split(/\s+/).some(word => word.length > 3 && questionLower.includes(word))
-            );
-            
-            // Only show image if:
-            // - From specific office query (office_query) with very high relevance (>= 95) AND name mentioned
-            // - Very high relevance (>= 98) AND name/keywords are mentioned (for general searches)
-            const isSpecificSearch = matchType === 'office_query';
-            // Stricter requirements: even specific searches need name mentioned and very high relevance
-            const isSpecificMatch = isSpecificSearch && relevance >= 95 && nameMentioned;
-            const isStrongMatch = relevance >= 98 && nameMentioned;
-            
-            if (relevance > highestOfficeRelevance) {
-              highestOfficeRelevance = relevance;
-              bestOfficeMatch = null;
-              // Only show image if there's a very strong, specific match
-              if (isOfficeQuestion && item.image_url && (isSpecificMatch || isStrongMatch)) {
-                console.log(`📸 Adding office image: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned})`);
-                bestOfficeMatch = {
-                  url: item.image_url.trim(),
-                  name: item.name || "Image",
-                  type: "office",
-                  relevance_score: relevance
-                };
-              } else if (isOfficeQuestion && item.image_url) {
-                console.log(`⚠️ Office image rejected: ${item.name} (relevance: ${relevance}, match_type: ${matchType}, name mentioned: ${nameMentioned}, specific: ${isSpecificSearch})`);
-              }
-            } else if (
-              relevance === highestOfficeRelevance &&
-              !bestOfficeMatch &&
-              isOfficeQuestion &&
-              item.image_url &&
-              (isSpecificMatch || isStrongMatch)
-            ) {
-              // Tie-breaker: if multiple offices share the same top score,
-              // take the first one that actually has an image and very high relevance with name mentioned
-              console.log(`📸 Adding office image for tie-breaker: ${item.name} (relevance: ${relevance})`);
+            // Simple logic: if it's an office question and office has valid image, show it
+            if (isOfficeQuestion && item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
+              console.log(`📸 Adding office image: ${item.name}`);
               bestOfficeMatch = {
                 url: item.image_url.trim(),
                 name: item.name || "Image",
                 type: "office",
-                relevance_score: relevance
+                relevance_score: 100
               };
             }
           }
         });
-
-        // Final fallback: if we saw RV2 with an image but didn't select it yet, add it
-        if (rv2Fallback && (!bestRoomMatch || bestRoomMatch.name !== rv2Fallback.name)) {
-          console.log(`✅ Final fallback: adding RV2 image: ${rv2Fallback.url}`);
-          imageUrls.push(rv2Fallback);
-        }
       });
       
-      // Always include room image if we selected one (hard override to avoid missed matches)
-      if (isRoomQuestion && bestRoomMatch && bestRoomMatch.url) {
-        console.log(`✅ Final (force): Adding room image: ${bestRoomMatch.name} (relevance: ${bestRoomMatch.relevance_score})`);
+      // Add selected images to response
+      if (bestRoomMatch && bestRoomMatch.url) {
+        console.log(`✅ Adding room image: ${bestRoomMatch.name}`);
         imageUrls.push(bestRoomMatch);
-      } else if (isOfficeQuestion && bestOfficeMatch && bestOfficeMatch.url) {
-        console.log(`✅ Final: Adding office image: ${bestOfficeMatch.name} (relevance: ${bestOfficeMatch.relevance_score})`);
+      }
+      if (bestOfficeMatch && bestOfficeMatch.url) {
+        console.log(`✅ Adding office image: ${bestOfficeMatch.name}`);
         imageUrls.push(bestOfficeMatch);
-      } else {
-        if (isRoomQuestion && bestRoomMatch) {
-          console.log(`⚠️ Final: Room image rejected (no url or not selected): ${bestRoomMatch.name}`);
-        }
-        if (isOfficeQuestion && bestOfficeMatch) {
-          console.log(`⚠️ Final: Office image rejected (no url or not selected): ${bestOfficeMatch.name}`);
-        }
-        if (imageUrls.length > 0) {
-          console.log(`⚠️ Clearing ${imageUrls.length} image(s) - no selection made`);
-          imageUrls.length = 0;
-        }
       }
       const timeGuidance = await generateTimeAwareGuidance(dbResults);
       if (timeGuidance) {
@@ -571,9 +400,7 @@ router.post("/ask", async (req, res) => {
       dbContext = "\n\nNo specific information found in the database for this question.";
     }
 
-    // ========================================================================
-    // CONVERSATION MEMORY - Include last Q&A if available
-    // ========================================================================
+    // Add previous conversation for context
     let conversationContext = "";
     if (lastConv) {
       conversationContext = `\n\nPrevious conversation context:
@@ -584,9 +411,8 @@ The user may be asking a follow-up question. Use the previous context to underst
       console.log(`💭 Including conversation memory: "${lastConv.question}" -> "${lastConv.answer}"`);
     }
 
-    // ========================================================================
-    // AI PROCESSING - Generate intelligent response
-    // ========================================================================
+    // Generate AI response
+    // Build the prompt with all our context
     const systemPrompt = `You are a dynamic and helpful AI assistant for UM Visayan Campus. Be engaging and conversational while keeping responses concise.
 
 IMPORTANT INSTRUCTIONS:
@@ -636,24 +462,20 @@ and for the 3rd floor it is beside in AVR room
 
 ${dbContext}${pdfContext}${conversationContext}`;
 
-    // Try AI service (with timeout protection)
+    // Call AI service if it's working
     if (aiService.isAvailable()) {
       try {
         console.log('🤖 Generating AI response...');
         let answer = await aiService.generateResponse(systemPrompt, question);
         console.log('✅ AI response generated successfully');
         
-        // Remove any URLs from the answer text (images are handled separately)
-        // This prevents the AI from including image URLs or any links in the response
+        // Clean up URLs and links from the answer
         answer = answer.replace(/https?:\/\/[^\s]+/gi, '').trim();
-        // Remove common URL patterns and phrases that mention images/links
         answer = answer.replace(/(here is|see|view|check|link|url|image at|picture at)[\s:]*https?:\/\/[^\s]+/gi, '').trim();
-        answer = answer.replace(/\[.*?\]\(https?:\/\/[^\)]+\)/gi, '').trim(); // Remove markdown links
-        // Clean up any double spaces or empty sentences
+        answer = answer.replace(/\[.*?\]\(https?:\/\/[^\)]+\)/gi, '').trim();
         answer = answer.replace(/\s+/g, ' ').trim();
-        
-        // If the AI response indicates it doesn't have the information, don't show images
-        // This prevents showing random images when the AI can't answer properly
+
+        // If AI says it doesn't know, don't show random images
         const lowQualityIndicators = [
           "i don't have",
           "i don't know",
@@ -667,16 +489,16 @@ ${dbContext}${pdfContext}${conversationContext}`;
         ];
         const answerLower = answer.toLowerCase();
         const isLowQualityAnswer = lowQualityIndicators.some(indicator => answerLower.includes(indicator));
-        
+
         if (isLowQualityAnswer) {
           console.log(`⚠️ Low quality answer detected - clearing images to avoid showing random pictures`);
-          imageUrls.length = 0; // Clear all images if answer quality is low
+          imageUrls.length = 0;
         }
         
-        // Save this conversation for next time (in-memory for backward compatibility)
+        // Save conversation for context
         saveConversation(userId, question, answer);
-        
-        // Save to database if user is authenticated
+
+        // Save to DB if user is logged in
         const authenticatedUserId = await getUserIdFromToken(req);
         if (authenticatedUserId) {
           try {
@@ -690,7 +512,7 @@ ${dbContext}${pdfContext}${conversationContext}`;
             console.log('💾 Chat history saved to database');
           } catch (dbErr) {
             console.error('⚠️ Failed to save chat history:', dbErr.message);
-            // Don't fail the request if DB save fails
+            // Don't break if DB fails
           }
         }
         
@@ -700,12 +522,12 @@ ${dbContext}${pdfContext}${conversationContext}`;
         });
       } catch (aiErr) {
         console.warn('⚠️ AI service failed:', aiErr.message);
-        
-        // Check if it's a content policy violation (racist/inappropriate content)
+
+        // Check for content policy violations
         const errorMessage = aiErr.message?.toLowerCase() || '';
         const errorBody = aiErr.body || aiErr.error || {};
         const errorCode = errorBody.code || errorBody.type || '';
-        
+
         if (
           errorMessage.includes('content policy') ||
           errorMessage.includes('content_filter') ||
@@ -714,17 +536,17 @@ ${dbContext}${pdfContext}${conversationContext}`;
           errorCode.includes('content_filter') ||
           errorCode.includes('content_policy')
         ) {
-          return res.json({ 
-            answer: "we dont tolorate racism here" 
+          return res.json({
+            answer: "we dont tolorate racism here"
           });
         }
-        
-        // Check if it's a timeout
+
+        // Handle timeouts
         if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
           return res.json({ answer: "Sorry, I'm having trouble processing your question right now. Please try again in a moment." });
         }
-        
-        // Generic error fallback - user-friendly message
+
+        // Generic fallback
         return res.json({ answer: "Sorry, I don't have that information available right now. Please try asking a different question." });
       }
     } else {
@@ -740,6 +562,7 @@ ${dbContext}${pdfContext}${conversationContext}`;
   }
 });
 
+// Add time-aware guidance for offices (open/closed times)
 async function generateTimeAwareGuidance(dbResults) {
   const officeResult = dbResults.find((result) => result.table === "offices");
   if (!officeResult || !Array.isArray(officeResult.data) || officeResult.data.length === 0) {
@@ -768,6 +591,7 @@ async function generateTimeAwareGuidance(dbResults) {
   return buildOfficeScheduleNarrative(officeResult.data, defaults);
 }
 
+// Build human-readable office status messages
 function buildOfficeScheduleNarrative(offices, defaults) {
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -775,13 +599,13 @@ function buildOfficeScheduleNarrative(offices, defaults) {
   const guidance = [];
 
   offices.slice(0, 5).forEach((office) => {
-    // Sunday: all offices closed
+    // All offices closed on Sundays
     if (day === 0) {
       guidance.push(`• ${office.name}: closed today (offices are closed on Sundays).`);
       return;
     }
 
-    // Base schedule from DB or defaults
+    // Get schedule from DB or use defaults
     const schedule = {
       open: parseTimeToMinutes(office.open_time) ?? parseTimeToMinutes(defaults.default_office_open),
       close: parseTimeToMinutes(office.close_time) ?? parseTimeToMinutes(defaults.default_office_close),
@@ -791,7 +615,7 @@ function buildOfficeScheduleNarrative(offices, defaults) {
         parseTimeToMinutes(office.lunch_end) ?? parseTimeToMinutes(defaults.default_lunch_end),
     };
 
-    // Saturday: force half-day 7:00–12:00 regardless of stored schedule
+    // Saturdays are half-day
     if (day === 6) {
       schedule.open = 7 * 60;
       schedule.close = 12 * 60;
@@ -810,6 +634,7 @@ function buildOfficeScheduleNarrative(offices, defaults) {
   return guidance.length ? guidance.slice(0, 3).join("\n") : "";
 }
 
+// Describe if office is open/closed based on current time
 function describeOfficeStatus(schedule, nowMinutes) {
   const { open, close, lunchStart, lunchEnd } = schedule;
 
@@ -843,6 +668,7 @@ function describeOfficeStatus(schedule, nowMinutes) {
   return `open until ${formatTimeLabel(close)} today.`;
 }
 
+// Convert time string like "09:30" to minutes since midnight
 function parseTimeToMinutes(value) {
   if (!value || typeof value !== "string") return null;
   const [hourStr, minuteStr] = value.split(":");
@@ -852,6 +678,7 @@ function parseTimeToMinutes(value) {
   return hours * 60 + minutes;
 }
 
+// Format minutes to 12-hour time
 function formatTimeLabel(totalMinutes) {
   const hours24 = Math.floor(totalMinutes / 60) % 24;
   const minutes = totalMinutes % 60;
@@ -861,17 +688,18 @@ function formatTimeLabel(totalMinutes) {
   return `${hours12}:${paddedMinutes} ${suffix}`;
 }
 
+// Format minutes to readable text
 function formatMinutes(value) {
   if (value <= 1) return "1 minute";
   return `${value} minutes`;
 }
 
+// Check if someone is complaining about their class schedule/subjects
 function isClassScheduleConcern(text) {
   if (!text) return false;
   const q = text.toLowerCase();
 
-  // Only trigger for personal concerns, not general information questions
-  // Questions like "what are the subjects" should NOT trigger this
+  // Personal schedule concerns (not general questions)
   const personalKeywords = [
     "my schedule",
     "my subjects",
@@ -892,8 +720,7 @@ function isClassScheduleConcern(text) {
     "i need to change",
     "help me with my",
   ];
-  
-  // General keywords that indicate a concern (not just asking for info)
+
   const concernKeywords = [
     "enrollment concern",
     "enrolment concern",
@@ -907,21 +734,20 @@ function isClassScheduleConcern(text) {
     "schedule conflict",
   ];
 
-  // Check if it's a personal question or concern
   const isPersonal = personalKeywords.some((k) => q.includes(k));
   const isConcern = concernKeywords.some((k) => q.includes(k));
-  
-  // Don't trigger if asking for general information (what, which, list, show)
+
+  // Skip general info questions like "what are the subjects"
   const isInfoQuestion = /^(what|which|list|show|tell me|what are|what is|what's)/i.test(q.trim());
-  
+
   return (isPersonal || isConcern) && !isInfoQuestion;
 }
 
+// Check if they're asking about department heads
 function isDepartmentHeadQuery(question) {
   if (!question) return false;
   const q = question.toLowerCase();
-  
-  // Check if question is asking about department head
+
   const headKeywords = ['head', 'chair', 'chairperson', 'director', 'leader', 'in charge'];
   const questionPatterns = [
     /who is (the )?(department )?head (of|for)/i,
@@ -931,27 +757,23 @@ function isDepartmentHeadQuery(question) {
     /who (is|are) in charge (of|for)/i,
     /(who|what) (is|are) (the )?(department )?head/i,
   ];
-  
+
   const hasHeadKeyword = headKeywords.some(keyword => q.includes(keyword));
   const matchesPattern = questionPatterns.some(pattern => pattern.test(question));
-  
-  // Check if it's asking about a specific department/program
-  // This works for BSIT, BSCS, BSCE, IT, CS, CE, etc.
+
+  // Must be asking about a specific department
   const hasDepartment = extractDepartmentFromQuestion(question) !== null;
-  
-  // Also check if question mentions department/program keywords even if extractDepartmentFromQuestion doesn't catch it
   const hasDepartmentKeywords = /\b(department|program|dept)\b/i.test(question);
-  
-  // Return true if it has head keywords AND (has specific department OR mentions department/program)
+
   return (hasHeadKeyword || matchesPattern) && (hasDepartment || hasDepartmentKeywords);
 }
 
+// Get department head info from database
 async function getDepartmentHeadInfo(deptKey) {
   const key = (deptKey || "").toUpperCase();
 
   try {
-    // Try to find a professor in this program/department whose position explicitly indicates "department head"
-    // Use strict matching - only positions that clearly indicate department head role
+    // Look for professors with department head positions
     const headPositions = [
       'department head',
       'dept head',
@@ -961,9 +783,7 @@ async function getDepartmentHeadInfo(deptKey) {
       'department director',
       'dept director'
     ];
-    
-    // First, try exact position matches (most specific)
-    // Use case-insensitive matching by checking each position
+
     const allProfessors = await prisma.professors.findMany({
       where: {
         OR: [
@@ -982,31 +802,28 @@ async function getDepartmentHeadInfo(deptKey) {
       },
     });
 
-    // Filter for professors whose position matches head positions (case-insensitive)
+    // Find one with a head position
     for (const professor of allProfessors) {
       if (professor.position) {
         const positionLower = professor.position.toLowerCase();
         for (const headPos of headPositions) {
           if (positionLower.includes(headPos.toLowerCase())) {
             console.log(`✅ Found ${key} department head: ${professor.name} (${professor.position})`);
-      return {
+            return {
               name: professor.name,
               email: professor.email || "No email on record",
-      };
+            };
           }
         }
       }
     }
-    
-    // If no exact match found, don't return any professor
-    // This prevents returning wrong professors who might have "head" in their position
-    // but aren't actually the department head
+
     console.log(`⚠️ No department head found for ${key} in database`);
   } catch (err) {
     console.error("⚠️ Failed to load department head from professors:", err.message);
   }
 
-  // Fallback to static config if no DB match
+  // Use fallback if DB doesn't have it
   if (DEPARTMENT_HEAD_FALLBACKS[key]) {
     console.log(`⚠️ Using fallback for ${key} department head`);
     return DEPARTMENT_HEAD_FALLBACKS[key];
