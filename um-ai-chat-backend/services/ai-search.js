@@ -418,9 +418,14 @@ async function searchDatabase(question) {
           // Look for patterns like "X room" where X is a descriptive word
           const genericRoomMatch = q.match(/\b([a-z]+)\s+room\b/i);
           if (genericRoomMatch && genericRoomMatch[1] && genericRoomMatch[1].length > 3) {
-            // Extract the descriptive word (e.g., "collaboration" from "collaboration room")
-            roomIdentifier = genericRoomMatch[1].toLowerCase();
-            console.log(`   🔍 Detected generic room name: "${roomIdentifier}"`);
+            const extractedWord = genericRoomMatch[1].toLowerCase();
+            // Blacklist words that are not valid room descriptions
+            const invalidRoomWords = ['only', 'any', 'some', 'this', 'that', 'every', 'all', 'other', 'another', 'many', 'much', 'few', 'several', 'various', 'different', 'same', 'own', 'each', 'both', 'either', 'neither'];
+            if (!invalidRoomWords.includes(extractedWord)) {
+              // Extract the descriptive word (e.g., "collaboration" from "collaboration room")
+              roomIdentifier = extractedWord;
+              console.log(`   🔍 Detected generic room name: "${roomIdentifier}"`);
+            }
           }
         }
 
