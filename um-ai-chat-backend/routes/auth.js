@@ -385,8 +385,8 @@ router.post("/admin/forgot-password", async (req, res) => {
             },
         });
 
-        // Send reset code via email to the specified admin email
-        const adminEmail = "a.siojo.143903.tc@umindanao.edu.ph";
+        // Send reset code via email to the admin email (same as used for user password reset)
+        const adminEmail = process.env.ADMIN_EMAIL || "a.siojo.143903.tc@umindanao.edu.ph";
         await sendAdminPasswordResetEmail(adminEmail, resetCode);
 
         console.log(`🔐 ADMIN PASSWORD RESET CODE sent to email for "${username}"`);
