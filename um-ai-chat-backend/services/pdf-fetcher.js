@@ -2,7 +2,7 @@ const { PDFParse } = require('pdf-parse');
 
 /**
  * Fetch and parse content from a PDF URL
- * @param {string} url - The PDF URL to fetch
+ * @param {string} url 
  * @param {number} timeout - Timeout in milliseconds (default: 30000)
  * @returns {Promise<{success: boolean, content?: string, error?: string}>}
  */
