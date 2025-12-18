@@ -323,4 +323,12 @@ export const adminAuthAPI = {
     method: 'POST',
     body: JSON.stringify({ currentPassword, newPassword }),
   }),
+  forgotPassword: (username: string) => apiCall('/auth/admin/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ username }),
+  }),
+  resetPassword: (username: string, code: string, newPassword: string) => apiCall('/auth/admin/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ username, code, newPassword }),
+  }),
 };
