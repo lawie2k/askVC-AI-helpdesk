@@ -386,28 +386,34 @@ router.post("/ask", async (req, res) => {
             // Log when room is found
             console.log(`🔍 Room found in search: "${item.name}" (ID: ${item.id}, Image: ${item.image_url ? '✅' : '❌'}, Relevance: ${item.relevance_score || 'N/A'})`);
 
-            // Simple logic: if it's a room question and room has valid image, show it
+            // Select the most relevant room with an image
             if (isRoomQuestion && item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
-              console.log(`📸 Adding room image: ${item.name}`);
-              bestRoomMatch = {
-                url: item.image_url.trim(),
-                name: item.name || "Image",
-                type: "room",
-                relevance_score: 100
-              };
+              const itemRelevance = item.relevance_score || 0;
+              if (!bestRoomMatch || itemRelevance > bestRoomMatch.relevance_score) {
+                console.log(`📸 Selected room image: ${item.name} (relevance: ${itemRelevance})`);
+                bestRoomMatch = {
+                  url: item.image_url.trim(),
+                  name: item.name || "Image",
+                  type: "room",
+                  relevance_score: itemRelevance
+                };
+              }
             }
           }
           
           if (result.table === "offices") {
-            // Simple logic: if it's an office question and office has valid image, show it
+            // Select the most relevant office with an image
             if (isOfficeQuestion && item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
-              console.log(`📸 Adding office image: ${item.name}`);
-              bestOfficeMatch = {
-                url: item.image_url.trim(),
-                name: item.name || "Image",
-                type: "office",
-                relevance_score: 100
-              };
+              const itemRelevance = item.relevance_score || 0;
+              if (!bestOfficeMatch || itemRelevance > bestOfficeMatch.relevance_score) {
+                console.log(`📸 Selected office image: ${item.name} (relevance: ${itemRelevance})`);
+                bestOfficeMatch = {
+                  url: item.image_url.trim(),
+                  name: item.name || "Image",
+                  type: "office",
+                  relevance_score: itemRelevance
+                };
+              }
             }
           }
         });
