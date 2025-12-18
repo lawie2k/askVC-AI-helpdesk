@@ -345,5 +345,128 @@ router.post("/admin/change-password", authenticateAdmin, async (req, res) => {
     }
 })
 
+// Admin forgot password - generates a reset code for admin use
+router.post("/admin/forgot-password", async (req, res) => {
+    try {
+        const { username } = req.body;
+
+        if (!username) {
+            return res.status(400).json({ error: "Username is required" });
+        }
+
+        const admin = await prisma.admins.findUnique({
+            where: { username },
+        });
+
+        if (!admin) {
+            // Don't reveal if admin exists for security
+            return res.status(200).json({
+                message: "If the username exists, a reset code has been generated.",
+                instructions: "Check the server logs for the reset code."
+            });
+        }
+
+        // Invalidate any existing reset tokens for this admin
+        await prisma.password_reset_tokens.deleteMany({
+            where: { user_id: admin.id } // Note: using user_id field but for admin
+        });
+
+        // Generate a 6-digit reset code
+        const resetCode = generateResetCode();
+        const codeHash = await bcrypt.hash(resetCode, BCRYPT_ROUNDS);
+        const expiresAt = new Date(Date.now() + RESET_CODE_TTL_MINUTES * 60 * 1000);
+
+        // Store the reset token using the existing password_reset_tokens table
+        // We'll use a negative user_id to distinguish admin tokens
+        await prisma.password_reset_tokens.create({
+            data: {
+                user_id: -admin.id, // Negative to indicate admin (temporary solution)
+                code_hash: codeHash,
+                expires_at: expiresAt,
+            },
+        });
+
+        // Log the reset code for admin to see (since admins can access logs)
+        console.log(`🔐 ADMIN PASSWORD RESET CODE for "${username}": ${resetCode}`);
+        console.log(`⏰ Code expires at: ${expiresAt.toISOString()}`);
+        console.log(`📝 To reset: POST /auth/admin/reset-password with { username, code, newPassword }`);
+
+        return res.status(200).json({
+            message: "If the username exists, a reset code has been generated.",
+            instructions: "Check the server logs for the reset code.",
+            expiresInMinutes: RESET_CODE_TTL_MINUTES
+        });
+
+    } catch (e) {
+        console.error("Error requesting admin password reset:", e);
+        return res.status(500).json({ error: "Unable to process password reset request" });
+    }
+})
+
+// Admin reset password using code
+router.post("/admin/reset-password", async (req, res) => {
+    try {
+        const { username, code, newPassword } = req.body;
+
+        if (!username || !code || !newPassword) {
+            return res.status(400).json({ error: "Username, code, and newPassword are required" });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({ error: "New password must be at least 8 characters long" });
+        }
+
+        const admin = await prisma.admins.findUnique({
+            where: { username },
+        });
+
+        if (!admin) {
+            return res.status(400).json({ error: "Invalid or expired code" });
+        }
+
+        // Find the most recent valid reset token for this admin
+        const tokenRecord = await prisma.password_reset_tokens.findFirst({
+            where: {
+                user_id: -admin.id, // Negative to indicate admin
+                used: false,
+                expires_at: { gt: new Date() },
+            },
+            orderBy: { created_at: "desc" },
+        });
+
+        if (!tokenRecord) {
+            return res.status(400).json({ error: "Invalid or expired code" });
+        }
+
+        // Verify the reset code
+        const isCodeValid = await bcrypt.compare(code, tokenRecord.code_hash);
+        if (!isCodeValid) {
+            return res.status(400).json({ error: "Invalid or expired code" });
+        }
+
+        // Hash the new password
+        const hashedNewPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+        // Update admin password and mark token as used in a transaction
+        await prisma.$transaction([
+            prisma.admins.update({
+                where: { id: admin.id },
+                data: { password_hashed: hashedNewPassword },
+            }),
+            prisma.password_reset_tokens.update({
+                where: { id: tokenRecord.id },
+                data: { used: true },
+            }),
+        ]);
+
+        console.log(`✅ Admin password reset successful for: ${username}`);
+        return res.status(200).json({ message: "Password reset successfully" });
+
+    } catch (e) {
+        console.error("Error resetting admin password:", e);
+        return res.status(500).json({ error: "Unable to reset password" });
+    }
+})
+
 
 module.exports = router;
