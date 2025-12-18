@@ -192,6 +192,68 @@ async function sendViaSendGridAPI(to, code) {
   }
 }
 
+async function sendAdminPasswordResetEmail(to, code) {
+  try {
+    const emailService = process.env.EMAIL_SERVICE || "gmail";
+
+    // Use SendGrid API (better for cloud hosting like Render)
+    if (emailService === "sendgrid-api") {
+      return await sendViaSendGridAPI(to, code);
+    }
+
+    // Use SMTP (nodemailer) for other services
+    const emailTransporter = getTransporter();
+    const fromEmail = process.env.EMAIL_FROM || process.env.GMAIL_USER || process.env.SENDGRID_FROM_EMAIL;
+
+    if (!fromEmail) {
+      throw new Error("Missing EMAIL_FROM environment variable");
+    }
+
+    const subject = "UM AI Admin Password Reset Code";
+    const text = `Your UM AI Admin password reset code is ${code}. This code will expire in 10 minutes.`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: #900C27; padding: 20px; text-align: center;">
+          <h1 style="color: white; margin: 0;">UM AI Admin</h1>
+          <p style="color: white; margin: 5px 0 0 0; font-size: 14px;">Password Reset</p>
+        </div>
+        <div style="padding: 30px; background-color: #f9f9f9;">
+          <p>Hi Admin,</p>
+          <p>We received a request to reset your UM AI Admin password.</p>
+          <div style="background-color: white; padding: 20px; margin: 20px 0; text-align: center; border: 2px solid #900C27; border-radius: 5px;">
+            <p style="margin: 0; font-size: 12px; color: #666;">Your reset code is:</p>
+            <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #900C27; margin: 10px 0;">${code}</p>
+          </div>
+          <p>This code expires in 10 minutes.</p>
+          <p>If you didn't request this, please contact system administrator immediately.</p>
+          <p style="margin-top: 30px; color: #666; font-size: 12px;">— UM AI System</p>
+        </div>
+      </div>
+    `;
+
+    console.log("[Email] Sending admin password reset email", {
+      to,
+      from: fromEmail,
+      service: emailService,
+    });
+
+    const result = await emailTransporter.sendMail({
+      from: `UM AI System <${fromEmail}>`,
+      to,
+      subject,
+      text,
+      html,
+    });
+
+    console.log("[Email] Admin password reset email sent successfully:", result.messageId);
+    return result;
+  } catch (err) {
+    console.error("[Email] Failed to send admin password reset email:", err);
+    throw err;
+  }
+}
+
 module.exports = {
   sendPasswordResetEmail,
+  sendAdminPasswordResetEmail,
 };

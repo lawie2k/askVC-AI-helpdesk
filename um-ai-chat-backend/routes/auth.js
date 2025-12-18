@@ -2,7 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/prismaClient");
-const { sendPasswordResetEmail } = require("../services/email-service");
+const { sendPasswordResetEmail, sendAdminPasswordResetEmail } = require("../services/email-service");
 const { authenticateAdmin } = require("./middleware/adminAuth");
 const crypto = require("crypto");
 require("dotenv").config();
@@ -361,14 +361,13 @@ router.post("/admin/forgot-password", async (req, res) => {
         if (!admin) {
             // Don't reveal if admin exists for security
             return res.status(200).json({
-                message: "If the username exists, a reset code has been generated.",
-                instructions: "Check the server logs for the reset code."
+                message: "If the username exists, a reset code has been sent to the admin email.",
             });
         }
 
         // Invalidate any existing reset tokens for this admin
         await prisma.password_reset_tokens.deleteMany({
-            where: { user_id: admin.id } // Note: using user_id field but for admin
+            where: { user_id: -admin.id } // Negative to indicate admin
         });
 
         // Generate a 6-digit reset code
@@ -380,20 +379,22 @@ router.post("/admin/forgot-password", async (req, res) => {
         // We'll use a negative user_id to distinguish admin tokens
         await prisma.password_reset_tokens.create({
             data: {
-                user_id: -admin.id, // Negative to indicate admin (temporary solution)
+                user_id: -admin.id, // Negative to indicate admin
                 code_hash: codeHash,
                 expires_at: expiresAt,
             },
         });
 
-        // Log the reset code for admin to see (since admins can access logs)
-        console.log(`🔐 ADMIN PASSWORD RESET CODE for "${username}": ${resetCode}`);
+        // Send reset code via email to the specified admin email
+        const adminEmail = "a.siojo.143903.tc@umindanao.edu.ph";
+        await sendAdminPasswordResetEmail(adminEmail, resetCode);
+
+        console.log(`🔐 ADMIN PASSWORD RESET CODE sent to email for "${username}"`);
+        console.log(`📧 Email sent to: ${adminEmail}`);
         console.log(`⏰ Code expires at: ${expiresAt.toISOString()}`);
-        console.log(`📝 To reset: POST /auth/admin/reset-password with { username, code, newPassword }`);
 
         return res.status(200).json({
-            message: "If the username exists, a reset code has been generated.",
-            instructions: "Check the server logs for the reset code.",
+            message: "If the username exists, a reset code has been sent to the admin email.",
             expiresInMinutes: RESET_CODE_TTL_MINUTES
         });
 

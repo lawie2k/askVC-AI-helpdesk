@@ -72,7 +72,7 @@ export default function login() {
             }
 
             await adminAuthAPI.forgotPassword(username);
-            setForgotSuccess("Reset code generated! Check the server logs for your reset code.");
+            setForgotSuccess("Reset code sent! Check your email for the reset code.");
             setShowResetForm(true);
 
         } catch (error: any) {
@@ -211,7 +211,7 @@ export default function login() {
                         type="text"
                         value={resetCode}
                         onChange={(e) => setResetCode(e.target.value)}
-                        placeholder="Check server logs for code"
+                        placeholder="Check your email for code"
                         required
                       />
 
