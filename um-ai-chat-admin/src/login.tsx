@@ -14,6 +14,7 @@ export default function login() {
 
     // Forgot password states
     const [showForgotPassword, setShowForgotPassword] = useState(false);
+    const [forgotUsername, setForgotUsername] = useState(""); // Separate username for forgot password
     const [resetCode, setResetCode] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [showResetForm, setShowResetForm] = useState(false);
@@ -67,11 +68,11 @@ export default function login() {
         setForgotSuccess("");
 
         try {
-            if (!username || username.trim().length === 0) {
+            if (!forgotUsername || forgotUsername.trim().length === 0) {
                 throw new Error("Username is required");
             }
 
-            await adminAuthAPI.forgotPassword(username);
+            await adminAuthAPI.forgotPassword(forgotUsername);
             setForgotSuccess("Reset code sent! Check your email for the reset code.");
             setShowResetForm(true);
 
@@ -90,7 +91,7 @@ export default function login() {
         setForgotSuccess("");
 
         try {
-            if (!username || !resetCode || !newPassword) {
+            if (!forgotUsername || !resetCode || !newPassword) {
                 throw new Error("All fields are required");
             }
 
@@ -98,13 +99,14 @@ export default function login() {
                 throw new Error("New password must be at least 8 characters long");
             }
 
-            await adminAuthAPI.resetPassword(username, resetCode, newPassword);
+            await adminAuthAPI.resetPassword(forgotUsername, resetCode, newPassword);
             setForgotSuccess("Password reset successful! You can now login with your new password.");
 
             // Reset form after 3 seconds
             setTimeout(() => {
                 setShowForgotPassword(false);
                 setShowResetForm(false);
+                setForgotUsername("");
                 setResetCode("");
                 setNewPassword("");
                 setForgotSuccess("");
@@ -198,8 +200,9 @@ export default function login() {
                   <input
                     className="w-[310px] h-[40px] mt-2 bg-[#292929] text-white px-3"
                     type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    value={forgotUsername}
+                    onChange={(e) => setForgotUsername(e.target.value)}
+                    placeholder="Enter your admin username"
                     required
                   />
 
@@ -251,6 +254,7 @@ export default function login() {
                     onClick={() => {
                       setShowForgotPassword(false);
                       setShowResetForm(false);
+                      setForgotUsername("");
                       setResetCode("");
                       setNewPassword("");
                       setError("");
