@@ -304,10 +304,24 @@ router.post("/ask", async (req, res) => {
       /\brv\s*\d+\b/i.test(question) ||
       /\bavr\b/i.test(question)
     );
+
+    // Only show room images for specific room queries (not generic "room" questions)
+    const isSpecificRoomQuestion = isRoomQuestion && (
+      /\b(rv|avr|comlab|com lab|lab|laboratory|meeting|study|collaboration|auditorium|gym|library|cafeteria)\b/i.test(question) ||
+      /\b\d{3,4}\b/.test(question) ||
+      /\brv\s*\d+\b/i.test(question) ||
+      /\b(room\s*)?\d{3,4}\b/i.test(question)
+    );
+
     const isOfficeQuestion =
       /\b(office|offices|sao|student affairs|registrar|cashier|clinic|library|faculty|guidance)\b/i.test(
         question
       );
+
+    // Only show office images for specific office queries (not generic "office" questions)
+    const isSpecificOfficeQuestion = isOfficeQuestion && (
+      /\b(guidance|sao|student affairs|registrar|cashier|clinic|faculty)\b/i.test(question)
+    );
     
     if (dbResults.length > 0) {
       console.log(`📊 Found ${dbResults.length} relevant database results`);
@@ -386,8 +400,8 @@ router.post("/ask", async (req, res) => {
             // Log when room is found
             console.log(`🔍 Room found in search: "${item.name}" (ID: ${item.id}, Image: ${item.image_url ? '✅' : '❌'}, Relevance: ${item.relevance_score || 'N/A'})`);
 
-            // Select the most relevant room with an image
-            if (isRoomQuestion && item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
+            // Only show room images for specific room queries (not generic "room" questions)
+            if (isSpecificRoomQuestion && item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
               const itemRelevance = item.relevance_score || 0;
               if (!bestRoomMatch || itemRelevance > bestRoomMatch.relevance_score) {
                 console.log(`📸 Selected room image: ${item.name} (relevance: ${itemRelevance})`);
@@ -402,8 +416,8 @@ router.post("/ask", async (req, res) => {
           }
           
           if (result.table === "offices") {
-            // Select the most relevant office with an image
-            if (isOfficeQuestion && item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
+            // Only show office images for specific office queries (not generic "office" questions)
+            if (isSpecificOfficeQuestion && item.image_url && item.image_url.trim() !== '' && item.image_url !== 'null') {
               const itemRelevance = item.relevance_score || 0;
               if (!bestOfficeMatch || itemRelevance > bestOfficeMatch.relevance_score) {
                 console.log(`📸 Selected office image: ${item.name} (relevance: ${itemRelevance})`);
