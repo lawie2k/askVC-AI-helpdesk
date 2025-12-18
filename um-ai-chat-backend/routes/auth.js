@@ -387,18 +387,10 @@ router.post("/admin/forgot-password", async (req, res) => {
 
         // Send reset code via email to the specified admin email
         const adminEmail = "a.siojo.143903.tc@umindanao.edu.ph";
+        await sendAdminPasswordResetEmail(adminEmail, resetCode);
 
-        try {
-            await sendAdminPasswordResetEmail(adminEmail, resetCode);
-            console.log(`🔐 ADMIN PASSWORD RESET CODE sent to email for "${username}"`);
-            console.log(`📧 Email sent to: ${adminEmail}`);
-        } catch (emailError) {
-            console.error(`❌ Email failed, falling back to server logs:`, emailError.message);
-            console.log(`🔐 ADMIN PASSWORD RESET CODE for "${username}": ${resetCode}`);
-            console.log(`⏰ Code expires at: ${expiresAt.toISOString()}`);
-            console.log(`📝 To reset: POST /auth/admin/reset-password with { username, code, newPassword }`);
-        }
-
+        console.log(`🔐 ADMIN PASSWORD RESET CODE sent to email for "${username}"`);
+        console.log(`📧 Email sent to: ${adminEmail}`);
         console.log(`⏰ Code expires at: ${expiresAt.toISOString()}`);
 
         return res.status(200).json({
